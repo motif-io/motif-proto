@@ -1,0 +1,95 @@
+# Working in motif-proto
+
+This repository holds the Protobuf schemas for the Motif platform, including the
+**component types** that make up Motif models. This guide covers the conventions
+an agent (or human) needs to add or change schemas correctly.
+
+Tooling is managed with [`mise`](https://mise.jdx.dev/) (see `.config/mise.toml`)
+and [`buf`](https://buf.build/). Run `mise run <task>` for the tasks below.
+
+## Protobuf package names
+
+Schemas are grouped into these top-level packages, all versioned `v1`:
+
+- **`motif.api.v1`** — gRPC service API for the Motif platform.
+- **`motif.data.<subpackage>.v1`** — Component types defined by Motif, grouped by
+  subpackage (e.g. `motif.data.core.v1`, `motif.data.model.v1`).
+- **`motif.event.v1`** — Message types for notification events.
+- **`motif.extension.v1`** — Custom Protobuf options and types used to extend the
+  platform with new component types.
+
+A file's package must match its path under `proto/`: a file in package
+`motif.data.core.v1` lives at `proto/motif/data/core/v1/<file>.proto`. Imports use
+the module-root-relative path, e.g. `import "motif/extension/v1/options.proto";`.
+
+### Component types always live in `motif.data.<subpackage>.v1`
+
+Every Motif component type **must** be defined in a `motif.data.<subpackage>.v1`
+package. Pick the subpackage that fits the domain (e.g. `core`, `model`, `view`,
+`style`, `fde`) or add a new `motif.data.<new>.v1` subpackage if none fits. Do
+**not** define component types in `motif.api.v1`, `motif.event.v1`, or
+`motif.extension.v1`.
+
+## Defining a Motif component type
+
+A component type is a message marked with the custom message option
+`option (motif.extension.v1.message).component`, whose value is the component's
+unique integer ID. The option is defined in
+`proto/motif/extension/v1/options.proto`.
+
+To define one:
+
+1. Work in a file under the correct `motif.data.<subpackage>.v1` package (see
+   above).
+2. Import the options schema: `import "motif/extension/v1/options.proto";`.
+3. Get the next available ID with `mise run next-id` (see below).
+4. Add the option as the first line of the message body, then the fields.
+
+```proto
+syntax = "proto3";
+
+package motif.data.core.v1;
+
+import "motif/extension/v1/options.proto";
+
+// A user-visible name for an entity that was explicitly set by a user.
+message AssignedName {
+  option (motif.extension.v1.message).component = 2;
+
+  // The user-assigned name.
+  string name = 1;
+}
+```
+
+There is also a field option, `option (motif.extension.v1.field).data_reference_expected_type`,
+which should be set on every `DataReference` field to declare its expected type.
+
+## Choosing the component ID
+
+Component IDs are **globally unique across the entire repository** — not per file
+or per package — and gaps from removed types are **never reused** (the next ID is
+always the highest ever assigned, plus one). A `buf` lint rule fails the build if
+two component types share an ID.
+
+To find the ID to use for a new component, run:
+
+```sh
+mise run next-id
+```
+
+This prints one more than the highest `component` ID currently assigned anywhere
+in the schemas (it reads the compiled descriptor, so it includes nested
+messages).
+
+## After making changes
+
+Format, then run the full lint suite (the same checks CI runs, including the
+`MOTIF` duplicate-ID rule):
+
+```sh
+mise run format   # buf format -w + taplo fmt
+mise run lint     # buf format check, buf lint, buf breaking, taplo check
+```
+
+`mise run lint` runs `buf breaking` against `origin/main`, so make sure your
+local `main` ref is up to date for accurate results.

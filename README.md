@@ -17,44 +17,43 @@ required.
 
 ## Custom options
 
-Motif's custom protobuf options use a **single extension number per extendee**,
-pointing at a wrapper message. New options are added as *fields* on the wrapper
-message, so a new extension number is never required.
+Motif extends protobuf with its own message and field options, defined in
+[`proto/motif/extension/v1/options.proto`](proto/motif/extension/v1/options.proto).
+See that file for the full set; this section covers how to apply them.
 
-Today only `MessageOptions` is extended:
+Mark a message as a component type and assign its ID with the `component` message
+option (see [Choosing a component ID](#choosing-a-component-id)):
 
 ```proto
-// motif.extension.v1
-extend google.protobuf.MessageOptions {
-  optional MotifMessageOptions message = 50000;
+message DefaultName {
+  option (motif.extension.v1.message).component = 1;
+
+  string name = 1;
 }
 ```
 
-`50000` is a temporary internal-range placeholder, to be replaced with a single
-public extension number assigned by the protobuf maintainers. Because extension
-numbers are scoped per extendee, the same number can be reused if another
-descriptor type (e.g. `FieldOptions`) ever needs its own wrapper.
-
-Usage:
+Declare the type a `DataReference` field resolves to with the
+`data_reference_expected_type` field option — set it on every `DataReference`
+field:
 
 ```proto
-// A component (entity) type.
-message User {
-  option (motif.extension.v1.message).component = 86;
-}
+motif.extension.v1.DataReference curve = 3 [
+  (motif.extension.v1.field).data_reference_expected_type = {
+    kind: TYPE_MESSAGE
+    type_name: "motif.data.geometry.v1.Curve2"
+  }
+];
+```
 
-// A relationship type. Endpoints are fields of type EntityReference, identified
-// structurally by their type — no field option needed. A relationship has at
-// least one EntityReference, and at most one ModelReference (present when its
-// endpoints resolve against an external model).
-message AssignedTo {
-  option (motif.extension.v1.message).relationship = 42;
+## Choosing a component ID
 
-  // The entity this relationship points to.
-  EntityReference assignee = 1;
+Component IDs (the value of `option (motif.extension.v1.message).component`) are
+unique across the whole repository, and IDs from removed types are never reused.
+A buf lint rule fails the build if two component types share an ID.
 
-  // Optional. When set, the assignee resolves against this model rather than the
-  // relationship's own model.
-  ModelReference model = 2;
-}
+To find the next available ID — one more than the highest currently assigned —
+run:
+
+```sh
+mise run next-id
 ```

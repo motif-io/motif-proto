@@ -9,6 +9,10 @@ min_version = "2026.4.5"
 description = "Format proto and TOML files"
 run = ["buf format -w", "taplo fmt $(git ls-files '*.toml')"]
 
+[tasks.next-id]
+description = "Print the next available component type ID (max assigned + 1)"
+run = "./tools/next-component-id.sh"
+
 [tasks.lint]
 description = "Run all linting checks locally (CI uses bufbuild/buf-action)"
 run = [
