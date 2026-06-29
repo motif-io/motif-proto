@@ -4,3 +4,7 @@ deps:
   - name: buf.build/bufbuild/protovalidate
     commit: 50325440f8f24053b047484a6bf60b76
     digest: b5:74cb6f5c0853c3c10aafc701614194bbd63326bdb8ef4068214454b8894b03ba4113e04b3a33a8321cdf05336e37db4dc14a5e2495db8462566914f36086ba31
+plugins:
+  - name: buf.build/motif/motif-options
+    commit: 0ce20ac485da4cd98d4576f33ec3762a
+    digest: p1:452a2d7d10fb44e6eca471854fd59cb756f0731893fc4beed0a2c0f913b993d5f2c76d999f90c973403290e64e765d8dd4a1d838935bd62f6dacccf4ae0d4f2a

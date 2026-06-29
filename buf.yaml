@@ -5,9 +5,13 @@ modules:
     name: buf.build/motif/platform
 deps:
   - buf.build/bufbuild/protovalidate
+plugins:
+  - plugin: buf.build/motif/motif-options
 lint:
   use:
     - STANDARD
+    - MOTIF
 breaking:
   use:
     - FILE
+    - MOTIF
