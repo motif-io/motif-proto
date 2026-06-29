@@ -81,6 +81,11 @@ This prints one more than the highest `component` ID currently assigned anywhere
 in the schemas (it reads the compiled descriptor, so it includes nested
 messages).
 
+Keep IDs dense: prefer the value from `mise run next-id` over assigning IDs far
+from the sequence. `mise run check-id-gaps` (part of `mise run lint`, and run in
+CI) fails if more than 10 consecutive IDs are left unused between two assigned
+IDs — a guard against typos like `600` for `60`.
+
 ## After making changes
 
 Format, then run the full lint suite (the same checks CI runs, including the
@@ -88,7 +93,7 @@ Format, then run the full lint suite (the same checks CI runs, including the
 
 ```sh
 mise run format   # buf format -w + taplo fmt
-mise run lint     # buf format check, buf lint, buf breaking, taplo check
+mise run lint     # buf format check, buf lint, buf breaking, taplo check, ID-gap check
 ```
 
 `mise run lint` runs `buf breaking` against `origin/main`, so make sure your

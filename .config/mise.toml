@@ -13,6 +13,10 @@ run = ["buf format -w", "taplo fmt $(git ls-files '*.toml')"]
 description = "Print the next available component type ID (max assigned + 1)"
 run = "./tools/next-component-id.sh"
 
+[tasks.check-id-gaps]
+description = "Fail if any gap between component type IDs exceeds 10 unused IDs"
+run = "./tools/check-component-id-gaps.sh 10"
+
 [tasks.lint]
 description = "Run all linting checks locally (CI uses bufbuild/buf-action)"
 run = [
@@ -20,4 +24,5 @@ run = [
   "buf lint",
   "buf breaking --against '.git#ref=refs/remotes/origin/main'",
   "taplo fmt --check $(git ls-files '*.toml')",
+  "mise run check-id-gaps",
 ]

@@ -1,0 +1,24 @@
+# Checks on Motif component type IDs (see README "Choosing a component ID").
+#
+# Gaps in component ID allocations make it difficult to choose new IDs based
+# on the maximum allocated value without wasting IDs in the ID space. This
+# check guards against significant gaps between allocated IDs.
+name: Component IDs
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  component-id-gap-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jdx/mise-action@v2
+      - run: mise run check-id-gaps

@@ -57,3 +57,8 @@ run:
 ```sh
 mise run next-id
 ```
+
+Keep IDs dense: prefer the value from `mise run next-id` over assigning IDs far
+from the sequence. CI runs `mise run check-id-gaps`, which fails if more than 10
+consecutive IDs are left unused between two assigned IDs (a guard against typos
+like `600` for `60`).
