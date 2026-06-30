@@ -2,27 +2,30 @@
 min_version = "2026.4.5"
 
 [tools]
-"ubi:bufbuild/buf" = { version = "1.68.4" }
-"ubi:tamasfe/taplo" = { version = "0.10.0" }
+buf = "1.68.4"
+taplo = "0.10.0"
+jq = "1.8.2"
 
 [tasks.format]
 description = "Format proto and TOML files"
-run = ["buf format -w", "taplo fmt $(git ls-files '*.toml')"]
+run = ["buf format -w", "taplo fmt"]
 
 [tasks.next-id]
 description = "Print the next available component type ID (max assigned + 1)"
-run = "./tools/next-component-id.sh"
+dir = "{{ config_root }}"
+run = "buf build -o -#format=json | jq -f tools/next-component-id.jq"
 
 [tasks.check-id-gaps]
-description = "Fail if any gap between component type IDs exceeds 15 unused IDs"
-run = "./tools/check-component-id-gaps.sh 15"
+description = "Fail if any gap between component type IDs exceeds the threshold"
+dir = "{{ config_root }}"
+run = "buf build -o -#format=json | jq -r --argjson max 15 -f tools/check-component-id-gaps.jq"
 
 [tasks.lint]
 description = "Run all linting checks locally (CI uses bufbuild/buf-action)"
 run = [
   "buf format -d --exit-code",
   "buf lint",
-  "buf breaking --against '.git#ref=refs/remotes/origin/main'",
-  "taplo fmt --check $(git ls-files '*.toml')",
+  "buf breaking --against .git#ref=refs/remotes/origin/main",
+  "taplo fmt --check",
   "mise run check-id-gaps",
 ]
