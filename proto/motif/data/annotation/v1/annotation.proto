@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+// Annotation components: text and other annotations placed in views.
+package motif.data.annotation.v1;
+
+import "motif/data/geometry/v1/geometry.proto";
+import "motif/extension/v1/options.proto";
+
+// Authored content bounds for a text annotation.
+message TextAnnotation {
+  option (motif.extension.v1.message).component = 114;
+
+  // The annotation's origin point.
+  motif.data.geometry.v1.Point2 origin = 1;
+
+  // The size of the annotation's content bounds.
+  motif.data.geometry.v1.Size2 size = 2;
+}

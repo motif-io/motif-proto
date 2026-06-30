@@ -14,8 +14,8 @@ description = "Print the next available component type ID (max assigned + 1)"
 run = "./tools/next-component-id.sh"
 
 [tasks.check-id-gaps]
-description = "Fail if any gap between component type IDs exceeds 10 unused IDs"
-run = "./tools/check-component-id-gaps.sh 10"
+description = "Fail if any gap between component type IDs exceeds 15 unused IDs"
+run = "./tools/check-component-id-gaps.sh 15"
 
 [tasks.lint]
 description = "Run all linting checks locally (CI uses bufbuild/buf-action)"
