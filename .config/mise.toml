@@ -22,7 +22,7 @@ description = "Run all linting checks locally (CI uses bufbuild/buf-action)"
 run = [
   "buf format -d --exit-code",
   "buf lint",
-  "buf breaking --against '.git#ref=refs/remotes/origin/main'",
+  "buf breaking --against .git#ref=refs/remotes/origin/main",
   "taplo fmt --check $(git ls-files '*.toml')",
   "mise run check-id-gaps",
 ]
