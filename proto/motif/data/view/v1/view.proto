@@ -9,22 +9,31 @@ import "motif/data/geometry/v1/geometry.proto";
 import "motif/extension/v1/options.proto";
 import "motif/extension/v1/reference.proto";
 
-// The behavioral classification of a view.
+// The behavioral classification of a view. Each kind has distinct rendering /
+// camera behavior; views with no meaningful behavioral distinction (e.g.
+// interior vs. exterior elevations, or model-derived vs. standalone details)
+// share a single kind rather than introducing a subtype layer.
 enum ViewKind {
+  // 3 was VIEW_KIND_SECTION: sectioning is now a capability (SectionBox on any
+  // view), not a distinct view kind.
+  reserved 3;
+  reserved "VIEW_KIND_SECTION";
+
   // Unspecified view kind.
   VIEW_KIND_UNSPECIFIED = 0;
   // A 3D view.
   VIEW_KIND_3D = 1;
   // A plan view.
   VIEW_KIND_PLAN = 2;
-  // A section view.
-  VIEW_KIND_SECTION = 3;
   // An elevation view.
   VIEW_KIND_ELEVATION = 4;
   // A callout view.
   VIEW_KIND_CALLOUT = 5;
   // A drafting view.
   VIEW_KIND_DRAFTING = 6;
+  // Reflected ceiling plan: an upward-looking plan-family view. Distinct from
+  // PLAN because its camera direction and view-range semantics differ.
+  VIEW_KIND_RCP = 7;
 }
 
 // Marks an entity as a view.
