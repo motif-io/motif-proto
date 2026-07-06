@@ -185,7 +185,7 @@ message ProjectedGeometry {
 // entities rendered in the view; per-(source, view) outline / cap-fill style
 // overrides still win when present.
 message ViewStyle {
-  option (motif.extension.v1.message).component = 115;
+  option (motif.extension.v1.message).component = 111;
 
   // Default outline stroke: on-paper width plus an optional Revit-style pen
   // index resolved against the view scale at render time.
@@ -206,7 +206,7 @@ message ViewStyle {
 // cap-fill style group from an outline-style group (which carries `Color` /
 // `LineStyle` instead) sharing the same relationship space.
 message CapFillStyle {
-  option (motif.extension.v1.message).component = 116;
+  option (motif.extension.v1.message).component = 112;
 
   // Fill color for the cut-plane cap geometry of this (source, view).
   motif.data.style.v1.Color color = 1;
