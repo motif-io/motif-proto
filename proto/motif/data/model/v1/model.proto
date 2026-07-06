@@ -376,3 +376,96 @@ message ModelUnitSettings {
   // Angle display settings.
   AngleUnitGroup angle = 4;
 }
+
+// Wall-asset compose behavior. Reads the 6 declared sub-parameters (workplane,
+// base/top elevations, base/top offsets, attachment mode) from the asset's
+// `ResolvedParameters` via `DataReference` + `FieldPath`; writes the composed
+// `(coordinate_system, height)` pair into the per-instance
+// `ResolvedWallSweepInputs` component for `SweepWidthHeightAlongCurveBehaviorV2`
+// to consume.
+//
+// Decouples wall-specific composition from the general sweep primitive.
+message ComposeParametricWallSweepInputsBehavior {
+  option (motif.extension.v1.message).component = 115;
+
+  // The wall's workplane frame.
+  motif.extension.v1.DataReference workplane = 1 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.geometry.v1.CoordinateSystem3"
+    }
+  ];
+
+  // The elevation of the wall's base level.
+  motif.extension.v1.DataReference base_level_elev = 2 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}
+  ];
+
+  // The wall's base offset from the base level.
+  motif.extension.v1.DataReference base_offset = 3 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}
+  ];
+
+  // The elevation of the wall's top level.
+  motif.extension.v1.DataReference top_level_elev = 4 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}
+  ];
+
+  // The wall's top offset from the top level.
+  motif.extension.v1.DataReference top_offset = 5 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}
+  ];
+
+  // The wall's top attachment mode (e.g. `levelAbove` or `unattachedUp`).
+  motif.extension.v1.DataReference top_attachment_mode = 6 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_STRING}
+  ];
+
+  // The entity the composed `ResolvedWallSweepInputs` is written to.
+  motif.extension.v1.DataReference output = 7 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.model.v1.ResolvedWallSweepInputs"
+    }
+  ];
+}
+
+// Per-instance output of `ComposeParametricWallSweepInputsBehavior`: the composed
+// `(coordinate_system, height)` pair that `SweepWidthHeightAlongCurveBehaviorV2`
+// reads in the `DataReference` + decomposition shape.
+//
+// Sites wall-specific composition outside the general sweep primitive. Sweep
+// wiring targets the two fields of this component via per-field `DataReference`
+// from `coordinate_system` and `height` paths.
+message ResolvedWallSweepInputs {
+  option (motif.extension.v1.message).component = 116;
+
+  // Composed placement frame for the sweep. Composed as `workplane` with
+  // `origin.z` overridden to `base_level_elev + base_offset`.
+  motif.data.geometry.v1.CoordinateSystem3 coordinate_system = 1;
+
+  // Composed sweep distance in meters.
+  // - In `levelAbove` mode:
+  //   `top_level_elev - base_level_elev - base_offset + top_offset`.
+  // - In `unattachedUp` mode: `top_offset`.
+  double height = 2;
+}
+
+// Per-instance marker identifying a parametric wall whose bindings use the
+// `DataReference` + decomposition shape (8 declared sub-parameters; the
+// wall-asset compose behavior emits `ResolvedWallSweepInputs`).
+//
+// Presence flips the parametric-wall sweep wiring branch and the properties
+// emitter's decode branch from the legacy literal-binding path to the v2 path.
+// Absence on a parametric-wall instance means a legacy wall awaiting
+// opportunistic migration on the first parametric-wall setter call.
+message ParametricWallShapeV2 {
+  option (motif.extension.v1.message).component = 117;
+}
