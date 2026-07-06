@@ -6,6 +6,7 @@ package motif.data.view.v1;
 
 import "buf/validate/validate.proto";
 import "motif/data/geometry/v1/geometry.proto";
+import "motif/data/style/v1/style.proto";
 import "motif/extension/v1/options.proto";
 import "motif/extension/v1/reference.proto";
 
@@ -177,6 +178,38 @@ message ProjectedGeometry {
 
   // TODO: add styling fields here as the floor-plan UX evolves (stroke
   // colors / weights, line patterns, hatching, etc.).
+}
+
+// Per-view "default" styling applied to the view's derived outline and
+// cut-plane cap-fill geometry. Each field is the default appearance for all
+// entities rendered in the view; per-(source, view) outline / cap-fill style
+// overrides still win when present.
+message ViewStyle {
+  option (motif.extension.v1.message).component = 115;
+
+  // Default outline stroke: on-paper width plus an optional Revit-style pen
+  // index resolved against the view scale at render time.
+  motif.data.style.v1.LineStyle line_style = 1;
+
+  // Default outline color.
+  motif.data.style.v1.Color line_color = 2;
+
+  // Default cut-plane cap-fill color.
+  motif.data.style.v1.Color fill_color = 3;
+}
+
+// Persisted fill style for a per-(source, view) cut-plane cap-fill group.
+//
+// The derived cap-fill geometry is ephemeral (like outlines), but its style is
+// user data and persists. Lives on a group entity identified by the
+// (source, view) pair; the presence of this component is what distinguishes a
+// cap-fill style group from an outline-style group (which carries `Color` /
+// `LineStyle` instead) sharing the same relationship space.
+message CapFillStyle {
+  option (motif.extension.v1.message).component = 116;
+
+  // Fill color for the cut-plane cap geometry of this (source, view).
+  motif.data.style.v1.Color color = 1;
 }
 
 // The home (default) view of a model.
