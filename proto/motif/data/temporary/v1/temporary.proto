@@ -67,11 +67,55 @@ message ResolvedParameters {
   map<string, google.protobuf.Any> values = 1;
 }
 
+// An arithmetic expression node over f64 values drawn from data slots.
+//
+// `binding` leaves carry a `DataReference` addressing a `TYPE_DOUBLE` slot. The
+// referenced slot must hold a `DoubleValue` payload.
+message ParametricExpression {
+  // The expression node.
+  oneof node {
+    // A literal f64 value.
+    double literal = 1;
+
+    // A reference to a `TYPE_DOUBLE` slot supplying the value.
+    motif.extension.v1.DataReference binding = 2 [(motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}];
+
+    // A binary operation over two sub-expressions.
+    ParametricBinaryOp binary_op = 3;
+  }
+}
+
+// A binary arithmetic operation applied to two sub-expressions.
+message ParametricBinaryOp {
+  // The operator applied to `left` and `right`.
+  ParametricOperator operator = 1;
+  // The left operand.
+  ParametricExpression left = 2;
+  // The right operand.
+  ParametricExpression right = 3;
+}
+
+// Arithmetic operators supported in parametric expressions.
+enum ParametricOperator {
+  // Unspecified operator.
+  PARAMETRIC_OPERATOR_UNSPECIFIED = 0;
+  // Addition.
+  PARAMETRIC_OPERATOR_ADD = 1;
+  // Subtraction.
+  PARAMETRIC_OPERATOR_SUB = 2;
+  // Multiplication.
+  PARAMETRIC_OPERATOR_MUL = 3;
+  // Division.
+  PARAMETRIC_OPERATOR_DIV = 4;
+}
+
 // A parameter binding supplied by an instance to satisfy one entry in
 // `ParameterDeclarations`.
 //
-// A binding is either a literal `Any` payload (matching the declared
-// `expected_type`) or a `DataReference` pointing at a concrete value.
+// A binding is a literal `Any` payload (matching the declared `expected_type`),
+// a `DataReference` pointing at a concrete value, or an arithmetic expression
+// whose `binding` leaves are resolved against sibling bindings in the same
+// behavior.
 message ParameterBinding {
   // How the parameter value is supplied.
   oneof source {
@@ -82,6 +126,10 @@ message ParameterBinding {
     // so a static data_reference_expected_type is intentionally not set here.
     // buf:lint:ignore MOTIF_DATA_REFERENCE_MISSING_EXPECTED_TYPE
     motif.extension.v1.DataReference data_ref = 2;
+
+    // An arithmetic expression whose `binding` leaves resolve against sibling
+    // bindings in the same behavior.
+    ParametricExpression expression = 3;
   }
 }
 
