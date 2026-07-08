@@ -1,0 +1,1047 @@
+syntax = "proto3";
+
+package motif.data.external.v1;
+
+import "motif/extension/v1/options.proto";
+
+// Revit category
+message RevitCategoryValue {
+  option (motif.extension.v1.message).component = 118;
+
+  RevitCategory value = 1;
+}
+
+// Industry Foundation Classes categorization
+message IfcValue {
+  option (motif.extension.v1.message).component = 119;
+
+  Ifc value = 1;
+}
+
+enum RevitCategory {
+  REVIT_CATEGORY_UNSPECIFIED = 0;
+  // Abutment Foundation Tags
+  REVIT_CATEGORY_ABUTMENT_FOUNDATION_TAGS = 1;
+  // Abutment Pile Tags
+  REVIT_CATEGORY_ABUTMENT_PILE_TAGS = 2;
+  // Abutment Tags
+  REVIT_CATEGORY_ABUTMENT_TAGS = 3;
+  // Abutment Wall Tags
+  REVIT_CATEGORY_ABUTMENT_WALL_TAGS = 4;
+  // Abutments
+  REVIT_CATEGORY_ABUTMENTS = 5;
+  // Abutments - Abutment Foundations
+  REVIT_CATEGORY_ABUTMENTS_ABUTMENT_FOUNDATIONS = 6;
+  // Abutments - Abutment Piles
+  REVIT_CATEGORY_ABUTMENTS_ABUTMENT_PILES = 7;
+  // Abutments - Abutment Walls
+  REVIT_CATEGORY_ABUTMENTS_ABUTMENT_WALLS = 8;
+  // Abutments - Approach Slabs
+  REVIT_CATEGORY_ABUTMENTS_APPROACH_SLABS = 9;
+  // Adaptive Points
+  REVIT_CATEGORY_ADAPTIVE_POINTS = 10;
+  // Air Systems
+  REVIT_CATEGORY_AIR_SYSTEMS = 11;
+  // Air Terminal Tags
+  REVIT_CATEGORY_AIR_TERMINAL_TAGS = 12;
+  // Air Terminals
+  REVIT_CATEGORY_AIR_TERMINALS = 13;
+  // Alignment Station Label Sets
+  REVIT_CATEGORY_ALIGNMENT_STATION_LABEL_SETS = 14;
+  // Alignment Station Labels
+  REVIT_CATEGORY_ALIGNMENT_STATION_LABELS = 15;
+  // Alignment Tags
+  REVIT_CATEGORY_ALIGNMENT_TAGS = 16;
+  // Alignments
+  REVIT_CATEGORY_ALIGNMENTS = 17;
+  // Analysis Display Style
+  REVIT_CATEGORY_ANALYSIS_DISPLAY_STYLE = 18;
+  // Analysis Results
+  REVIT_CATEGORY_ANALYSIS_RESULTS = 19;
+  // Analytical Beam Tags
+  REVIT_CATEGORY_ANALYTICAL_BEAM_TAGS = 20;
+  // Analytical Beams
+  REVIT_CATEGORY_ANALYTICAL_BEAMS = 21;
+  // Analytical Brace Tags
+  REVIT_CATEGORY_ANALYTICAL_BRACE_TAGS = 22;
+  // Analytical Braces
+  REVIT_CATEGORY_ANALYTICAL_BRACES = 23;
+  // Analytical Column Tags
+  REVIT_CATEGORY_ANALYTICAL_COLUMN_TAGS = 24;
+  // Analytical Columns
+  REVIT_CATEGORY_ANALYTICAL_COLUMNS = 25;
+  // Analytical Floor Tags
+  REVIT_CATEGORY_ANALYTICAL_FLOOR_TAGS = 26;
+  // Analytical Floors
+  REVIT_CATEGORY_ANALYTICAL_FLOORS = 27;
+  // Analytical Foundation Slabs
+  REVIT_CATEGORY_ANALYTICAL_FOUNDATION_SLABS = 28;
+  // Analytical Isolated Foundation Tags
+  REVIT_CATEGORY_ANALYTICAL_ISOLATED_FOUNDATION_TAGS = 29;
+  // Analytical Isolated Foundations
+  REVIT_CATEGORY_ANALYTICAL_ISOLATED_FOUNDATIONS = 30;
+  // Analytical Link Tags
+  REVIT_CATEGORY_ANALYTICAL_LINK_TAGS = 31;
+  // Analytical Links
+  REVIT_CATEGORY_ANALYTICAL_LINKS = 32;
+  // Analytical Node Tags
+  REVIT_CATEGORY_ANALYTICAL_NODE_TAGS = 33;
+  // Analytical Nodes
+  REVIT_CATEGORY_ANALYTICAL_NODES = 34;
+  // Analytical Pipe Connections
+  REVIT_CATEGORY_ANALYTICAL_PIPE_CONNECTIONS = 35;
+  // Analytical Slab Foundation Tags
+  REVIT_CATEGORY_ANALYTICAL_SLAB_FOUNDATION_TAGS = 36;
+  // Analytical Spaces
+  REVIT_CATEGORY_ANALYTICAL_SPACES = 37;
+  // Analytical Surfaces
+  REVIT_CATEGORY_ANALYTICAL_SURFACES = 38;
+  // Analytical Wall Foundation Tags
+  REVIT_CATEGORY_ANALYTICAL_WALL_FOUNDATION_TAGS = 39;
+  // Analytical Wall Foundations
+  REVIT_CATEGORY_ANALYTICAL_WALL_FOUNDATIONS = 40;
+  // Analytical Wall Tags
+  REVIT_CATEGORY_ANALYTICAL_WALL_TAGS = 41;
+  // Analytical Walls
+  REVIT_CATEGORY_ANALYTICAL_WALLS = 42;
+  // Anchor Tags
+  REVIT_CATEGORY_ANCHOR_TAGS = 43;
+  // Annotation Crop Boundary
+  REVIT_CATEGORY_ANNOTATION_CROP_BOUNDARY = 44;
+  // Approach Slab Tags
+  REVIT_CATEGORY_APPROACH_SLAB_TAGS = 45;
+  // Area Load Tags
+  REVIT_CATEGORY_AREA_LOAD_TAGS = 46;
+  // Area Tags
+  REVIT_CATEGORY_AREA_TAGS = 47;
+  // Areas
+  REVIT_CATEGORY_AREAS = 48;
+  // Areas - Color Fill
+  REVIT_CATEGORY_AREAS_COLOR_FILL = 49;
+  // Areas - Interior Fill
+  REVIT_CATEGORY_AREAS_INTERIOR_FILL = 50;
+  // Areas - Reference
+  REVIT_CATEGORY_AREAS_REFERENCE = 51;
+  // Assemblies
+  REVIT_CATEGORY_ASSEMBLIES = 52;
+  // Assembly Tags
+  REVIT_CATEGORY_ASSEMBLY_TAGS = 53;
+  // Audio Visual Devices
+  REVIT_CATEGORY_AUDIO_VISUAL_DEVICES = 54;
+  // Bearing Tags
+  REVIT_CATEGORY_BEARING_TAGS = 55;
+  // Bearings
+  REVIT_CATEGORY_BEARINGS = 56;
+  // Bolt Tags
+  REVIT_CATEGORY_BOLT_TAGS = 57;
+  // Boundary Conditions
+  REVIT_CATEGORY_BOUNDARY_CONDITIONS = 58;
+  // Bridge Cable Tags
+  REVIT_CATEGORY_BRIDGE_CABLE_TAGS = 59;
+  // Bridge Cables
+  REVIT_CATEGORY_BRIDGE_CABLES = 60;
+  // Bridge Deck Tags
+  REVIT_CATEGORY_BRIDGE_DECK_TAGS = 61;
+  // Bridge Decks
+  REVIT_CATEGORY_BRIDGE_DECKS = 62;
+  // Bridge Framing
+  REVIT_CATEGORY_BRIDGE_FRAMING = 63;
+  // Bridge Framing - Arches
+  REVIT_CATEGORY_BRIDGE_FRAMING_ARCHES = 64;
+  // Bridge Framing - Cross Bracing
+  REVIT_CATEGORY_BRIDGE_FRAMING_CROSS_BRACING = 65;
+  // Bridge Framing - Diaphragms
+  REVIT_CATEGORY_BRIDGE_FRAMING_DIAPHRAGMS = 66;
+  // Bridge Framing - Primarys
+  REVIT_CATEGORY_BRIDGE_FRAMING_PRIMARYS = 67;
+  // Bridge Framing - Trusses
+  REVIT_CATEGORY_BRIDGE_FRAMING_TRUSSES = 68;
+  // Bridge Framing Tags
+  REVIT_CATEGORY_BRIDGE_FRAMING_TAGS = 69;
+  // Cable Tray Fitting Tags
+  REVIT_CATEGORY_CABLE_TRAY_FITTING_TAGS = 70;
+  // Cable Tray Fittings
+  REVIT_CATEGORY_CABLE_TRAY_FITTINGS = 71;
+  // Cable Tray Runs
+  REVIT_CATEGORY_CABLE_TRAY_RUNS = 72;
+  // Cable Tray Tags
+  REVIT_CATEGORY_CABLE_TRAY_TAGS = 73;
+  // Cable Trays
+  REVIT_CATEGORY_CABLE_TRAYS = 74;
+  // Callout Boundary
+  REVIT_CATEGORY_CALLOUT_BOUNDARY = 75;
+  // Callout Heads
+  REVIT_CATEGORY_CALLOUT_HEADS = 76;
+  // Callouts
+  REVIT_CATEGORY_CALLOUTS = 77;
+  // Cameras
+  REVIT_CATEGORY_CAMERAS = 78;
+  // Casework
+  REVIT_CATEGORY_CASEWORK = 79;
+  // Casework Tags
+  REVIT_CATEGORY_CASEWORK_TAGS = 80;
+  // Ceiling Tags
+  REVIT_CATEGORY_CEILING_TAGS = 81;
+  // Ceilings
+  REVIT_CATEGORY_CEILINGS = 82;
+  // Color Fill Legends
+  REVIT_CATEGORY_COLOR_FILL_LEGENDS = 83;
+  // Color pipe fill legends
+  REVIT_CATEGORY_COLOR_PIPE_FILL_LEGENDS = 84;
+  // Columns
+  REVIT_CATEGORY_COLUMNS = 85;
+  // Communication Device Tags
+  REVIT_CATEGORY_COMMUNICATION_DEVICE_TAGS = 86;
+  // Communication Devices
+  REVIT_CATEGORY_COMMUNICATION_DEVICES = 87;
+  // Conduit Fitting Tags
+  REVIT_CATEGORY_CONDUIT_FITTING_TAGS = 88;
+  // Conduit Fittings
+  REVIT_CATEGORY_CONDUIT_FITTINGS = 89;
+  // Conduit Runs
+  REVIT_CATEGORY_CONDUIT_RUNS = 90;
+  // Conduit Tags
+  REVIT_CATEGORY_CONDUIT_TAGS = 91;
+  // Conduits
+  REVIT_CATEGORY_CONDUITS = 92;
+  // Connection Symbols
+  REVIT_CATEGORY_CONNECTION_SYMBOLS = 93;
+  // Contour Labels
+  REVIT_CATEGORY_CONTOUR_LABELS = 94;
+  // Coordination Model
+  REVIT_CATEGORY_COORDINATION_MODEL = 95;
+  // Cover labels
+  REVIT_CATEGORY_COVER_LABELS = 96;
+  // Crop Boundaries
+  REVIT_CATEGORY_CROP_BOUNDARIES = 97;
+  // Curtain Grids
+  REVIT_CATEGORY_CURTAIN_GRIDS = 98;
+  // Curtain Panel Tags
+  REVIT_CATEGORY_CURTAIN_PANEL_TAGS = 99;
+  // Curtain Panels
+  REVIT_CATEGORY_CURTAIN_PANELS = 100;
+  // Curtain System Tags
+  REVIT_CATEGORY_CURTAIN_SYSTEM_TAGS = 101;
+  // Curtain Systems
+  REVIT_CATEGORY_CURTAIN_SYSTEMS = 102;
+  // Curtain Systems - Curtain System Grids
+  REVIT_CATEGORY_CURTAIN_SYSTEMS_CURTAIN_SYSTEM_GRIDS = 103;
+  // Curtain Wall Mullions
+  REVIT_CATEGORY_CURTAIN_WALL_MULLIONS = 104;
+  // Cutout contours
+  REVIT_CATEGORY_CUTOUT_CONTOURS = 105;
+  // Data Device Tags
+  REVIT_CATEGORY_DATA_DEVICE_TAGS = 106;
+  // Data Devices
+  REVIT_CATEGORY_DATA_DEVICES = 107;
+  // Detail Item Tags
+  REVIT_CATEGORY_DETAIL_ITEM_TAGS = 108;
+  // Detail Items
+  REVIT_CATEGORY_DETAIL_ITEMS = 109;
+  // Dimensions
+  REVIT_CATEGORY_DIMENSIONS = 110;
+  // Door Tags
+  REVIT_CATEGORY_DOOR_TAGS = 111;
+  // Doors
+  REVIT_CATEGORY_DOORS = 112;
+  // Duct Accessories
+  REVIT_CATEGORY_DUCT_ACCESSORIES = 113;
+  // Duct Accessory Tags
+  REVIT_CATEGORY_DUCT_ACCESSORY_TAGS = 114;
+  // Duct Color Fill
+  REVIT_CATEGORY_DUCT_COLOR_FILL = 115;
+  // Duct Color Fill Legends
+  REVIT_CATEGORY_DUCT_COLOR_FILL_LEGENDS = 116;
+  // Duct Fitting Tags
+  REVIT_CATEGORY_DUCT_FITTING_TAGS = 117;
+  // Duct Fittings
+  REVIT_CATEGORY_DUCT_FITTINGS = 118;
+  // Duct Insulation Tags
+  REVIT_CATEGORY_DUCT_INSULATION_TAGS = 119;
+  // Duct Insulations
+  REVIT_CATEGORY_DUCT_INSULATIONS = 120;
+  // Duct Lining Tags
+  REVIT_CATEGORY_DUCT_LINING_TAGS = 121;
+  // Duct Linings
+  REVIT_CATEGORY_DUCT_LININGS = 122;
+  // Duct Placeholders
+  REVIT_CATEGORY_DUCT_PLACEHOLDERS = 123;
+  // Duct Systems
+  REVIT_CATEGORY_DUCT_SYSTEMS = 124;
+  // Duct Tags
+  REVIT_CATEGORY_DUCT_TAGS = 125;
+  // Ducts
+  REVIT_CATEGORY_DUCTS = 126;
+  // Electrical Circuits
+  REVIT_CATEGORY_ELECTRICAL_CIRCUITS = 127;
+  // Electrical Equipment
+  REVIT_CATEGORY_ELECTRICAL_EQUIPMENT = 128;
+  // Electrical Equipment Tags
+  REVIT_CATEGORY_ELECTRICAL_EQUIPMENT_TAGS = 129;
+  // Electrical Fixture Tags
+  REVIT_CATEGORY_ELECTRICAL_FIXTURE_TAGS = 130;
+  // Electrical Fixtures
+  REVIT_CATEGORY_ELECTRICAL_FIXTURES = 131;
+  // Electrical Spare/Space Circuits
+  REVIT_CATEGORY_ELECTRICAL_SPARE_SPACE_CIRCUITS = 132;
+  // Elevation Marks
+  REVIT_CATEGORY_ELEVATION_MARKS = 133;
+  // Elevations
+  REVIT_CATEGORY_ELEVATIONS = 134;
+  // Entourage
+  REVIT_CATEGORY_ENTOURAGE = 135;
+  // Expansion Joint Tags
+  REVIT_CATEGORY_EXPANSION_JOINT_TAGS = 136;
+  // Expansion Joints
+  REVIT_CATEGORY_EXPANSION_JOINTS = 137;
+  // Filled region
+  REVIT_CATEGORY_FILLED_REGION = 138;
+  // Filling of conduit color
+  REVIT_CATEGORY_FILLING_OF_CONDUIT_COLOR = 139;
+  // Fire Alarm Device Tags
+  REVIT_CATEGORY_FIRE_ALARM_DEVICE_TAGS = 140;
+  // Fire Alarm Devices
+  REVIT_CATEGORY_FIRE_ALARM_DEVICES = 141;
+  // Fire Protection
+  REVIT_CATEGORY_FIRE_PROTECTION = 142;
+  // Flex Duct Tags
+  REVIT_CATEGORY_FLEX_DUCT_TAGS = 143;
+  // Flex Ducts
+  REVIT_CATEGORY_FLEX_DUCTS = 144;
+  // Flex Pipe Tags
+  REVIT_CATEGORY_FLEX_PIPE_TAGS = 145;
+  // Flex Pipes
+  REVIT_CATEGORY_FLEX_PIPES = 146;
+  // Floor Tags
+  REVIT_CATEGORY_FLOOR_TAGS = 147;
+  // Floors
+  REVIT_CATEGORY_FLOORS = 148;
+  // Food Service Equipment
+  REVIT_CATEGORY_FOOD_SERVICE_EQUIPMENT = 149;
+  // Foundation Span Direction Symbol
+  REVIT_CATEGORY_FOUNDATION_SPAN_DIRECTION_SYMBOL = 150;
+  // Furniture
+  REVIT_CATEGORY_FURNITURE = 151;
+  // Furniture System Tags
+  REVIT_CATEGORY_FURNITURE_SYSTEM_TAGS = 152;
+  // Furniture Systems
+  REVIT_CATEGORY_FURNITURE_SYSTEMS = 153;
+  // Furniture Tags
+  REVIT_CATEGORY_FURNITURE_TAGS = 154;
+  // Generic Annotations
+  REVIT_CATEGORY_GENERIC_ANNOTATIONS = 155;
+  // Generic Model Tags
+  REVIT_CATEGORY_GENERIC_MODEL_TAGS = 156;
+  // Generic Models
+  REVIT_CATEGORY_GENERIC_MODELS = 157;
+  // Grid Heads
+  REVIT_CATEGORY_GRID_HEADS = 158;
+  // Grids
+  REVIT_CATEGORY_GRIDS = 159;
+  // Guide Grids
+  REVIT_CATEGORY_GUIDE_GRIDS = 160;
+  // Hardscape
+  REVIT_CATEGORY_HARDSCAPE = 161;
+  // Hole Tags
+  REVIT_CATEGORY_HOLE_TAGS = 162;
+  // HVAC Zones
+  REVIT_CATEGORY_HVAC_ZONES = 163;
+  // HVAC Zones - Boundary
+  REVIT_CATEGORY_HVAC_ZONES_BOUNDARY = 164;
+  // HVAC Zones - Color Fill
+  REVIT_CATEGORY_HVAC_ZONES_COLOR_FILL = 165;
+  // HVAC Zones - Interior Fill
+  REVIT_CATEGORY_HVAC_ZONES_INTERIOR_FILL = 166;
+  // HVAC Zones - Reference Lines
+  REVIT_CATEGORY_HVAC_ZONES_REFERENCE_LINES = 167;
+  // Imports in Families
+  REVIT_CATEGORY_IMPORTS_IN_FAMILIES = 168;
+  // Internal Area Load Tags
+  REVIT_CATEGORY_INTERNAL_AREA_LOAD_TAGS = 169;
+  // Internal Line Load Tags
+  REVIT_CATEGORY_INTERNAL_LINE_LOAD_TAGS = 170;
+  // Internal Point Load Tags
+  REVIT_CATEGORY_INTERNAL_POINT_LOAD_TAGS = 171;
+  // Keynote Tags
+  REVIT_CATEGORY_KEYNOTE_TAGS = 172;
+  // Level Heads
+  REVIT_CATEGORY_LEVEL_HEADS = 173;
+  // Levels
+  REVIT_CATEGORY_LEVELS = 174;
+  // Lighting Device Tags
+  REVIT_CATEGORY_LIGHTING_DEVICE_TAGS = 175;
+  // Lighting Devices
+  REVIT_CATEGORY_LIGHTING_DEVICES = 176;
+  // Lighting Fixture Tags
+  REVIT_CATEGORY_LIGHTING_FIXTURE_TAGS = 177;
+  // Lighting Fixtures
+  REVIT_CATEGORY_LIGHTING_FIXTURES = 178;
+  // Line Load Tags
+  REVIT_CATEGORY_LINE_LOAD_TAGS = 179;
+  // Lines
+  REVIT_CATEGORY_LINES = 180;
+  // Masking Region
+  REVIT_CATEGORY_MASKING_REGION = 181;
+  // Mass
+  REVIT_CATEGORY_MASS = 182;
+  // Mass - Form
+  REVIT_CATEGORY_MASS_FORM = 183;
+  // Mass - Gridlines
+  REVIT_CATEGORY_MASS_GRIDLINES = 184;
+  // Mass - Mass Exterior Wall
+  REVIT_CATEGORY_MASS_MASS_EXTERIOR_WALL = 185;
+  // Mass - Mass Floor
+  REVIT_CATEGORY_MASS_MASS_FLOOR = 186;
+  // Mass - Mass Glazing
+  REVIT_CATEGORY_MASS_MASS_GLAZING = 187;
+  // Mass - Mass Interior Wall
+  REVIT_CATEGORY_MASS_MASS_INTERIOR_WALL = 188;
+  // Mass - Mass Opening
+  REVIT_CATEGORY_MASS_MASS_OPENING = 189;
+  // Mass - Mass Roof
+  REVIT_CATEGORY_MASS_MASS_ROOF = 190;
+  // Mass - Mass Shade
+  REVIT_CATEGORY_MASS_MASS_SHADE = 191;
+  // Mass - Mass Skylight
+  REVIT_CATEGORY_MASS_MASS_SKYLIGHT = 192;
+  // Mass - Mass Zone
+  REVIT_CATEGORY_MASS_MASS_ZONE = 193;
+  // Mass - Nodes
+  REVIT_CATEGORY_MASS_NODES = 194;
+  // Mass - Pattern Fill
+  REVIT_CATEGORY_MASS_PATTERN_FILL = 195;
+  // Mass - Pattern Lines
+  REVIT_CATEGORY_MASS_PATTERN_LINES = 196;
+  // Mass Floor Tags
+  REVIT_CATEGORY_MASS_FLOOR_TAGS = 197;
+  // Mass Tags
+  REVIT_CATEGORY_MASS_TAGS = 198;
+  // Matchline
+  REVIT_CATEGORY_MATCHLINE = 199;
+  // Material Tags
+  REVIT_CATEGORY_MATERIAL_TAGS = 200;
+  // Materials
+  REVIT_CATEGORY_MATERIALS = 201;
+  // Mechanical Equipment
+  REVIT_CATEGORY_MECHANICAL_EQUIPMENT = 202;
+  // Mechanical Equipment Set Tags
+  REVIT_CATEGORY_MECHANICAL_EQUIPMENT_SET_TAGS = 203;
+  // Mechanical Equipment Sets
+  REVIT_CATEGORY_MECHANICAL_EQUIPMENT_SETS = 204;
+  // Mechanical Equipment Tags
+  REVIT_CATEGORY_MECHANICAL_EQUIPMENT_TAGS = 205;
+  // Medical Equipment
+  REVIT_CATEGORY_MEDICAL_EQUIPMENT = 206;
+  // MEP Fabrication Containment
+  REVIT_CATEGORY_MEP_FABRICATION_CONTAINMENT = 207;
+  // MEP Fabrication Containment Tags
+  REVIT_CATEGORY_MEP_FABRICATION_CONTAINMENT_TAGS = 208;
+  // MEP Fabrication Ductwork
+  REVIT_CATEGORY_MEP_FABRICATION_DUCTWORK = 209;
+  // MEP Fabrication Ductwork Tags
+  REVIT_CATEGORY_MEP_FABRICATION_DUCTWORK_TAGS = 210;
+  // MEP Fabrication Hanger Tags
+  REVIT_CATEGORY_MEP_FABRICATION_HANGER_TAGS = 211;
+  // MEP Fabrication Hangers
+  REVIT_CATEGORY_MEP_FABRICATION_HANGERS = 212;
+  // MEP Fabrication Pipework
+  REVIT_CATEGORY_MEP_FABRICATION_PIPEWORK = 213;
+  // MEP Fabrication Pipework Tags
+  REVIT_CATEGORY_MEP_FABRICATION_PIPEWORK_TAGS = 214;
+  // Model Groups
+  REVIT_CATEGORY_MODEL_GROUPS = 215;
+  // Multi-Category Tags
+  REVIT_CATEGORY_MULTI_CATEGORY_TAGS = 216;
+  // Multi-Reference Annotations
+  REVIT_CATEGORY_MULTI_REFERENCE_ANNOTATIONS = 217;
+  // Nurse Call Device Tags
+  REVIT_CATEGORY_NURSE_CALL_DEVICE_TAGS = 218;
+  // Nurse Call Devices
+  REVIT_CATEGORY_NURSE_CALL_DEVICES = 219;
+  // Panel Schedules
+  REVIT_CATEGORY_PANEL_SCHEDULES = 220;
+  // Parking
+  REVIT_CATEGORY_PARKING = 221;
+  // Parking Tags
+  REVIT_CATEGORY_PARKING_TAGS = 222;
+  // Part Tags
+  REVIT_CATEGORY_PART_TAGS = 223;
+  // Parts
+  REVIT_CATEGORY_PARTS = 224;
+  // Path Of Displacement
+  REVIT_CATEGORY_PATH_OF_DISPLACEMENT = 225;
+  // Path of Travel Tags
+  REVIT_CATEGORY_PATH_OF_TRAVEL_TAGS = 226;
+  // Pier Cap Tags
+  REVIT_CATEGORY_PIER_CAP_TAGS = 227;
+  // Pier Column Tags
+  REVIT_CATEGORY_PIER_COLUMN_TAGS = 228;
+  // Pier Foundation Tags
+  REVIT_CATEGORY_PIER_FOUNDATION_TAGS = 229;
+  // Pier Pile Tags
+  REVIT_CATEGORY_PIER_PILE_TAGS = 230;
+  // Pier Tags
+  REVIT_CATEGORY_PIER_TAGS = 231;
+  // Pier Tower Tags
+  REVIT_CATEGORY_PIER_TOWER_TAGS = 232;
+  // Pier Wall Tags
+  REVIT_CATEGORY_PIER_WALL_TAGS = 233;
+  // Piers
+  REVIT_CATEGORY_PIERS = 234;
+  // Piers - Pier Caps
+  REVIT_CATEGORY_PIERS_PIER_CAPS = 235;
+  // Piers - Pier Columns
+  REVIT_CATEGORY_PIERS_PIER_COLUMNS = 236;
+  // Piers - Pier Foundations
+  REVIT_CATEGORY_PIERS_PIER_FOUNDATIONS = 237;
+  // Piers - Pier Piles
+  REVIT_CATEGORY_PIERS_PIER_PILES = 238;
+  // Piers - Pier Towers
+  REVIT_CATEGORY_PIERS_PIER_TOWERS = 239;
+  // Piers - Pier Walls
+  REVIT_CATEGORY_PIERS_PIER_WALLS = 240;
+  // Pipe Accessories
+  REVIT_CATEGORY_PIPE_ACCESSORIES = 241;
+  // Pipe Accessory Tags
+  REVIT_CATEGORY_PIPE_ACCESSORY_TAGS = 242;
+  // Pipe Color Fill
+  REVIT_CATEGORY_PIPE_COLOR_FILL = 243;
+  // Pipe Color Fill Legends
+  REVIT_CATEGORY_PIPE_COLOR_FILL_LEGENDS = 244;
+  // Pipe Fitting Tags
+  REVIT_CATEGORY_PIPE_FITTING_TAGS = 245;
+  // Pipe Fittings
+  REVIT_CATEGORY_PIPE_FITTINGS = 246;
+  // Pipe Insulation Tags
+  REVIT_CATEGORY_PIPE_INSULATION_TAGS = 247;
+  // Pipe Insulations
+  REVIT_CATEGORY_PIPE_INSULATIONS = 248;
+  // Pipe Placeholders
+  REVIT_CATEGORY_PIPE_PLACEHOLDERS = 249;
+  // Pipe Segments
+  REVIT_CATEGORY_PIPE_SEGMENTS = 250;
+  // Pipe Tags
+  REVIT_CATEGORY_PIPE_TAGS = 251;
+  // Pipes
+  REVIT_CATEGORY_PIPES = 252;
+  // Piping Systems
+  REVIT_CATEGORY_PIPING_SYSTEMS = 253;
+  // Plan Region
+  REVIT_CATEGORY_PLAN_REGION = 254;
+  // Planning Tables
+  REVIT_CATEGORY_PLANNING_TABLES = 255;
+  // Planting
+  REVIT_CATEGORY_PLANTING = 256;
+  // Planting Tags
+  REVIT_CATEGORY_PLANTING_TAGS = 257;
+  // Plate Tags
+  REVIT_CATEGORY_PLATE_TAGS = 258;
+  // Plumbing Fixture Tags
+  REVIT_CATEGORY_PLUMBING_FIXTURE_TAGS = 259;
+  // Plumbing Fixtures
+  REVIT_CATEGORY_PLUMBING_FIXTURES = 260;
+  // Point Clouds
+  REVIT_CATEGORY_POINT_CLOUDS = 261;
+  // Point Load Tags
+  REVIT_CATEGORY_POINT_LOAD_TAGS = 262;
+  // Profile Tags
+  REVIT_CATEGORY_PROFILE_TAGS = 263;
+  // Project Information
+  REVIT_CATEGORY_PROJECT_INFORMATION = 264;
+  // Property Line Segment Tags
+  REVIT_CATEGORY_PROPERTY_LINE_SEGMENT_TAGS = 265;
+  // Property Tags
+  REVIT_CATEGORY_PROPERTY_TAGS = 266;
+  // Railing Tags
+  REVIT_CATEGORY_RAILING_TAGS = 267;
+  // Railings
+  REVIT_CATEGORY_RAILINGS = 268;
+  // Ramps
+  REVIT_CATEGORY_RAMPS = 269;
+  // Raster Images
+  REVIT_CATEGORY_RASTER_IMAGES = 270;
+  // Rebar Cover References
+  REVIT_CATEGORY_REBAR_COVER_REFERENCES = 271;
+  // Rebar Set Toggle
+  REVIT_CATEGORY_REBAR_SET_TOGGLE = 272;
+  // Rebar Shape
+  REVIT_CATEGORY_REBAR_SHAPE = 273;
+  // Reference Boxes
+  REVIT_CATEGORY_REFERENCE_BOXES = 274;
+  // Reference Lines
+  REVIT_CATEGORY_REFERENCE_LINES = 275;
+  // Reference Planes
+  REVIT_CATEGORY_REFERENCE_PLANES = 276;
+  // Reference Points
+  REVIT_CATEGORY_REFERENCE_POINTS = 277;
+  // Reference Viewers
+  REVIT_CATEGORY_REFERENCE_VIEWERS = 278;
+  // Reinforcement coating references
+  REVIT_CATEGORY_REINFORCEMENT_COATING_REFERENCES = 279;
+  // Render Regions
+  REVIT_CATEGORY_RENDER_REGIONS = 280;
+  // Revision Cloud Tags
+  REVIT_CATEGORY_REVISION_CLOUD_TAGS = 281;
+  // Revision Clouds
+  REVIT_CATEGORY_REVISION_CLOUDS = 282;
+  // Roads
+  REVIT_CATEGORY_ROADS = 283;
+  // Roof Tags
+  REVIT_CATEGORY_ROOF_TAGS = 284;
+  // Roofs
+  REVIT_CATEGORY_ROOFS = 285;
+  // Roofs - Fascias
+  REVIT_CATEGORY_ROOFS_FASCIAS = 286;
+  // Roofs - Gutters
+  REVIT_CATEGORY_ROOFS_GUTTERS = 287;
+  // Room Tags
+  REVIT_CATEGORY_ROOM_TAGS = 288;
+  // Rooms
+  REVIT_CATEGORY_ROOMS = 289;
+  // Rooms - Color Fill
+  REVIT_CATEGORY_ROOMS_COLOR_FILL = 290;
+  // Rooms - Interior Fill
+  REVIT_CATEGORY_ROOMS_INTERIOR_FILL = 291;
+  // Rooms - Reference
+  REVIT_CATEGORY_ROOMS_REFERENCE = 292;
+  // Routing Preferences
+  REVIT_CATEGORY_ROUTING_PREFERENCES = 293;
+  // RVT Links
+  REVIT_CATEGORY_RVT_LINKS = 294;
+  // Schedule Graphics
+  REVIT_CATEGORY_SCHEDULE_GRAPHICS = 295;
+  // Schedules
+  REVIT_CATEGORY_SCHEDULES = 296;
+  // Scope Boxes
+  REVIT_CATEGORY_SCOPE_BOXES = 297;
+  // Screw Labels
+  REVIT_CATEGORY_SCREW_LABELS = 298;
+  // Section Boxes
+  REVIT_CATEGORY_SECTION_BOXES = 299;
+  // Section Line
+  REVIT_CATEGORY_SECTION_LINE = 300;
+  // Section Marks
+  REVIT_CATEGORY_SECTION_MARKS = 301;
+  // Sections
+  REVIT_CATEGORY_SECTIONS = 302;
+  // Security Device Tags
+  REVIT_CATEGORY_SECURITY_DEVICE_TAGS = 303;
+  // Security Devices
+  REVIT_CATEGORY_SECURITY_DEVICES = 304;
+  // Shaft Openings
+  REVIT_CATEGORY_SHAFT_OPENINGS = 305;
+  // Shear Stud Tags
+  REVIT_CATEGORY_SHEAR_STUD_TAGS = 306;
+  // Sheets
+  REVIT_CATEGORY_SHEETS = 307;
+  // Signage
+  REVIT_CATEGORY_SIGNAGE = 308;
+  // Signage frames
+  REVIT_CATEGORY_SIGNAGE_FRAMES = 309;
+  // Site
+  REVIT_CATEGORY_SITE = 310;
+  // Site - Internal Origin
+  REVIT_CATEGORY_SITE_INTERNAL_ORIGIN = 311;
+  // Site - Pads
+  REVIT_CATEGORY_SITE_PADS = 312;
+  // Site - Project Base Point
+  REVIT_CATEGORY_SITE_PROJECT_BASE_POINT = 313;
+  // Site - Property Lines
+  REVIT_CATEGORY_SITE_PROPERTY_LINES = 314;
+  // Site - Survey Point
+  REVIT_CATEGORY_SITE_SURVEY_POINT = 315;
+  // Site Tags
+  REVIT_CATEGORY_SITE_TAGS = 316;
+  // Slope quotas
+  REVIT_CATEGORY_SLOPE_QUOTAS = 317;
+  // Space Tags
+  REVIT_CATEGORY_SPACE_TAGS = 318;
+  // Spaces
+  REVIT_CATEGORY_SPACES = 319;
+  // Spaces - Color Fill
+  REVIT_CATEGORY_SPACES_COLOR_FILL = 320;
+  // Spaces - Interior
+  REVIT_CATEGORY_SPACES_INTERIOR = 321;
+  // Spaces - Reference
+  REVIT_CATEGORY_SPACES_REFERENCE = 322;
+  // Span Direction Symbol
+  REVIT_CATEGORY_SPAN_DIRECTION_SYMBOL = 323;
+  // Specialty Equipment
+  REVIT_CATEGORY_SPECIALTY_EQUIPMENT = 324;
+  // Specialty Equipment Tags
+  REVIT_CATEGORY_SPECIALTY_EQUIPMENT_TAGS = 325;
+  // Spot Coordinates
+  REVIT_CATEGORY_SPOT_COORDINATES = 326;
+  // Spot Elevation Symbols
+  REVIT_CATEGORY_SPOT_ELEVATION_SYMBOLS = 327;
+  // Spot Elevations
+  REVIT_CATEGORY_SPOT_ELEVATIONS = 328;
+  // Spot Slopes
+  REVIT_CATEGORY_SPOT_SLOPES = 329;
+  // Sprinkler Tags
+  REVIT_CATEGORY_SPRINKLER_TAGS = 330;
+  // Sprinklers
+  REVIT_CATEGORY_SPRINKLERS = 331;
+  // Stair Landing Tags
+  REVIT_CATEGORY_STAIR_LANDING_TAGS = 332;
+  // Stair Paths
+  REVIT_CATEGORY_STAIR_PATHS = 333;
+  // Stair Run Tags
+  REVIT_CATEGORY_STAIR_RUN_TAGS = 334;
+  // Stair Support Tags
+  REVIT_CATEGORY_STAIR_SUPPORT_TAGS = 335;
+  // Stair Tags
+  REVIT_CATEGORY_STAIR_TAGS = 336;
+  // Stair Tread/Riser Numbers
+  REVIT_CATEGORY_STAIR_TREAD_RISER_NUMBERS = 337;
+  // Stairs
+  REVIT_CATEGORY_STAIRS = 338;
+  // Stairs - Landings
+  REVIT_CATEGORY_STAIRS_LANDINGS = 339;
+  // Stairs - Runs
+  REVIT_CATEGORY_STAIRS_RUNS = 340;
+  // Stairs - Stringers
+  REVIT_CATEGORY_STAIRS_STRINGERS = 341;
+  // Stairs - Supports
+  REVIT_CATEGORY_STAIRS_SUPPORTS = 342;
+  // Stairs - Treads/Risers
+  REVIT_CATEGORY_STAIRS_TREADS_RISERS = 343;
+  // Stairway section labels
+  REVIT_CATEGORY_STAIRWAY_SECTION_LABELS = 344;
+  // Stairways
+  REVIT_CATEGORY_STAIRWAYS = 345;
+  // Structural Annotations
+  REVIT_CATEGORY_STRUCTURAL_ANNOTATIONS = 346;
+  // Structural Area Reinforcement
+  REVIT_CATEGORY_STRUCTURAL_AREA_REINFORCEMENT = 347;
+  // Structural Area Reinforcement - Boundary
+  REVIT_CATEGORY_STRUCTURAL_AREA_REINFORCEMENT_BOUNDARY = 348;
+  // Structural Area Reinforcement Symbols
+  REVIT_CATEGORY_STRUCTURAL_AREA_REINFORCEMENT_SYMBOLS = 349;
+  // Structural Area Reinforcement Tags
+  REVIT_CATEGORY_STRUCTURAL_AREA_REINFORCEMENT_TAGS = 350;
+  // Structural Beam System Tags
+  REVIT_CATEGORY_STRUCTURAL_BEAM_SYSTEM_TAGS = 351;
+  // Structural Beam Systems
+  REVIT_CATEGORY_STRUCTURAL_BEAM_SYSTEMS = 352;
+  // Structural Column Tags
+  REVIT_CATEGORY_STRUCTURAL_COLUMN_TAGS = 353;
+  // Structural Columns
+  REVIT_CATEGORY_STRUCTURAL_COLUMNS = 354;
+  // Structural Columns - Location Lines
+  REVIT_CATEGORY_STRUCTURAL_COLUMNS_LOCATION_LINES = 355;
+  // Structural Columns - Rigid Links
+  REVIT_CATEGORY_STRUCTURAL_COLUMNS_RIGID_LINKS = 356;
+  // Structural Columns - Stick Symbols
+  REVIT_CATEGORY_STRUCTURAL_COLUMNS_STICK_SYMBOLS = 357;
+  // Structural Connection Tags
+  REVIT_CATEGORY_STRUCTURAL_CONNECTION_TAGS = 358;
+  // Structural Connections
+  REVIT_CATEGORY_STRUCTURAL_CONNECTIONS = 359;
+  // Structural Connections - Anchors
+  REVIT_CATEGORY_STRUCTURAL_CONNECTIONS_ANCHORS = 360;
+  // Structural Connections - Bolts
+  REVIT_CATEGORY_STRUCTURAL_CONNECTIONS_BOLTS = 361;
+  // Structural Connections - Holes
+  REVIT_CATEGORY_STRUCTURAL_CONNECTIONS_HOLES = 362;
+  // Structural Connections - Modifiers
+  REVIT_CATEGORY_STRUCTURAL_CONNECTIONS_MODIFIERS = 363;
+  // Structural Connections - Others
+  REVIT_CATEGORY_STRUCTURAL_CONNECTIONS_OTHERS = 364;
+  // Structural Connections - Plates
+  REVIT_CATEGORY_STRUCTURAL_CONNECTIONS_PLATES = 365;
+  // Structural Connections - Profiles
+  REVIT_CATEGORY_STRUCTURAL_CONNECTIONS_PROFILES = 366;
+  // Structural Connections - Reference
+  REVIT_CATEGORY_STRUCTURAL_CONNECTIONS_REFERENCE = 367;
+  // Structural Connections - Shear Studs
+  REVIT_CATEGORY_STRUCTURAL_CONNECTIONS_SHEAR_STUDS = 368;
+  // Structural Connections - Symbol
+  REVIT_CATEGORY_STRUCTURAL_CONNECTIONS_SYMBOL = 369;
+  // Structural Connections - Welds
+  REVIT_CATEGORY_STRUCTURAL_CONNECTIONS_WELDS = 370;
+  // Structural Fabric Areas
+  REVIT_CATEGORY_STRUCTURAL_FABRIC_AREAS = 371;
+  // Structural Fabric Areas - Boundary
+  REVIT_CATEGORY_STRUCTURAL_FABRIC_AREAS_BOUNDARY = 372;
+  // Structural Fabric Reinforcement
+  REVIT_CATEGORY_STRUCTURAL_FABRIC_REINFORCEMENT = 373;
+  // Structural Fabric Reinforcement - Boundary
+  REVIT_CATEGORY_STRUCTURAL_FABRIC_REINFORCEMENT_BOUNDARY = 374;
+  // Structural Fabric Reinforcement - Fabric Wire
+  REVIT_CATEGORY_STRUCTURAL_FABRIC_REINFORCEMENT_FABRIC_WIRE = 375;
+  // Structural Fabric Reinforcement Symbols
+  REVIT_CATEGORY_STRUCTURAL_FABRIC_REINFORCEMENT_SYMBOLS = 376;
+  // Structural Fabric Reinforcement Tags
+  REVIT_CATEGORY_STRUCTURAL_FABRIC_REINFORCEMENT_TAGS = 377;
+  // Structural Foundation Tags
+  REVIT_CATEGORY_STRUCTURAL_FOUNDATION_TAGS = 378;
+  // Structural Foundations
+  REVIT_CATEGORY_STRUCTURAL_FOUNDATIONS = 379;
+  // Structural Framing
+  REVIT_CATEGORY_STRUCTURAL_FRAMING = 380;
+  // Structural Framing - Chord
+  REVIT_CATEGORY_STRUCTURAL_FRAMING_CHORD = 381;
+  // Structural Framing - Kicker Bracing
+  REVIT_CATEGORY_STRUCTURAL_FRAMING_KICKER_BRACING = 382;
+  // Structural Framing - Location Lines
+  REVIT_CATEGORY_STRUCTURAL_FRAMING_LOCATION_LINES = 383;
+  // Structural Framing - Other
+  REVIT_CATEGORY_STRUCTURAL_FRAMING_OTHER = 384;
+  // Structural Framing - Plan Bracing
+  REVIT_CATEGORY_STRUCTURAL_FRAMING_PLAN_BRACING = 385;
+  // Structural Framing - Primary
+  REVIT_CATEGORY_STRUCTURAL_FRAMING_PRIMARY = 386;
+  // Structural Framing - Rigid Links
+  REVIT_CATEGORY_STRUCTURAL_FRAMING_RIGID_LINKS = 387;
+  // Structural Framing - Secondary
+  REVIT_CATEGORY_STRUCTURAL_FRAMING_SECONDARY = 388;
+  // Structural Framing - Tertiary
+  REVIT_CATEGORY_STRUCTURAL_FRAMING_TERTIARY = 389;
+  // Structural Framing - Vertical Bracing
+  REVIT_CATEGORY_STRUCTURAL_FRAMING_VERTICAL_BRACING = 390;
+  // Structural Framing - Web
+  REVIT_CATEGORY_STRUCTURAL_FRAMING_WEB = 391;
+  // Structural Framing Tags
+  REVIT_CATEGORY_STRUCTURAL_FRAMING_TAGS = 392;
+  // Structural Internal Loads
+  REVIT_CATEGORY_STRUCTURAL_INTERNAL_LOADS = 393;
+  // Structural Load Cases
+  REVIT_CATEGORY_STRUCTURAL_LOAD_CASES = 394;
+  // Structural Loads
+  REVIT_CATEGORY_STRUCTURAL_LOADS = 395;
+  // Structural Path Reinforcement
+  REVIT_CATEGORY_STRUCTURAL_PATH_REINFORCEMENT = 396;
+  // Structural Path Reinforcement - Boundary
+  REVIT_CATEGORY_STRUCTURAL_PATH_REINFORCEMENT_BOUNDARY = 397;
+  // Structural Path Reinforcement Symbols
+  REVIT_CATEGORY_STRUCTURAL_PATH_REINFORCEMENT_SYMBOLS = 398;
+  // Structural Path Reinforcement Tags
+  REVIT_CATEGORY_STRUCTURAL_PATH_REINFORCEMENT_TAGS = 399;
+  // Structural Rebar
+  REVIT_CATEGORY_STRUCTURAL_REBAR = 400;
+  // Structural Rebar Coupler Tags
+  REVIT_CATEGORY_STRUCTURAL_REBAR_COUPLER_TAGS = 401;
+  // Structural Rebar Couplers
+  REVIT_CATEGORY_STRUCTURAL_REBAR_COUPLERS = 402;
+  // Structural Rebar Tags
+  REVIT_CATEGORY_STRUCTURAL_REBAR_TAGS = 403;
+  // Structural Stiffener Tags
+  REVIT_CATEGORY_STRUCTURAL_STIFFENER_TAGS = 404;
+  // Structural Stiffeners
+  REVIT_CATEGORY_STRUCTURAL_STIFFENERS = 405;
+  // Structural Tendon Tags
+  REVIT_CATEGORY_STRUCTURAL_TENDON_TAGS = 406;
+  // Structural Tendons
+  REVIT_CATEGORY_STRUCTURAL_TENDONS = 407;
+  // Structural Truss Tags
+  REVIT_CATEGORY_STRUCTURAL_TRUSS_TAGS = 408;
+  // Structural Trusses
+  REVIT_CATEGORY_STRUCTURAL_TRUSSES = 409;
+  // Switch System
+  REVIT_CATEGORY_SWITCH_SYSTEM = 410;
+  // Symbol of Light Direction
+  REVIT_CATEGORY_SYMBOL_OF_LIGHT_DIRECTION = 411;
+  // System-Zone Tags
+  REVIT_CATEGORY_SYSTEM_ZONE_TAGS = 412;
+  // System-Zones
+  REVIT_CATEGORY_SYSTEM_ZONES = 413;
+  // Telephone Device Tags
+  REVIT_CATEGORY_TELEPHONE_DEVICE_TAGS = 414;
+  // Telephone Devices
+  REVIT_CATEGORY_TELEPHONE_DEVICES = 415;
+  // Temporary Structures
+  REVIT_CATEGORY_TEMPORARY_STRUCTURES = 416;
+  // Text Notes
+  REVIT_CATEGORY_TEXT_NOTES = 417;
+  // Title Blocks
+  REVIT_CATEGORY_TITLE_BLOCKS = 418;
+  // Topography
+  REVIT_CATEGORY_TOPOGRAPHY = 419;
+  // Vertical Circulation
+  REVIT_CATEGORY_VERTICAL_CIRCULATION = 420;
+  // Vibration Damper Tags
+  REVIT_CATEGORY_VIBRATION_DAMPER_TAGS = 421;
+  // Vibration Isolator Tags
+  REVIT_CATEGORY_VIBRATION_ISOLATOR_TAGS = 422;
+  // Vibration Management
+  REVIT_CATEGORY_VIBRATION_MANAGEMENT = 423;
+  // Vibration Management - Vibration Dampers
+  REVIT_CATEGORY_VIBRATION_MANAGEMENT_VIBRATION_DAMPERS = 424;
+  // Vibration Management - Vibration Isolators
+  REVIT_CATEGORY_VIBRATION_MANAGEMENT_VIBRATION_ISOLATORS = 425;
+  // View Reference
+  REVIT_CATEGORY_VIEW_REFERENCE = 426;
+  // View Titles
+  REVIT_CATEGORY_VIEW_TITLES = 427;
+  // Viewports
+  REVIT_CATEGORY_VIEWPORTS = 428;
+  // Views
+  REVIT_CATEGORY_VIEWS = 429;
+  // Wall Tags
+  REVIT_CATEGORY_WALL_TAGS = 430;
+  // Walls
+  REVIT_CATEGORY_WALLS = 431;
+  // Walls - Curtain Wall Grids
+  REVIT_CATEGORY_WALLS_CURTAIN_WALL_GRIDS = 432;
+  // Walls - Wall Sweeps
+  REVIT_CATEGORY_WALLS_WALL_SWEEPS = 433;
+  // Water Loops
+  REVIT_CATEGORY_WATER_LOOPS = 434;
+  // Weld Tags
+  REVIT_CATEGORY_WELD_TAGS = 435;
+  // Window Tags
+  REVIT_CATEGORY_WINDOW_TAGS = 436;
+  // Windows
+  REVIT_CATEGORY_WINDOWS = 437;
+  // Wire Tags
+  REVIT_CATEGORY_WIRE_TAGS = 438;
+  // Wires
+  REVIT_CATEGORY_WIRES = 439;
+  // Wires - Home Run Arrows
+  REVIT_CATEGORY_WIRES_HOME_RUN_ARROWS = 440;
+  // Zone Equipment
+  REVIT_CATEGORY_ZONE_EQUIPMENT = 441;
+  // Zone Tags
+  REVIT_CATEGORY_ZONE_TAGS = 442;
+}
+
+enum Ifc {
+  IFC_UNSPECIFIED = 0;
+  // IfcAirTerminal
+  IFC_AIR_TERMINAL = 1;
+  // IfcAlarm
+  IFC_ALARM = 2;
+  // IfcAnnotation
+  IFC_ANNOTATION = 3;
+  // IfcAnnotation-Dimension
+  IFC_ANNOTATION_DIMENSION = 4;
+  // IfcAnnotation-Survey
+  IFC_ANNOTATION_SURVEY = 5;
+  // IfcAnnotation-Symbol
+  IFC_ANNOTATION_SYMBOL = 6;
+  // IfcAudioVisualAppliance
+  IFC_AUDIO_VISUAL_APPLIANCE = 7;
+  // IfcBeam
+  IFC_BEAM = 8;
+  // IfcBoundaryEdgeCondition
+  IFC_BOUNDARY_EDGE_CONDITION = 9;
+  // IfcBridgePart
+  IFC_BRIDGE_PART = 10;
+  // IfcBuildingElementProxy
+  IFC_BUILDING_ELEMENT_PROXY = 11;
+  // IfcCableCarrierSegment
+  IFC_CABLE_CARRIER_SEGMENT = 12;
+  // IfcCableFitting
+  IFC_CABLE_FITTING = 13;
+  // IfcCableSegment
+  IFC_CABLE_SEGMENT = 14;
+  // IfcCeiling
+  IFC_CEILING = 15;
+  // IfcColumn
+  IFC_COLUMN = 16;
+  // IfcCommunicationsAppliance
+  IFC_COMMUNICATIONS_APPLIANCE = 17;
+  // IfcCovering
+  IFC_COVERING = 18;
+  // IfcCurtainWall
+  IFC_CURTAIN_WALL = 19;
+  // IfcDiscreteAccessory
+  IFC_DISCRETE_ACCESSORY = 20;
+  // IfcDistributionPort
+  IFC_DISTRIBUTION_PORT = 21;
+  // IfcDistributionSystem
+  IFC_DISTRIBUTION_SYSTEM = 22;
+  // IfcDocumentInformation
+  IFC_DOCUMENT_INFORMATION = 23;
+  // IfcDocumentReference
+  IFC_DOCUMENT_REFERENCE = 24;
+  // IfcDoor
+  IFC_DOOR = 25;
+  // IfcDuctAccessory
+  IFC_DUCT_ACCESSORY = 26;
+  // IfcDuctFitting
+  IFC_DUCT_FITTING = 27;
+  // IfcDuctSegment
+  IFC_DUCT_SEGMENT = 28;
+  // IfcElectricalDomain
+  IFC_ELECTRICAL_DOMAIN = 29;
+  // IfcElectricAppliance
+  IFC_ELECTRIC_APPLIANCE = 30;
+  // IfcElementAssembly
+  IFC_ELEMENT_ASSEMBLY = 31;
+  // IfcEnergyConversionDevice
+  IFC_ENERGY_CONVERSION_DEVICE = 32;
+  // IfcFireSuppressionTerminal
+  IFC_FIRE_SUPPRESSION_TERMINAL = 33;
+  // IfcFlowSegment
+  IFC_FLOW_SEGMENT = 34;
+  // IfcFooting
+  IFC_FOOTING = 35;
+  // IfcFurniture
+  IFC_FURNITURE = 36;
+  // IfcGeographicElement
+  IFC_GEOGRAPHIC_ELEMENT = 37;
+  // IfcLightFixture
+  IFC_LIGHT_FIXTURE = 38;
+  // IfcMedicalDevice
+  IFC_MEDICAL_DEVICE = 39;
+  // IfcMember
+  IFC_MEMBER = 40;
+  // IfcOpeningElement
+  IFC_OPENING_ELEMENT = 41;
+  // IfcOutlet
+  IFC_OUTLET = 42;
+  // IfcPile
+  IFC_PILE = 43;
+  // IfcPipeFitting
+  IFC_PIPE_FITTING = 44;
+  // IfcPipeSegment
+  IFC_PIPE_SEGMENT = 45;
+  // IfcPlate
+  IFC_PLATE = 46;
+  // IfcRailing
+  IFC_RAILING = 47;
+  // IfcRamp
+  IFC_RAMP = 48;
+  // IfcReinforcingBar
+  IFC_REINFORCING_BAR = 49;
+  // IfcReinforcingMesh
+  IFC_REINFORCING_MESH = 50;
+  // IfcRoad
+  IFC_ROAD = 51;
+  // IfcRoof
+  IFC_ROOF = 52;
+  // IfcSanitaryTerminal
+  IFC_SANITARY_TERMINAL = 53;
+  // IfcSite
+  IFC_SITE = 54;
+  // IfcSlab
+  IFC_SLAB = 55;
+  // IfcSpace
+  IFC_SPACE = 56;
+  // IfcSpatialZone
+  IFC_SPATIAL_ZONE = 57;
+  // IfcStair
+  IFC_STAIR = 58;
+  // IfcStructuralConnection
+  IFC_STRUCTURAL_CONNECTION = 59;
+  // IfcStructuralCurveMember
+  IFC_STRUCTURAL_CURVE_MEMBER = 60;
+  // IfcStructuralLoad
+  IFC_STRUCTURAL_LOAD = 61;
+  // IfcStructuralPointConnection
+  IFC_STRUCTURAL_POINT_CONNECTION = 62;
+  // IfcStructuralResultGroup
+  IFC_STRUCTURAL_RESULT_GROUP = 63;
+  // IfcStructuralSurfaceMember
+  IFC_STRUCTURAL_SURFACE_MEMBER = 64;
+  // IfcTransportElement
+  IFC_TRANSPORT_ELEMENT = 65;
+  // IfcVibrationIsolator
+  IFC_VIBRATION_ISOLATOR = 66;
+  // IfcWall
+  IFC_WALL = 67;
+  // IfcWindow
+  IFC_WINDOW = 68;
+}
