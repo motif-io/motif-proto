@@ -8,6 +8,7 @@ package motif.data.temporary.v1;
 import "buf/validate/validate.proto";
 import "google/protobuf/any.proto";
 import "motif/data/geometry/v1/geometry.proto";
+import "motif/data/style/v1/style.proto";
 import "motif/extension/v1/options.proto";
 import "motif/extension/v1/reference.proto";
 import "motif/extension/v1/type.proto";
@@ -16,6 +17,16 @@ import "motif/extension/v1/type.proto";
 // model.
 message MockModel {
   option (motif.extension.v1.message).component = 39;
+}
+
+// Marks a parametric asset as a built-in (Motif-defined) asset assembly: a
+// marker the asset materializer keys on to expand a placed instance into baked
+// geometry. The assembly's part recipe is carried as data in a sibling
+// `BuiltinAssetConfiguration` component (evaluated against the instance's
+// resolved parameters). Distinct from future user-defined assets, which carry
+// no built-in marker.
+message BuiltinAssetAssembly {
+  option (motif.extension.v1.message).component = 106;
 }
 
 // An in-development component which informs the change-propagation server to
@@ -67,21 +78,39 @@ message ResolvedParameters {
   map<string, google.protobuf.Any> values = 1;
 }
 
-// An arithmetic expression node over f64 values drawn from data slots.
+// A scalar expression node over f64 values. Shared by two consumers,
+// distinguished by their binding-leaf kind:
 //
-// `binding` leaves carry a `DataReference` addressing a `TYPE_DOUBLE` slot. The
-// referenced slot must hold a `DoubleValue` payload.
+//   * Change-propagation parameter bindings use the `binding` (`DataReference`)
+//     leaf, addressing a `TYPE_DOUBLE` slot that must hold a `DoubleValue`
+//     payload. The `parameter` leaf is rejected.
+//   * Built-in asset geometry configurations use the `parameter` leaf, a name
+//     looked up in the instance's resolved-parameter scope. The `binding`
+//     (`DataReference`) leaf is rejected.
+//
+// The invalid leaf for a given consumer is rejected at decode.
 message ParametricExpression {
   // The expression node.
   oneof node {
     // A literal f64 value.
     double literal = 1;
 
-    // A reference to a `TYPE_DOUBLE` slot supplying the value.
+    // Change-propagation slot-ref leaf (parameter bindings only): a reference to
+    // a `TYPE_DOUBLE` slot supplying the value.
     motif.extension.v1.DataReference binding = 2 [(motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}];
 
     // A binary operation over two sub-expressions.
     ParametricBinaryOp binary_op = 3;
+
+    // Named-parameter leaf, looked up in the evaluation scope (geometry configs
+    // only).
+    string parameter = 4;
+
+    // Arithmetic negation of a sub-expression.
+    ParametricExpression neg = 5;
+
+    // A conditional selecting between two sub-expressions.
+    ParametricConditional conditional = 6;
   }
 }
 
@@ -107,6 +136,42 @@ enum ParametricOperator {
   PARAMETRIC_OPERATOR_MUL = 3;
   // Division.
   PARAMETRIC_OPERATOR_DIV = 4;
+  // Minimum of the two operands.
+  PARAMETRIC_OPERATOR_MIN = 5;
+  // Maximum of the two operands.
+  PARAMETRIC_OPERATOR_MAX = 6;
+}
+
+// Ordering predicates for `ParametricConditional`. Equality comparisons are
+// deliberately absent: float equality over real-valued parameters is not
+// meaningful.
+enum ParametricComparisonOp {
+  // Unspecified comparison operator.
+  PARAMETRIC_COMPARISON_OP_UNSPECIFIED = 0;
+  // Strictly less than.
+  PARAMETRIC_COMPARISON_OP_LESS = 1;
+  // Less than or equal.
+  PARAMETRIC_COMPARISON_OP_LESS_EQUAL = 2;
+  // Strictly greater than.
+  PARAMETRIC_COMPARISON_OP_GREATER = 3;
+  // Greater than or equal.
+  PARAMETRIC_COMPARISON_OP_GREATER_EQUAL = 4;
+}
+
+// `if (lhs <op> rhs) then `then` else `otherwise``. Predicates exist only here,
+// keeping the language single-typed over doubles. Only the taken branch is
+// evaluated.
+message ParametricConditional {
+  // The comparison predicate applied to `lhs` and `rhs`.
+  ParametricComparisonOp op = 1;
+  // The comparison's left operand.
+  ParametricExpression lhs = 2;
+  // The comparison's right operand.
+  ParametricExpression rhs = 3;
+  // The value when the predicate holds.
+  ParametricExpression then = 4;
+  // The value when the predicate does not hold.
+  ParametricExpression otherwise = 5;
 }
 
 // A parameter binding supplied by an instance to satisfy one entry in
@@ -215,6 +280,251 @@ message SweepWidthHeightAlongCurveBehaviorV2 {
       type_name: "motif.data.temporary.v1.Shape"
     }
   ];
+}
+
+// Sweeps a closed profile along a spine, where both the profile and the spine
+// are ordered lists of `Curve2` segments (one `Curve2List` parameter value
+// each), rather than a width/height rectangle. The spine `curves` are swept in
+// the `coordinate_system`; a single spine segment produces a smooth solid pipe
+// while multiple segments produce a pipe-shell with right-corner transitions at
+// the joints. The generated solid is written to the `output` entity as a
+// `Shape`.
+message SweepProfileAlongCurvesBehaviorV2 {
+  option (motif.extension.v1.message).component = 129;
+
+  // Spine: ordered `Curve2` segments. One segment sweeps a smooth pipe; many
+  // sweep a mitered pipe-shell.
+  motif.extension.v1.DataReference curves = 1 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.core.v1.Curve2List"
+    }
+  ];
+
+  // Closed profile loop, as one `Curve2List` value.
+  motif.extension.v1.DataReference profile = 2 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.core.v1.Curve2List"
+    }
+  ];
+
+  // Coordinate system the spine/profile curves live in.
+  motif.extension.v1.DataReference coordinate_system = 3 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.geometry.v1.CoordinateSystem3"
+    }
+  ];
+
+  // The entity the generated `Shape` is written to.
+  motif.extension.v1.DataReference output = 4 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.temporary.v1.Shape"
+    }
+  ];
+}
+
+// A behavior which generates one part of a built-in parametric asset assembly.
+//
+// Regeneration resolves the named `inputs` into a parameter map, evaluates the
+// asset's stored `configuration` against it to obtain the engine-agnostic asset
+// parts, looks up the part selected by `part_index`, sweeps or extrudes it (in
+// the part's own self-placing frame), and writes the result to the `output`
+// entity as a `Shape`.
+//
+// Distinct from `SweepWidthHeightAlongCurveBehaviorV2` (which only sweeps a
+// *centered rectangle* along a *single* curve): asset parts are arbitrary
+// non-rectangular profiles, anchored origin-on-spine, swept along multi-segment
+// / closed spines (or extruded, for e.g. a glazing pane).
+message BuiltinAssetPartBehaviorV2 {
+  option (motif.extension.v1.message).component = 105;
+
+  // Resolved parameter inputs keyed by parameter name (e.g. "width" /
+  // "height"). The configuration's decoder validates the value types it needs;
+  // types are not constrained per-entry here.
+  // buf:lint:ignore MOTIF_DATA_REFERENCE_MISSING_EXPECTED_TYPE
+  map<string, motif.extension.v1.DataReference> inputs = 2;
+
+  // Index into the evaluated configuration's parts selecting which part this
+  // behavior builds.
+  uint32 part_index = 3;
+
+  // The entity the generated `Shape` is written to.
+  motif.extension.v1.DataReference output = 4 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.temporary.v1.Shape"
+    }
+  ];
+
+  // The asset entity's stored configuration the parts are evaluated from.
+  // Required.
+  motif.extension.v1.DataReference configuration = 5 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.temporary.v1.BuiltinAssetConfiguration"
+    }
+  ];
+}
+
+// Stored, expression-driven definition of a built-in asset assembly's parts.
+//
+// Placed permanently on a `CONFIGURATION_DRIVEN` asset entity alongside its
+// `BuiltinAssetAssembly` marker. Each part's geometry is a sweep/extrude recipe
+// whose scalars are expression trees over named parameters; evaluating the
+// configuration against an instance's resolved parameter scope yields the same
+// engine-agnostic parts vocabulary the code-authored recipes produce
+// (`builtin_asset_recipes::geometry_parts::AssetPart`), so consumers bake
+// configured and code-authored assemblies identically.
+//
+// The expression language is single-typed (every expression is a finite double
+// in meters) and exactly IEEE-754-specified, so evaluation is deterministic.
+// Structural limits (expression depth, part and point counts) are enforced at
+// decode.
+message BuiltinAssetConfiguration {
+  option (motif.extension.v1.message).component = 119;
+
+  // Minimum reader version required to interpret this configuration. Readers
+  // built against an older supported version reject higher-versioned payloads
+  // up front. Bump only for semantic extensions an older evaluator cannot
+  // represent (new ops, new geometry kinds); purely additive optional fields do
+  // not bump it. The encoder sets the minimum a payload actually needs: 2 when
+  // any part uses curve geometry (`curve_sweep`/`curve_extrude`), otherwise 1.
+  uint32 version = 1;
+
+  // The assembly's parts, in stable authoring order (a per-part behavior's
+  // `part_index` indexes this list).
+  repeated Part parts = 2;
+
+  // Scalar expressions over named parameters use the shared
+  // `ParametricExpression` (its `parameter`/`literal`/`binary_op`/`neg`/
+  // `conditional` leaves); the `binding` (`DataReference`) leaf is rejected here
+  // at decode.
+
+  // A 2D point whose coordinates are parametric expressions.
+  message Point2Expr {
+    // The x-coordinate expression.
+    ParametricExpression x = 1;
+    // The y-coordinate expression.
+    ParametricExpression y = 2;
+  }
+
+  // A 3D point whose coordinates are parametric expressions.
+  message Point3Expr {
+    // The x-coordinate expression.
+    ParametricExpression x = 1;
+    // The y-coordinate expression.
+    ParametricExpression y = 2;
+    // The z-coordinate expression.
+    ParametricExpression z = 3;
+  }
+
+  // A single spine/profile curve segment, built on the fly from expression
+  // points at evaluation time (the concrete `Curve2` is never persisted). Each
+  // variant maps to a point-based constructor in the `geometry` crate. Nurbs
+  // curves are deliberately unsupported.
+  message CurveExpr {
+    // The curve segment kind.
+    oneof curve {
+      // Straight segment `start -> end` (`geometry::Line2::from_points`).
+      LineCurve line = 1;
+      // Circular arc through three points
+      // (`geometry::Circle2::from_arc_points`).
+      ArcCurve arc = 2;
+      // Elliptical arc through start/end plus a middle point
+      // (`geometry::Ellipse2::from_ellipse_points`).
+      EllipseArcCurve ellipse_arc = 3;
+    }
+  }
+
+  // A straight segment defined by two expression endpoints.
+  message LineCurve {
+    // The segment start point.
+    Point2Expr start = 1;
+    // The segment end point.
+    Point2Expr end = 2;
+  }
+
+  // A circular arc through three expression points.
+  message ArcCurve {
+    // The arc start point.
+    Point2Expr start = 1;
+    // A point on the arc between `start` and `end`.
+    Point2Expr mid = 2;
+    // The arc end point.
+    Point2Expr end = 3;
+  }
+
+  // An elliptical arc through start/end plus a middle point.
+  message EllipseArcCurve {
+    // The arc start point.
+    Point2Expr start = 1;
+    // The arc end point.
+    Point2Expr end = 2;
+    // A point on the arc between `start` and `end`.
+    Point2Expr middle = 3;
+  }
+
+  // Sweep an ordered curve profile along an ordered curve spine. Unlike
+  // `SweepExpr`, spine and profile are curve segments (lines/arcs) rather than
+  // straight-polyline points: spine connectivity is explicit in the ordered
+  // curves, and the profile curves must themselves form a closed loop.
+  message CurveSweepExpr {
+    // The ordered spine curve segments.
+    repeated CurveExpr spine = 1;
+    // The ordered profile curve segments (a closed loop).
+    repeated CurveExpr profile = 2;
+  }
+
+  // Extrude a closed curve profile (lines/arcs) along the frame's `+Z`.
+  message CurveExtrudeExpr {
+    // The closed profile curve segments.
+    repeated CurveExpr profile = 1;
+    // The extrusion depth, in meters.
+    ParametricExpression depth_m = 2;
+    // The extrusion start offset along `+Z`, in meters.
+    ParametricExpression depth_start_m = 3;
+  }
+
+  // The frame embedding a part's 2D recipe into 3D: expression origin, *literal*
+  // unit axes (a parameter-dependent rotation would require normalization, which
+  // the language cannot express; no recipe needs it).
+  message FrameExpr {
+    // The frame origin.
+    Point3Expr origin = 1;
+    // The frame x-axis.
+    motif.data.geometry.v1.UnitVector3 x_axis = 2;
+    // The frame z-axis.
+    motif.data.geometry.v1.UnitVector3 z_axis = 3;
+  }
+
+  // A single part of the assembly.
+  message Part {
+    // Display label (e.g. "Jamb"); becomes the materialized child entity's
+    // name.
+    string name = 1;
+    // The part's display color.
+    motif.data.style.v1.Color.Srgb color = 2;
+    // Display opacity in [0, 1]; absent = fully opaque.
+    optional float opacity = 3;
+    // The part's geometry recipe.
+    oneof geometry {
+      // Sweep a curve profile along a curve spine.
+      CurveSweepExpr curve_sweep = 7;
+      // Extrude a curve profile along the frame's `+Z`.
+      CurveExtrudeExpr curve_extrude = 8;
+    }
+    // The frame embedding the 2D recipe into 3D.
+    FrameExpr frame = 6;
+  }
 }
 
 // Identifies a behavior whose regeneration function is as follows:
@@ -564,4 +874,18 @@ message CutGeometryBehavior {
     (buf.validate.field).required = true,
     (motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}
   ];
+}
+
+// Points at the original asset that was materialized. The result of
+// materializing a parametric asset is pointed at by `Instance`; this points back
+// at the source. For non-parametric assets, this is not present.
+message SourceAsset {
+  option (motif.extension.v1.message).component = 130;
+
+  // The source asset entity that was materialized. Required.
+  motif.extension.v1.EntityReference entity = 1 [(buf.validate.field).required = true];
+
+  // Optional. When set, the source entity is resolved against this model and
+  // version rather than the materialized entity's own model.
+  motif.extension.v1.ModelReference model = 2;
 }
