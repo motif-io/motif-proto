@@ -2,7 +2,7 @@ syntax = "proto3";
 
 // FDE spatial components: room footprints, import metadata, and plan topology
 // (room/space boundaries and door portals).
-package motif.data.fde.v1;
+package motif.data.fde.spatial.v1;
 
 import "buf/validate/validate.proto";
 import "motif/extension/v1/options.proto";
@@ -10,7 +10,7 @@ import "motif/extension/v1/reference.proto";
 
 // Authoritative 2D footprint for rooms (Revit import) and site OSM buildings.
 //
-// For site buildings, pair with `motif.data.fde.v1.SiteBuilding` on the same
+// For site buildings, pair with `motif.data.fde.site.v1.SiteBuilding` on the same
 // entity. The wire format is OGC WKB `MultiPolygon` (2D, little-endian, no SRID)
 // with shared-meter XY coordinates.
 message PlanFootprint2D {
