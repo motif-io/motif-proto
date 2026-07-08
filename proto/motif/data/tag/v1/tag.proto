@@ -1,0 +1,87 @@
+syntax = "proto3";
+
+// Tag Asset component types: tag instances and type definitions with field
+// descriptors for sketch placement.
+package motif.data.tag.v1;
+
+import "motif/data/geometry/v1/geometry.proto";
+import "motif/extension/v1/options.proto";
+
+// Category of a tag asset.
+enum TagCategory {
+  // Invalid or missing; runtime rejects on load.
+  TAG_CATEGORY_UNSPECIFIED = 0;
+  // Free-floating tags (north arrow, stamp, etc.).
+  TAG_CATEGORY_GENERIC = 1;
+  // Door-hosted element tags.
+  TAG_CATEGORY_DOOR = 2;
+  // Room-hosted element tags.
+  TAG_CATEGORY_ROOM = 3;
+  // Grid line tags.
+  TAG_CATEGORY_GRID = 4;
+  // TODO: TAG_CATEGORY_WALL and TAG_CATEGORY_TITLE_BLOCK in follow-up MRs.
+}
+
+// Whether a tag field value is static or dynamically bound.
+enum TagFieldMode {
+  // Unspecified field mode.
+  TAG_FIELD_MODE_UNSPECIFIED = 0;
+  // A fixed, authored value.
+  TAG_FIELD_MODE_STATIC = 1;
+  // A value bound to model data at runtime.
+  TAG_FIELD_MODE_DYNAMIC = 2;
+  // TODO: ParameterBinding / DataRef wiring (T2).
+}
+
+// Kind of content a tag field displays.
+enum TagFieldKind {
+  // Unspecified field kind.
+  TAG_FIELD_KIND_UNSPECIFIED = 0;
+  // A text field.
+  TAG_FIELD_KIND_TEXT = 1;
+  // An image field.
+  TAG_FIELD_KIND_IMAGE = 2;
+}
+
+// Sketch placement for a tag field: origin, size, and optional rotation.
+message TagFieldPlacement {
+  // The field's origin point.
+  motif.data.geometry.v1.Point2 origin = 1;
+  // The field's content bounds size.
+  motif.data.geometry.v1.Size2 size = 2;
+  // Optional rotation, in radians.
+  optional double rotation = 3;
+}
+
+// Configuration for a single field on a tag type.
+message TagFieldDescriptor {
+  // Stable field key.
+  string key = 1;
+  // User-visible display name.
+  string display_name = 2;
+  // Static vs dynamic value mode.
+  TagFieldMode mode = 3;
+  // Text vs image field kind.
+  TagFieldKind kind = 4;
+  // Sketch placement on the tag.
+  TagFieldPlacement placement = 5;
+}
+
+// Marks an entity as a tag asset instance.
+message Tag {
+  option (motif.extension.v1.message).component = 118;
+
+  // The tag's category.
+  TagCategory category = 1;
+}
+
+// A type definition for tag assets. Carries the category and field layout
+// that serve as defaults when a new tag is created from this type.
+message TagType {
+  option (motif.extension.v1.message).component = 119;
+
+  // The category of tags this type produces.
+  TagCategory category = 1;
+  // Field descriptors defining the type's layout.
+  repeated TagFieldDescriptor fields = 2;
+}
