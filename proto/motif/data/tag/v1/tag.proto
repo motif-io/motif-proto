@@ -43,16 +43,6 @@ enum TagFieldKind {
   TAG_FIELD_KIND_IMAGE = 2;
 }
 
-// Sketch placement for a tag field: origin, size, and optional rotation.
-message TagFieldPlacement {
-  // The field's origin point.
-  motif.data.geometry.v1.Point2 origin = 1;
-  // The field's content bounds size.
-  motif.data.geometry.v1.Size2 size = 2;
-  // Optional rotation, in radians.
-  optional double rotation = 3;
-}
-
 // Configuration for a single field on a tag type.
 message TagFieldDescriptor {
   // Stable field key.
@@ -63,13 +53,13 @@ message TagFieldDescriptor {
   TagFieldMode mode = 3;
   // Text vs image field kind.
   TagFieldKind kind = 4;
-  // Sketch placement on the tag.
-  TagFieldPlacement placement = 5;
+  // Sketch placement on the tag: origin, size, and rotation.
+  motif.data.geometry.v1.Box2d placement = 5;
 }
 
 // Marks an entity as a tag asset instance.
 message Tag {
-  option (motif.extension.v1.message).component = 118;
+  option (motif.extension.v1.message).component = 121;
 
   // The tag's category.
   TagCategory category = 1;
@@ -78,7 +68,7 @@ message Tag {
 // A type definition for tag assets. Carries the category and field layout
 // that serve as defaults when a new tag is created from this type.
 message TagType {
-  option (motif.extension.v1.message).component = 119;
+  option (motif.extension.v1.message).component = 122;
 
   // The category of tags this type produces.
   TagCategory category = 1;
