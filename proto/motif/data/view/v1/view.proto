@@ -226,3 +226,9 @@ message HomeView {
   // The view entity that is the model's home view. Required.
   motif.extension.v1.EntityReference view = 1 [(buf.validate.field).required = true];
 }
+
+// Marks an entity as a sheet: an infinite paper-space canvas that composes
+// views for documentation and export.
+message Sheet {
+  option (motif.extension.v1.message).component = 118;
+}

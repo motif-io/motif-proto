@@ -2,7 +2,7 @@ syntax = "proto3";
 
 // FDE georeferencing components: project geolocation and model placement within
 // shared site coordinates.
-package motif.data.fde.v1;
+package motif.data.fde.georef.v1;
 
 import "buf/validate/validate.proto";
 import "motif/data/geometry/v1/geometry.proto";

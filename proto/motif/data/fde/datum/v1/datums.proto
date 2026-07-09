@@ -5,7 +5,7 @@ syntax = "proto3";
 //
 // Component IDs here were reclaimed from previously-retired component IDs
 // (replacing the earlier provisional 9020-9023 placeholders).
-package motif.data.fde.v1;
+package motif.data.fde.datum.v1;
 
 import "motif/extension/v1/options.proto";
 

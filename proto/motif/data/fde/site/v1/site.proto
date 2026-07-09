@@ -7,7 +7,7 @@ syntax = "proto3";
 // shared conversion happens at ingest, not at runtime. The georeferencing spine
 // (`ProjectGeolocation`, `SharedCoordinateOrigin`, `ModelPlacement`) ties these
 // shared-meter coordinates to true north and to model placements.
-package motif.data.fde.v1;
+package motif.data.fde.site.v1;
 
 import "motif/extension/v1/options.proto";
 
@@ -46,7 +46,7 @@ message SiteRoad {
 // An OSM building way — metadata only.
 //
 // The footprint geometry lives on the same entity as a
-// `motif.data.fde.v1.PlanFootprint2D` (OGC WKB MultiPolygon). `height_m` is the
+// `motif.data.fde.spatial.v1.PlanFootprint2D` (OGC WKB MultiPolygon). `height_m` is the
 // extrusion hint (OSM `height` or `building:levels`); the full tag bag goes in
 // `motif.data.core.v1.ForeignProperties`.
 message SiteBuilding {
