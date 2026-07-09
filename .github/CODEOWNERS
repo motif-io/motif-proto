@@ -1,0 +1,28 @@
+# CODEOWNERS
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Order matters: the LAST matching pattern for a changed file wins.
+
+# Default owner for the whole repo. This protects everything outside proto,
+# AND gates newly-added proto packages: a new package under proto/ that is not
+# listed below falls through to this rule, so the Motif 2.0 team must review
+# it — that review is where a new package's name gets approved.
+* @motif-io/motif-2-0
+
+# --- Approved proto packages ---------------------------------------------
+# When the Motif 2.0 team approves a new package's name, add a line here
+# assigning the package to its owner(s) so they own ongoing edits.
+#
+# Owners can be:
+#   - a team IN the motif-io org (must have write access):
+#       /proto/<package>/   @motif-io/<owning-team>
+#   - a list of individuals (space/comma-separated; each must have write
+#     access — external contributors added as outside collaborators):
+#       /proto/<package>/   @alice @bob
+#
+# NOTE: an owner CANNOT be a team from a different GitHub org — teams must
+# belong to motif-io. Cross-org contributors must be listed as individuals.
+# (No external packages approved yet.)
+
+# The motif package is owned by the Motif 2.0 team.
+/proto/motif/ @motif-io/motif-2-0
