@@ -16,3 +16,11 @@ message TextAnnotation {
   // The size of the annotation's content bounds.
   motif.data.geometry.v1.Size2 size = 2;
 }
+
+// A persisted dimension annotation.
+//
+// Stub reserving the component ID. Definition anchors and placement fields
+// land in a follow-up once the schema is finalized.
+message Dimension {
+  option (motif.extension.v1.message).component = 120;
+}
