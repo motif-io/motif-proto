@@ -156,6 +156,13 @@ message CropRegion {
   motif.data.geometry.v1.Size2 size = 2;
   // Optional rotation of the crop rectangle, in radians. Phase 0 ignores this.
   optional double rotation = 3;
+  // Whether cropping is active. When false the rectangle is retained but the
+  // view renders/exports at full extent. Independent of boundary_visible.
+  bool enabled = 4;
+  // Whether the crop boundary line is drawn in the view. Independent of
+  // enabled: the boundary can be shown without clipping, or hidden while
+  // clipping.
+  bool boundary_visible = 5;
 }
 
 // The result of projecting a source entity's geometry through a view's
