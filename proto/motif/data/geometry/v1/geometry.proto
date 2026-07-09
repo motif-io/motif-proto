@@ -177,3 +177,11 @@ message Plane {
   // Valid extent along the V direction.
   Domain v_domain = 5;
 }
+
+// A 2d rect with rotation.
+message Box2d {
+  Point3 origin = 1;
+  Size2 size = 2;
+  // Radians around the "up" axis
+  double rotation = 3;
+}
