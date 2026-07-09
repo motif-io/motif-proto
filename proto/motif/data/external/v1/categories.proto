@@ -6,14 +6,14 @@ import "motif/extension/v1/options.proto";
 
 // Revit category
 message RevitCategoryValue {
-  option (motif.extension.v1.message).component = 118;
+  option (motif.extension.v1.message).component = 121;
 
   RevitCategory value = 1;
 }
 
 // Industry Foundation Classes categorization
 message IfcValue {
-  option (motif.extension.v1.message).component = 119;
+  option (motif.extension.v1.message).component = 122;
 
   Ifc value = 1;
 }

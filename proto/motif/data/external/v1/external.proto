@@ -1,7 +1,6 @@
 syntax = "proto3";
 
-// External (plugin-ingest) component types: identities and view metadata for
-// objects imported from external applications such as Revit and Rhino.
+// Definitions associated with external applications such as Revit and Rhino
 package motif.data.external.v1;
 
 import "motif/extension/v1/options.proto";
