@@ -19,7 +19,9 @@ enum TagCategory {
   TAG_CATEGORY_ROOM = 3;
   // Grid line tags.
   TAG_CATEGORY_GRID = 4;
-  // TODO: TAG_CATEGORY_WALL and TAG_CATEGORY_TITLE_BLOCK in follow-up MRs.
+  // Sheet border title blocks (line geometry in V1; fields in V2).
+  TAG_CATEGORY_TITLE_BLOCK = 5;
+  // TODO: TAG_CATEGORY_WALL in a follow-up MR.
 }
 
 // Whether a tag field value is static or dynamically bound.
