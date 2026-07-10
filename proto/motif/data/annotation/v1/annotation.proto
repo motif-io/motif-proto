@@ -3,8 +3,10 @@ syntax = "proto3";
 // Annotation components: text and other annotations placed in views.
 package motif.data.annotation.v1;
 
+import "buf/validate/validate.proto";
 import "motif/data/geometry/v1/geometry.proto";
 import "motif/extension/v1/options.proto";
+import "motif/extension/v1/reference.proto";
 
 // Authored content bounds for a text annotation.
 message TextAnnotation {
@@ -19,8 +21,138 @@ message TextAnnotation {
   motif.data.geometry.v1.Box2d placement = 3;
 }
 
+// A persisted dimension annotation.
+//
+// Only the source grain persists: definition anchors and the placement rule
+// (style reference and per-view presence are reserved extensions). Lifecycle is
+// not persisted — existing in persisted data IS the permanent lifecycle; the
+// loader stamps it and the commit path guarantees it. Derived geometry
+// (resolved points, part meshes, labels) is regenerated client-side and never
+// enters changesets.
 message Dimension {
   option (motif.extension.v1.message).component = 120;
+
+  // Which curve of the referenced entity a feature anchor evaluates: the
+  // entity's own Curve2, or a wall's symbolic thickness-aware derived curves
+  // (the baseline behind its Requires link, or a face offset by half the
+  // footprint width — re-derived at every resolve, so a thickness edit moves
+  // the face and the dimension follows). Face sides are named in the baseline
+  // curve's plane: LEFT is +90° (counterclockwise) from the curve direction.
+  enum CurveRef {
+    // Unspecified curve reference.
+    CURVE_REF_UNSPECIFIED = 0;
+    // The referenced entity's own Curve2.
+    CURVE_REF_OWN = 1;
+    // The wall's baseline curve.
+    CURVE_REF_WALL_BASELINE = 2;
+    // The wall face left of the baseline curve direction.
+    CURVE_REF_WALL_FACE_LEFT = 3;
+    // The wall face right of the baseline curve direction.
+    CURVE_REF_WALL_FACE_RIGHT = 4;
+  }
+
+  // Where along the referenced curve the definition point sits. NEAREST is a
+  // datum: no stored station — the point is the perpendicular foot of the
+  // opposing anchor's resolved point, re-derived at every resolve.
+  enum CurveStation {
+    // Unspecified curve station.
+    CURVE_STATION_UNSPECIFIED = 0;
+    // The start of the curve.
+    CURVE_STATION_START = 1;
+    // The end of the curve.
+    CURVE_STATION_END = 2;
+    // The midpoint of the curve.
+    CURVE_STATION_MID = 3;
+    // A specific curve parameter, stored in `param`.
+    CURVE_STATION_PARAM = 4;
+    // The perpendicular foot of the opposing anchor's resolved point.
+    CURVE_STATION_NEAREST = 5;
+  }
+
+  // A structured feature reference on a synced entity. Stable across reload
+  // and reimport because it references the component's own topology (curves,
+  // baselines, footprint widths), never a mesh buffer.
+  message EntityFeature {
+    // The referenced entity. Commit asserts the target is persisted. Required.
+    motif.extension.v1.EntityReference entity = 1 [(buf.validate.field).required = true];
+    // Which curve of the referenced entity the anchor evaluates.
+    CurveRef curve = 2;
+    // Where along the referenced curve the definition point sits.
+    CurveStation station = 3;
+    // Curve parameter, meaningful only when station == CURVE_STATION_PARAM.
+    double param = 4;
+  }
+
+  // What a definition point is measured against.
+  message Anchor {
+    // The anchor target.
+    oneof anchor {
+      // A free point in world space.
+      motif.data.geometry.v1.Point3 free = 1;
+      // A feature on a synced entity.
+      EntityFeature entity_feature = 2;
+    }
+  }
+
+  // Linear-aligned definition geometry: the two measured points.
+  message LinearGeometry {
+    // The first measured point.
+    Anchor a = 1;
+    // The second measured point.
+    Anchor b = 2;
+  }
+
+  // Angular definition geometry: the vertex plus one point along each ray. The
+  // measured value is the minor angle between vertex→a and vertex→b; the arc
+  // radius/placement is derived client-side (auto radius), so the stored
+  // placement's offset is unused for this kind.
+  message AngularGeometry {
+    // The angle vertex.
+    Anchor vertex = 1;
+    // A point along the first ray.
+    Anchor a = 2;
+    // A point along the second ray.
+    Anchor b = 3;
+  }
+
+  // The captured dimension plane: plane normal plus the signed in-plane offset
+  // direction (which side of the measured line the dimension line sits on).
+  // World-fixed in v1; the feature-relative frame is a reserved extension.
+  message PlaneBasis {
+    // The dimension plane normal.
+    motif.data.geometry.v1.UnitVector3 normal = 1;
+    // The signed in-plane offset direction.
+    motif.data.geometry.v1.UnitVector3 offset_direction = 2;
+  }
+
+  // Per-dimension placement. Never a world-space point: the placement point is
+  // converted to basis + offset at commit and the plane re-derives on load.
+  message OwnPlacement {
+    // The captured dimension plane.
+    PlaneBasis basis = 1;
+    // Signed offset h from the measured line to the dimension line, meters.
+    double offset = 2;
+    // Reserved label slide along the dimension line, meters. 0 until used.
+    double text_slide = 3;
+  }
+
+  // The definition geometry.
+  oneof kind {
+    // Linear-aligned dimension.
+    LinearGeometry linear = 1;
+    // Angular dimension.
+    AngularGeometry angular = 2;
+  }
+
+  // How the dimension line is placed.
+  oneof placement {
+    // Placement owned by this dimension alone.
+    OwnPlacement own = 3;
+    // 4 reserved: shared (DimensionChain reference) — Shift-run placement.
+  }
+
+  // 5+ reserved: style assignment (named-style reference + override) once the
+  // dimension style model carries units instead of raw pixels.
 }
 
 // Rich-text content + styling for a text annotation. Box geometry stays in
