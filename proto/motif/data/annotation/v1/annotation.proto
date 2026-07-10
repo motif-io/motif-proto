@@ -10,17 +10,22 @@ import "motif/extension/v1/options.proto";
 message TextAnnotation {
   option (motif.extension.v1.message).component = 114;
 
-  // The annotation's origin point.
+  // Deprecated. Do not use. Use placement instead.
   motif.data.geometry.v1.Point2 origin = 1;
-
-  // The size of the annotation's content bounds.
+  // Deprecated. Do not use. Use placement instead.
   motif.data.geometry.v1.Size2 size = 2;
+
+  // Position, size, and rotation
+  motif.data.geometry.v1.Box2d placement = 3;
 }
 
-// A persisted dimension annotation.
-//
-// Stub reserving the component ID. Definition anchors and placement fields
-// land in a follow-up once the schema is finalized.
 message Dimension {
   option (motif.extension.v1.message).component = 120;
+}
+
+// Rich-text content + styling for a text annotation. Box geometry stays in
+// TextAnnotation (114). Spans are an inline repeated run; ordering is array
+// order. Unset span fields inherit the block defaults.
+message TextBlock {
+  option (motif.extension.v1.message).component = 125;
 }
