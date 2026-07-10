@@ -232,3 +232,31 @@ message HomeView {
 message Sheet {
   option (motif.extension.v1.message).component = 118;
 }
+
+// A view/sheet-scoped, BIM-inert placement of content into a view — the
+// view-scoped analog of `Instance` (motif.data.core.v1). A marker: what it
+// renders is resolved from the definition it points at via
+// `motif.data.core.v1.Presents`, then child-linked into the scene exactly as an
+// `Instance` renders its definition.
+message DrawingContent {
+  option (motif.extension.v1.message).component = 126;
+}
+
+// Which plane a `DrawingContent` placement anchors to within its view. World Z
+// is resolved against the owning view's `ViewRange`.
+message DrawLayer {
+  option (motif.extension.v1.message).component = 128;
+
+  // The plane this drawing content anchors to.
+  Layer layer = 1;
+
+  // A drawing-content anchor plane.
+  enum Layer {
+    // Unspecified draw layer.
+    LAYER_UNSPECIFIED = 0;
+    // Beneath the model, at the view's bottom-of-range.
+    LAYER_BACKGROUND = 1;
+    // Above the model, at the cut plane.
+    LAYER_FOREGROUND = 2;
+  }
+}

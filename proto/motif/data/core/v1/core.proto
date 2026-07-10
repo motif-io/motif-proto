@@ -158,6 +158,18 @@ message DerivedFrom {
   motif.extension.v1.EntityReference source = 1 [(buf.validate.field).required = true];
 }
 
+// Links a placement entity to the definition entity it presents (renders).
+//
+// The view-scoped analog of how an `Instance` points at its definition: a
+// `DrawingContent` (motif.data.view.v1) carries a `Presents` at the definition
+// it draws. Mirrors `DerivedFrom`'s single-`source` shape.
+message Presents {
+  option (motif.extension.v1.message).component = 127;
+
+  // The definition entity this entity presents. Required.
+  motif.extension.v1.EntityReference source = 1 [(buf.validate.field).required = true];
+}
+
 // The representation of an asset that should be rendered in the scene.
 //
 // NOTE: in the future the backend will provide a signed URL for the
