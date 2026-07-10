@@ -102,17 +102,30 @@ message Dimension {
     Anchor b = 2;
   }
 
-  // Angular definition geometry: the vertex plus one point along each ray. The
-  // measured value is the minor angle between vertex→a and vertex→b; the arc
-  // radius/placement is derived client-side (auto radius), so the stored
-  // placement's offset is unused for this kind.
+  // One ray of an angular dimension.
+  message Ray {
+    // The ray definition.
+    oneof ray {
+      // Ray from the shared vertex toward this anchor (the vertex anchor is
+      // authoritative).
+      Anchor to = 1;
+      // Ray along a referenced entity's curve ("angle between two walls"):
+      // the vertex is DERIVED as the rays' intersection, so it tracks the
+      // referenced entities; the stored vertex is ignored. Reserved for the
+      // entity-referenced angular consumer — loaders reject it until then.
+      EntityFeature edge = 2;
+    }
+  }
+
+  // Angular definition geometry: a vertex plus two rays. The measured value is
+  // the minor angle between the rays.
   message AngularGeometry {
     // The angle vertex.
     Anchor vertex = 1;
-    // A point along the first ray.
-    Anchor a = 2;
-    // A point along the second ray.
-    Anchor b = 3;
+    // The first ray.
+    Ray a = 2;
+    // The second ray.
+    Ray b = 3;
   }
 
   // The captured dimension plane: plane normal plus the signed in-plane offset
@@ -131,6 +144,8 @@ message Dimension {
     // The captured dimension plane.
     PlaneBasis basis = 1;
     // Signed offset h from the measured line to the dimension line, meters.
+    // For ANGULAR dimensions this is the arc radius: 0 = auto radius (derived
+    // client-side; all v1 records), nonzero = an explicit user-set radius.
     double offset = 2;
     // Reserved label slide along the dimension line, meters. 0 until used.
     double text_slide = 3;
@@ -151,8 +166,12 @@ message Dimension {
     // 4 reserved: shared (DimensionChain reference) — Shift-run placement.
   }
 
-  // 5+ reserved: style assignment (named-style reference + override) once the
-  // dimension style model carries units instead of raw pixels.
+  // Field-number allocation (kind/placement oneofs and top-level fields share
+  // this message's number space): 1-2 kind arms; 3-4 placement arms (4 =
+  // shared/DimensionChain, Shift-run placement); 5 = style assignment
+  // (named-style reference + override, once the style model carries units
+  // instead of raw pixels); future kind arms (linear_projected, radial) and
+  // other extensions take 6+.
 }
 
 // Rich-text content + styling for a text annotation. Box geometry stays in
