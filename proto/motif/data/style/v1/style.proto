@@ -65,12 +65,12 @@ message LineStyle {
   optional uint32 pen_size = 2;
 
   // Optional line pattern (dashes, dots, spaces) applied to the entity's
-  // strokes, referenced by a catalog-qualified name of the form
-  // "<catalog>:<pattern>" — e.g. "motif:Hidden", "motif:Grid Line". The name is
-  // split on the first ":": the leading segment is the catalog and the
-  // remainder is the pattern name (which may itself contain ":"). The reserved
-  // "motif" catalog holds the built-in patterns shipped with the product; other
-  // catalog names namespace user- or third-party-defined pattern catalogs.
+  // strokes, identified by name. An unqualified name (e.g. "Hidden",
+  // "Grid Line") resolves against the built-in patterns shipped with the
+  // product. A future catalog-qualified form "<catalog>:<pattern>" (split on the
+  // first ":") is reserved so user- or third-party-defined pattern catalogs can
+  // namespace their own patterns without colliding with the built-ins; an
+  // unqualified name is equivalent to the reserved "motif" catalog.
   //
   // Pattern dash/space lengths are fixed printed-paper sizes, so a pattern
   // renders at a constant printed size regardless of view scale. Absent means a
