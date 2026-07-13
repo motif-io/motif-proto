@@ -5,8 +5,8 @@ package motif.data.annotation.v1;
 
 import "buf/validate/validate.proto";
 import "motif/data/geometry/v1/geometry.proto";
-import "motif/extension/v1/options.proto";
 import "motif/data/style/v1/style.proto";
+import "motif/extension/v1/options.proto";
 import "motif/extension/v1/reference.proto";
 
 // Authored content bounds for a text annotation.
@@ -197,7 +197,6 @@ message TextBlock {
   repeated TextSpan spans = 4;
 }
 
-
 // A run of uniformly-styled text. Message-typed fields carry presence in
 // proto3, so `optional` is only needed on the scalar `size` field.
 message TextSpan {
@@ -233,18 +232,18 @@ message Layout {
   float line_height_factor = 3;
 }
 
-// Zero values match the runtime defaults so a missing field decodes correctly.
 enum Justify {
-  JUSTIFY_LEFT = 0;
-  JUSTIFY_CENTER = 1;
-  JUSTIFY_RIGHT = 2;
-  JUSTIFY_JUSTIFIED = 3;
+  JUSTIFY_UNSPECIFIED = 0;
+  JUSTIFY_LEFT = 1;
+  JUSTIFY_CENTER = 2;
+  JUSTIFY_RIGHT = 3;
+  JUSTIFY_JUSTIFIED = 4;
 }
 
-// Zero values match the runtime defaults so a missing field decodes correctly.
 enum LineBreak {
-  LINE_BREAK_WORD_BOUNDARY = 0;
-  LINE_BREAK_ANY_CHARACTER = 1;
-  LINE_BREAK_WORD_OR_CHARACTER = 2;
-  LINE_BREAK_NO_WRAP = 3;
+  LINE_BREAK_UNSPECIFIED = 0;
+  LINE_BREAK_WORD_BOUNDARY = 1;
+  LINE_BREAK_ANY_CHARACTER = 2;
+  LINE_BREAK_WORD_OR_CHARACTER = 3;
+  LINE_BREAK_NO_WRAP = 4;
 }
