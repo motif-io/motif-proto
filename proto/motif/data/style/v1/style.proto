@@ -63,4 +63,17 @@ message LineStyle {
   // the on-paper width in mm from the project's pen-width table for the
   // active view's scale and ignores `width`.
   optional uint32 pen_size = 2;
+
+  // Optional line pattern (dashes, dots, spaces) applied to the entity's
+  // strokes, referenced by a catalog-qualified name of the form
+  // "<catalog>:<pattern>" — e.g. "motif:Hidden", "motif:Grid Line". The name is
+  // split on the first ":": the leading segment is the catalog and the
+  // remainder is the pattern name (which may itself contain ":"). The reserved
+  // "motif" catalog holds the built-in patterns shipped with the product; other
+  // catalog names namespace user- or third-party-defined pattern catalogs.
+  //
+  // Pattern dash/space lengths are fixed printed-paper sizes, so a pattern
+  // renders at a constant printed size regardless of view scale. Absent means a
+  // continuous solid stroke.
+  optional string pattern = 3;
 }
