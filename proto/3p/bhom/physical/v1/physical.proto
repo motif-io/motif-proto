@@ -15,7 +15,7 @@ message FramingSection {
 
 // A physical beam with a straight centerline.
 message Beam {
-  option (motif.extension.v1.message).component = 120;
+  option (motif.extension.v1.message).component = 134;
 
   // Centerline start point.
   motif.data.geometry.v1.Point3 start_point = 1;
@@ -30,7 +30,7 @@ message Beam {
 
 // A physical column with a straight centerline.
 message Column {
-  option (motif.extension.v1.message).component = 121;
+  option (motif.extension.v1.message).component = 135;
 
   motif.data.geometry.v1.Point3 start_point = 1;
   motif.data.geometry.v1.Point3 end_point = 2;
@@ -42,16 +42,13 @@ message Column {
 
 // A physical bracing member with a straight centerline.
 message Bracing {
-  option (motif.extension.v1.message).component = 122;
+  option (motif.extension.v1.message).component = 136;
 
-  // Centerline start point.
   motif.data.geometry.v1.Point3 start_point = 1;
-  // Centerline end point.
   motif.data.geometry.v1.Point3 end_point = 2;
 
   FramingSection section = 3;
 
-  // Soft links to analytical structure bars associated with this member.
   repeated string analytical_bar_ids = 4;
 }
 
@@ -90,7 +87,8 @@ message Profile {
   }
 }
 
-// BHoM `ShapeType` numeric identity. Values match upstream BHoM wire numbers.
+// Shape types
+
 enum ShapeType {
   // Rectangle is zero in BHoM (not an unspecified sentinel); preserve wire numbers.
   // buf:lint:ignore ENUM_ZERO_VALUE_SUFFIX -- BHoM ShapeType.Rectangle = 0

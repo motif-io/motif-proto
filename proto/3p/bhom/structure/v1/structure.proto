@@ -7,7 +7,7 @@ import "motif/data/geometry/v1/geometry.proto";
 import "motif/extension/v1/options.proto";
 
 message Bar {
-  option (motif.extension.v1.message).component = 132;
+  option (motif.extension.v1.message).component = 137;
 
   // Centerline start point of a straight analytical bar.
   motif.data.geometry.v1.Point3 start_point = 1;

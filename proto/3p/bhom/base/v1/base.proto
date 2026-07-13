@@ -5,7 +5,7 @@ package bhom.data.base.v1;
 import "motif/extension/v1/options.proto";
 
 message BHoMBase {
-  option (motif.extension.v1.message).component = 128;
+  option (motif.extension.v1.message).component = 133;
 
   // Upstream BHoM oM full type name (for example, `BH.oM.Physical.Elements.Beam`).
   string bhom_type_full_name = 1;
