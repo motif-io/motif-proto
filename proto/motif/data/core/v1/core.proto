@@ -287,3 +287,21 @@ message IsOfType {
   // How the type's values relate to this entity.
   BindingMode binding_mode = 2;
 }
+
+// The 2D placement of a placed image — position, size, and rotation on its
+// plane — via `motif.data.geometry.v1.Box2d`. The image analog of
+// `motif.data.annotation.v1.TextAnnotation`'s `placement`: seeded from the
+// presented asset's natural extent at placement, then edited by the 2D
+// box-transform (move / resize / rotate).
+//
+// Placement-kind-neutral: attaches to any placement that presents an image
+// asset — a view-scoped `DrawingContent` (motif.data.view.v1, component 126) or
+// a model-space `Instance`. How the plane / world Z is resolved is a runtime
+// concern (a `DrawingContent` anchors Z via its `DrawLayer` against the view's
+// `ViewRange`; a model-space image sits on its instance's plane).
+message ImageBounds {
+  option (motif.extension.v1.message).component = 129;
+
+  // Position, size, and rotation of the placed image on its plane.
+  motif.data.geometry.v1.Box2d placement = 1;
+}
