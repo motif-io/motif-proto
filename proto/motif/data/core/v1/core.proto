@@ -201,9 +201,12 @@ message Representation {
     MIME_TYPE_OBJ = 5;
     // model/gltf-binary.
     MIME_TYPE_GLB = 6;
+    // font/ttf
+    MIME_TYPE_TTF = 7;
+    // application/json
+    MIME_TYPE_JSON = 8
     // Opaque/non-renderable payload (spreadsheets, documents, arbitrary blobs).
-    // Consumers must not attempt to render entities carrying this variant.
-    MIME_TYPE_UNKNOWN = 7;
+    MIME_TYPE_UNKNOWN = 9;
   }
 }
 
