@@ -203,19 +203,10 @@ message TextSpan {
   TextStyle style = 2;
 }
 
-// Font identity that survives reload (family name, not an unstable runtime
-// font-database id).
-message Font {
-  // Font family name, e.g. "Roboto".
-  string family = 1;
-  // star font style bits: BOLD = 0x1, ITALIC = 0x2. Unknown bits are ignored.
-  uint32 style_flags = 2;
-}
-
 message TextStyle {
   // On a span, unset => inherit the block default. As a block default, unset
   // means "use the application default font".
-  Font font = 1;
+  motif.data.style.v1.Font font = 1;
   // Em multiplier; 0 (the proto3 scalar default) decodes to the context
   // default: 1.0 as a block default, "inherit" on a span.
   float size = 2;
