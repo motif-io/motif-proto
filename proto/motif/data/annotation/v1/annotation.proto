@@ -188,22 +188,19 @@ message Dimension {
 message TextBlock {
   option (motif.extension.v1.message).component = 125;
 
-  // Block default font; spans inherit it when their font is unset. An unset
-  // font means "use the application default font".
-  Font default_font = 1;
-  // Block default size (em) + color; spans inherit unset fields.
-  Style default_style = 2;
-  Layout layout = 3;
-  repeated TextSpan spans = 4;
+  // Block default font, size (em), and color; spans inherit unset fields.
+  TextStyle default_style = 1;
+  TextLayout layout = 2;
+  repeated TextSpan spans = 3;
 }
 
 // A run of uniformly-styled text. Message-typed fields carry presence in
-// proto3, so `optional` is only needed on the scalar `size` field.
+// proto3; the scalar `size` field uses 0 to mean "unset" instead.
 message TextSpan {
   // "\n" encodes hard line breaks (matches the runtime text model).
   string text = 1;
   // Unset — or unset inner fields — inherit the TextBlock defaults.
-  Style style = 2;
+  TextStyle style = 2;
 }
 
 // Font identity that survives reload (family name, not an unstable runtime
@@ -215,9 +212,9 @@ message Font {
   uint32 style_flags = 2;
 }
 
-message Style {
-  // On a span, unset => inherit TextBlock.default_font. As a block default
-  // this stays unset: the block's font is carried by TextBlock.default_font.
+message TextStyle {
+  // On a span, unset => inherit the block default. As a block default, unset
+  // means "use the application default font".
   Font font = 1;
   // Em multiplier; 0 (the proto3 scalar default) decodes to the context
   // default: 1.0 as a block default, "inherit" on a span.
@@ -225,7 +222,7 @@ message Style {
   motif.data.style.v1.Color color = 3;
 }
 
-message Layout {
+message TextLayout {
   Justify justify = 1;
   LineBreak line_break = 2;
   // Line height multiplier; 0 (the proto3 scalar default) is decoded as 1.2.
