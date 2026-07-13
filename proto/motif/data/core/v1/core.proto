@@ -204,7 +204,7 @@ message Representation {
     // font/ttf
     MIME_TYPE_TTF = 7;
     // application/json
-    MIME_TYPE_JSON = 8
+    MIME_TYPE_JSON = 8;
     // Opaque/non-renderable payload (spreadsheets, documents, arbitrary blobs).
     MIME_TYPE_UNKNOWN = 9;
   }
