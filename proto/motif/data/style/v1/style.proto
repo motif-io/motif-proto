@@ -63,4 +63,49 @@ message LineStyle {
   // the on-paper width in mm from the project's pen-width table for the
   // active view's scale and ignores `width`.
   optional uint32 pen_size = 2;
+
+  // The line pattern applied to the entity's strokes: dashes, spaces, and dots.
+  // Unset means a continuous solid stroke. An entity either references a pattern
+  // by name or carries its own inline definition. Pattern lengths are fixed
+  // printed-paper sizes, so a pattern renders at a constant printed size
+  // regardless of view scale.
+  oneof pattern {
+    // Reference to a pattern by name. An unqualified name (e.g. "Hidden",
+    // "Grid Line") resolves against the built-in patterns shipped with the
+    // product. A catalog-qualified form "<catalog>:<pattern>" (split on the
+    // first ":") is reserved so user- or third-party-defined pattern catalogs
+    // can namespace their own patterns without colliding with the built-ins; an
+    // unqualified name is equivalent to the reserved "motif" catalog.
+    string pattern_ref = 3;
+
+    // An inline pattern definition carried by this entity instead of a named
+    // reference — the same shape as the built-in catalog patterns, letting a
+    // line be its own pattern.
+    LinePattern pattern_def = 4;
+  }
+}
+
+// A line pattern definition: one repeating cycle of dashes, spaces, and dots.
+// Shared by the built-in catalog and by inline definitions on an entity (see
+// LineStyle.pattern_def). An empty cycle is a continuous solid stroke.
+message LinePattern {
+  // The elements of one repeat, in order.
+  repeated LinePatternElement elements = 1;
+}
+
+// One element of a line pattern's repeating cycle. Exactly one kind is set.
+message LinePatternElement {
+  oneof element {
+    option (buf.validate.oneof).required = true;
+
+    // A drawn (on) segment; printed-paper length in millimeters.
+    float dash = 1 [(buf.validate.field).float = {gt: 0}];
+    // An undrawn (off) segment; printed-paper length in millimeters.
+    float space = 2 [(buf.validate.field).float = {gt: 0}];
+    // A dot marker. Carries no length; drawn at the line's width.
+    Dot dot = 3;
+  }
+
+  // A dot marker (no fields).
+  message Dot {}
 }
