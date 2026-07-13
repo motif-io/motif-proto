@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package bhom.data.structure.v1;
+
+import "3p/bhom/physical/v1/physical.proto";
+import "motif/data/geometry/v1/geometry.proto";
+import "motif/extension/v1/options.proto";
+
+message Bar {
+  option (motif.extension.v1.message).component = 119;
+
+  // Assuming we have a straight analyical bar
+  motif.data.geometry.v1.Point3 start_point = 1;
+  motif.data.geometry.v1.Point3 end_point = 2;
+
+  // Radians
+  double orientation_angle = 3;
+
+  bhom.data.physical.v1.Profile profile = 4;
+}

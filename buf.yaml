@@ -11,6 +11,11 @@ lint:
   use:
     - STANDARD
     - MOTIF
+  # Partner-owned packages (bhom.data.*, …) live under proto/3p/<partner>/<domain>/v1/
+  # rather than <partner>/data/<domain>/v1/, so PACKAGE_DIRECTORY_MATCH cannot apply.
+  ignore_only:
+    PACKAGE_DIRECTORY_MATCH:
+      - proto/3p
 breaking:
   use:
     - FILE
