@@ -5,26 +5,30 @@ package bhom.data.physical.v1;
 import "motif/data/geometry/v1/geometry.proto";
 import "motif/extension/v1/options.proto";
 
-// Cross section that is uniform along the object
+// Cross-section that is uniform along the member length.
 message FramingSection {
   Profile profile = 1;
 
-  // Radians. Roll of the profile about the member axis.
+  // Roll of the profile about the member axis, in radians.
   double orientation_angle = 2;
 }
 
+// A physical beam with a straight centerline.
 message Beam {
   option (motif.extension.v1.message).component = 120;
 
-  // Note that this is a simplifcation where we always have straight beam, columns, and braces. 
+  // Centerline start point.
   motif.data.geometry.v1.Point3 start_point = 1;
+  // Centerline end point.
   motif.data.geometry.v1.Point3 end_point = 2;
 
   FramingSection section = 3;
 
+  // Soft links to analytical structure bars associated with this member.
   repeated string analytical_bar_ids = 4;
 }
 
+// A physical column with a straight centerline.
 message Column {
   option (motif.extension.v1.message).component = 121;
 
@@ -36,32 +40,34 @@ message Column {
   repeated string analytical_bar_ids = 4;
 }
 
+// A physical bracing member with a straight centerline.
 message Bracing {
   option (motif.extension.v1.message).component = 122;
 
+  // Centerline start point.
   motif.data.geometry.v1.Point3 start_point = 1;
+  // Centerline end point.
   motif.data.geometry.v1.Point3 end_point = 2;
 
   FramingSection section = 3;
 
+  // Soft links to analytical structure bars associated with this member.
   repeated string analytical_bar_ids = 4;
 }
 
 message Profile {
-  // BHoM Shape types
+  // BHoM `ShapeType` wire value.
   ShapeType shape = 1;
 
-  // Edge curves in the section local XY-plane
-  // Note: This will be empty for TaperedProfile. Nested profiles carry geometry along length.
+  // Edge curves in the section local XY-plane.
+  // Empty for `TaperedProfile`; nested profiles carry geometry along the length.
   repeated motif.data.geometry.v1.Curve2 edges = 2;
 
-  // Optional display name from BHoM
+  // Optional display name from BHoM.
   string name = 3;
 
-  // Note we leave some entries for other fields we would like to add
-
-  // Parametric dimensions for a known profile type
-  // Omit for FreeFormProfile (shape = FREE_FORM, edges only). Note if it is unset we should assume it is freeform
+  // Parametric dimensions for a known profile type.
+  // Leave unset for free-form profiles (`shape = FREE_FORM`); use `edges` only.
   oneof definition {
     AngleProfile angle = 10;
     BoxProfile box = 11;
@@ -77,18 +83,17 @@ message Profile {
     TSectionProfile t_section = 21;
     TaperFlangeChannelProfile taper_flange_channel = 22;
     TaperFlangeISectionProfile taper_flange_i_section = 23;
-    TaperedProfile tapered = 24; 
+    TaperedProfile tapered = 24;
     TubeProfile tube = 25;
     VoidedISectionProfile voided_i_section = 26;
     ZSectionProfile z_section = 27;
   }
 }
 
-// Shape types 
-
+// BHoM `ShapeType` numeric identity. Values match upstream BHoM wire numbers.
 enum ShapeType {
-  // Zero is Rectangle in BHOM (not an unspecified sentinel) keep wire numbers. The comment below lets the default enum value of 0 not be ignored
-  // buf:lint:ignore ENUM_ZERO_VALUE_SUFFIX -- BHOM ShapeType.Rectangle = 0
+  // Rectangle is zero in BHoM (not an unspecified sentinel); preserve wire numbers.
+  // buf:lint:ignore ENUM_ZERO_VALUE_SUFFIX -- BHoM ShapeType.Rectangle = 0
   SHAPE_TYPE_RECTANGLE = 0;
   SHAPE_TYPE_BOX = 1;
   SHAPE_TYPE_ANGLE = 2;
@@ -245,7 +250,8 @@ message TaperFlangeISectionProfile {
   double toe_radius = 7;
 }
 
-// Varies along the object length. So at specific distances can be another surface. Will interpolate the shapes.
+// Profile that varies along the member length. Profiles at positions are
+// interpolated according to `interpolation_order`.
 message TaperedProfile {
   repeated int32 interpolation_order = 1;
   repeated ProfileAtPosition profiles = 2;

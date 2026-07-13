@@ -5,14 +5,14 @@ package bhom.data.base.v1;
 import "motif/extension/v1/options.proto";
 
 message BHoMBase {
-  option (motif.extension.v1.message).component = 118;
+  option (motif.extension.v1.message).component = 128;
 
-  // BHoM oM full type name (like BH.oM.Physical.Elements.Beam)
+  // Upstream BHoM oM full type name (for example, `BH.oM.Physical.Elements.Beam`).
   string bhom_type_full_name = 1;
 
-  // Optional assembly disambiguator (e.g. "Physical_oM").
+  // Optional assembly disambiguator (for example, `Physical_oM`).
   string bhom_assembly = 2;
 
-  // The actual display name from BHoMObject.Name
+  // Display name from `BHoMObject.Name`.
   string name = 3;
 }
