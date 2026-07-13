@@ -6,6 +6,7 @@ package motif.data.annotation.v1;
 import "buf/validate/validate.proto";
 import "motif/data/geometry/v1/geometry.proto";
 import "motif/extension/v1/options.proto";
+import "motif/data/style/v1/style.proto";
 import "motif/extension/v1/reference.proto";
 
 // Authored content bounds for a text annotation.
@@ -19,6 +20,13 @@ message TextAnnotation {
 
   // Position, size, and rotation
   motif.data.geometry.v1.Box2d placement = 3;
+
+  // Text inset from every box edge, meters. 0 (the proto3 scalar default)
+  // means no padding, matching the runtime default.
+  float padding = 4;
+  // Background fill behind the text, out to the border. Unset means no fill
+  // (the box background stays transparent).
+  motif.data.style.v1.Color fill = 5;
 }
 
 // A persisted dimension annotation.
@@ -179,4 +187,64 @@ message Dimension {
 // order. Unset span fields inherit the block defaults.
 message TextBlock {
   option (motif.extension.v1.message).component = 125;
+
+  // Block default font; spans inherit it when their font is unset. An unset
+  // font means "use the application default font".
+  Font default_font = 1;
+  // Block default size (em) + color; spans inherit unset fields.
+  Style default_style = 2;
+  Layout layout = 3;
+  repeated TextSpan spans = 4;
+}
+
+
+// A run of uniformly-styled text. Message-typed fields carry presence in
+// proto3, so `optional` is only needed on the scalar `size` field.
+message TextSpan {
+  // "\n" encodes hard line breaks (matches the runtime text model).
+  string text = 1;
+  // Unset — or unset inner fields — inherit the TextBlock defaults.
+  Style style = 2;
+}
+
+// Font identity that survives reload (family name, not an unstable runtime
+// font-database id).
+message Font {
+  // Font family name, e.g. "Roboto".
+  string family = 1;
+  // star font style bits: BOLD = 0x1, ITALIC = 0x2. Unknown bits are ignored.
+  uint32 style_flags = 2;
+}
+
+message Style {
+  // On a span, unset => inherit TextBlock.default_font. As a block default
+  // this stays unset: the block's font is carried by TextBlock.default_font.
+  Font font = 1;
+  // Em multiplier; 0 (the proto3 scalar default) decodes to the context
+  // default: 1.0 as a block default, "inherit" on a span.
+  float size = 2;
+  motif.data.style.v1.Color color = 3;
+}
+
+message Layout {
+  Justify justify = 1;
+  LineBreak line_break = 2;
+  // Line height multiplier; 0 (the proto3 scalar default) is decoded as 1.2.
+  float line_height_factor = 3;
+}
+
+// Zero values match the runtime defaults so a missing field decodes correctly.
+enum Justify {
+  JUSTIFY_LEFT = 0;
+  JUSTIFY_CENTER = 1;
+  JUSTIFY_RIGHT = 2;
+  JUSTIFY_JUSTIFIED = 3;
+}
+
+// Zero values match the runtime defaults so a missing field decodes correctly.
+enum LineBreak {
+  LINE_BREAK_WORD_BOUNDARY = 0;
+  LINE_BREAK_ANY_CHARACTER = 1;
+  LINE_BREAK_WORD_OR_CHARACTER = 2;
+  LINE_BREAK_NO_WRAP = 3;
 }
