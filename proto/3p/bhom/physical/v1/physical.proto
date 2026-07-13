@@ -89,7 +89,6 @@ message Profile {
 enum ShapeType {
   // Zero is Rectangle in BHOM (not an unspecified sentinel) keep wire numbers. The comment below lets the default enum value of 0 not be ignored
   // buf:lint:ignore ENUM_ZERO_VALUE_SUFFIX -- BHOM ShapeType.Rectangle = 0
-  // We could shift everything by 1 or place type rectangle elsewhere, but we would need to be vary of that conversion later. 
   SHAPE_TYPE_RECTANGLE = 0;
   SHAPE_TYPE_BOX = 1;
   SHAPE_TYPE_ANGLE = 2;

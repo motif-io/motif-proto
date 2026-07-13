@@ -176,7 +176,7 @@ Mirrors `BH.oM.Spatial.ShapeProfiles.IProfile`, hosted under **physical** (no `b
 ```text
 proto/3p/bhom/base/v1/base.proto           # BHoMBase
 proto/3p/bhom/physical/v1/physical.proto   # Beam/Column/Bracing, FramingSection, Profile + shapes
-proto/3p/bhom/structure/v1/bar.proto       # Bar
+proto/3p/bhom/structure/v1/structure.proto       # Bar
 buf.yaml                                   # PACKAGE_DIRECTORY_MATCH ignore for proto/3p
 ```
 
