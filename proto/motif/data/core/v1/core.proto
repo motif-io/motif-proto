@@ -170,12 +170,14 @@ message Presents {
   motif.extension.v1.EntityReference source = 1 [(buf.validate.field).required = true];
 }
 
-// The representation of an asset that should be rendered in the scene.
+// The representation of an asset. Entities carrying this component reference a
+// blob in the representation service that clients may fetch, decode, and
+// (depending on the MIME type) render into the scene.
 //
 // NOTE: in the future the backend will provide a signed URL for the
 // representation. For now, `id` is used to fetch the representation URL from the
 // representation service.
-message RenderedRepresentation {
+message Representation {
   option (motif.extension.v1.message).component = 4;
 
   // Identifier used to fetch the representation.
@@ -183,7 +185,7 @@ message RenderedRepresentation {
   // The MIME type of the representation.
   MimeType mime_type = 2;
 
-  // The media type of a rendered representation.
+  // The media type of a representation.
   enum MimeType {
     // Unspecified MIME type.
     MIME_TYPE_UNSPECIFIED = 0;
@@ -199,6 +201,9 @@ message RenderedRepresentation {
     MIME_TYPE_OBJ = 5;
     // model/gltf-binary.
     MIME_TYPE_GLB = 6;
+    // Opaque/non-renderable payload (spreadsheets, documents, arbitrary blobs).
+    // Consumers must not attempt to render entities carrying this variant.
+    MIME_TYPE_UNKNOWN = 7;
   }
 }
 
