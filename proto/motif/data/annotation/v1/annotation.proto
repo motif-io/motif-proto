@@ -5,6 +5,7 @@ package motif.data.annotation.v1;
 
 import "buf/validate/validate.proto";
 import "motif/data/geometry/v1/geometry.proto";
+import "motif/data/style/v1/style.proto";
 import "motif/extension/v1/options.proto";
 import "motif/extension/v1/reference.proto";
 
@@ -19,6 +20,13 @@ message TextAnnotation {
 
   // Position, size, and rotation
   motif.data.geometry.v1.Box2d placement = 3;
+
+  // Text inset from every box edge, meters. 0 (the proto3 scalar default)
+  // means no padding, matching the runtime default.
+  float padding = 4;
+  // Background fill behind the text, out to the border. Unset means no fill
+  // (the box background stays transparent).
+  motif.data.style.v1.Color fill = 5;
 }
 
 // A persisted dimension annotation.
@@ -179,4 +187,51 @@ message Dimension {
 // order. Unset span fields inherit the block defaults.
 message TextBlock {
   option (motif.extension.v1.message).component = 125;
+
+  // Block default font, size (em), and color; spans inherit unset fields.
+  TextStyle default_style = 1;
+  TextLayout layout = 2;
+  repeated TextSpan spans = 3;
+}
+
+// A run of uniformly-styled text. Message-typed fields carry presence in
+// proto3; the scalar `size` field uses 0 to mean "unset" instead.
+message TextSpan {
+  // "\n" encodes hard line breaks (matches the runtime text model).
+  string text = 1;
+  // Unset — or unset inner fields — inherit the TextBlock defaults.
+  TextStyle style = 2;
+}
+
+message TextStyle {
+  // On a span, unset => inherit the block default. As a block default, unset
+  // means "use the application default font".
+  motif.data.style.v1.Font font = 1;
+  // Em multiplier; 0 (the proto3 scalar default) decodes to the context
+  // default: 1.0 as a block default, "inherit" on a span.
+  float size = 2;
+  motif.data.style.v1.Color color = 3;
+}
+
+message TextLayout {
+  Justify justify = 1;
+  LineBreak line_break = 2;
+  // Line height multiplier; 0 (the proto3 scalar default) is decoded as 1.2.
+  float line_height_factor = 3;
+}
+
+enum Justify {
+  JUSTIFY_UNSPECIFIED = 0;
+  JUSTIFY_LEFT = 1;
+  JUSTIFY_CENTER = 2;
+  JUSTIFY_RIGHT = 3;
+  JUSTIFY_JUSTIFIED = 4;
+}
+
+enum LineBreak {
+  LINE_BREAK_UNSPECIFIED = 0;
+  LINE_BREAK_WORD_BOUNDARY = 1;
+  LINE_BREAK_ANY_CHARACTER = 2;
+  LINE_BREAK_WORD_OR_CHARACTER = 3;
+  LINE_BREAK_NO_WRAP = 4;
 }
