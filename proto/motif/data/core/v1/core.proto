@@ -204,7 +204,7 @@ message Representation {
   bytes id = 1 [(buf.validate.field).bytes.len = 16];
   // The MIME type of the representation.
   MimeType mime_type = 2;
-  
+
   // The raw MIME type string, populated when `mime_type` is
   // `MIME_TYPE_UNKNOWN` to preserve the original value.
   string mime_type_string = 3;
