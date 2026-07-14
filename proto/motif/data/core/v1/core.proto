@@ -205,9 +205,9 @@ message Representation {
   // The MIME type of the representation.
   MimeType mime_type = 2;
 
-  // The raw MIME type string, populated when `mime_type` is
-  // `MIME_TYPE_UNKNOWN` to preserve the original value.
-  string mime_type_string = 3;
+  // The raw extension string (ex: `.rtf`), populated when `mime_type` is
+  // `MIME_TYPE_UNKNOWN`
+  string extension = 3;
 }
 
 // Marker component indicating the entity represents some form of asset.
