@@ -170,49 +170,44 @@ message Presents {
   motif.extension.v1.EntityReference source = 1 [(buf.validate.field).required = true];
 }
 
+// The media type of a representation.
+enum MimeType {
+  // Unspecified MIME type.
+  MIME_TYPE_UNSPECIFIED = 0;
+  // image/jpeg.
+  MIME_TYPE_JPEG = 1;
+  // image/png.
+  MIME_TYPE_PNG = 2;
+  // application/pdf.
+  MIME_TYPE_PDF = 3;
+  // image/svg+xml.
+  MIME_TYPE_SVG = 4;
+  // model/obj.
+  MIME_TYPE_OBJ = 5;
+  // model/gltf-binary.
+  MIME_TYPE_GLB = 6;
+  // font/ttf
+  MIME_TYPE_TTF = 7;
+  // application/json
+  MIME_TYPE_JSON = 8;
+  // Opaque/non-renderable payload (spreadsheets, documents, arbitrary blobs).
+  MIME_TYPE_UNKNOWN = 9;
+}
+
 // The representation of an asset. Entities carrying this component reference a
 // blob in the representation service that clients may fetch, decode, and
 // (depending on the MIME type) render into the scene.
-//
-// NOTE: in the future the backend will provide a signed URL for the
-// representation. For now, `id` is used to fetch the representation URL from the
-// representation service.
 message Representation {
   option (motif.extension.v1.message).component = 4;
 
   // Identifier used to fetch the representation.
-  bytes id = 1;
+  bytes id = 1 [(buf.validate.field).bytes.len = 16];
   // The MIME type of the representation.
   MimeType mime_type = 2;
+  
   // The raw MIME type string, populated when `mime_type` is
   // `MIME_TYPE_UNKNOWN` to preserve the original value.
   string mime_type_string = 3;
-
-  // The media type of a representation.
-  enum MimeType {
-    // Unspecified MIME type.
-    MIME_TYPE_UNSPECIFIED = 0;
-    // image/jpeg.
-    MIME_TYPE_JPEG = 1;
-    // image/png.
-    MIME_TYPE_PNG = 2;
-    // application/pdf.
-    MIME_TYPE_PDF = 3;
-    // image/svg+xml.
-    MIME_TYPE_SVG = 4;
-    // model/obj.
-    MIME_TYPE_OBJ = 5;
-    // model/gltf-binary.
-    MIME_TYPE_GLB = 6;
-    // font/ttf
-    MIME_TYPE_TTF = 7;
-    // application/json
-    MIME_TYPE_JSON = 8;
-    // Opaque/non-renderable payload (spreadsheets, documents, arbitrary blobs).
-    MIME_TYPE_UNKNOWN = 9;
-  }
-
-  
 }
 
 // Marker component indicating the entity represents some form of asset.
