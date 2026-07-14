@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package bhom.data.structure.v1;
+
+import "3p/bhom/physical/v1/physical.proto";
+import "motif/data/geometry/v1/geometry.proto";
+import "motif/extension/v1/options.proto";
+
+message Bar {
+  option (motif.extension.v1.message).component = 137;
+
+  // Centerline start point of a straight analytical bar.
+  motif.data.geometry.v1.Point3 start_point = 1;
+  // Centerline end point of a straight analytical bar.
+  motif.data.geometry.v1.Point3 end_point = 2;
+
+  // Orientation angle in radians about the member axis.
+  double orientation_angle = 3;
+
+  bhom.data.physical.v1.Profile profile = 4;
+}

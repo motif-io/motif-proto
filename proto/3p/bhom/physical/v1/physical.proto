@@ -1,0 +1,290 @@
+syntax = "proto3";
+
+package bhom.data.physical.v1;
+
+import "motif/data/geometry/v1/geometry.proto";
+import "motif/extension/v1/options.proto";
+
+// Cross-section that is uniform along the member length.
+message FramingSection {
+  Profile profile = 1;
+
+  // Roll of the profile about the member axis, in radians.
+  double orientation_angle = 2;
+}
+
+// A physical beam with a straight centerline.
+message Beam {
+  option (motif.extension.v1.message).component = 134;
+
+  // Centerline start point.
+  motif.data.geometry.v1.Point3 start_point = 1;
+  // Centerline end point.
+  motif.data.geometry.v1.Point3 end_point = 2;
+
+  FramingSection section = 3;
+
+  // Soft links to analytical structure bars associated with this member.
+  repeated string analytical_bar_ids = 4;
+}
+
+// A physical column with a straight centerline.
+message Column {
+  option (motif.extension.v1.message).component = 135;
+
+  motif.data.geometry.v1.Point3 start_point = 1;
+  motif.data.geometry.v1.Point3 end_point = 2;
+
+  FramingSection section = 3;
+
+  repeated string analytical_bar_ids = 4;
+}
+
+// A physical bracing member with a straight centerline.
+message Bracing {
+  option (motif.extension.v1.message).component = 136;
+
+  motif.data.geometry.v1.Point3 start_point = 1;
+  motif.data.geometry.v1.Point3 end_point = 2;
+
+  FramingSection section = 3;
+
+  repeated string analytical_bar_ids = 4;
+}
+
+message Profile {
+  // BHoM `ShapeType` wire value.
+  ShapeType shape = 1;
+
+  // Edge curves in the section local XY-plane.
+  // Empty for `TaperedProfile`; nested profiles carry geometry along the length.
+  repeated motif.data.geometry.v1.Curve2 edges = 2;
+
+  // Optional display name from BHoM.
+  string name = 3;
+
+  // Parametric dimensions for a known profile type.
+  // Leave unset for free-form profiles (`shape = FREE_FORM`); use `edges` only.
+  oneof definition {
+    AngleProfile angle = 10;
+    BoxProfile box = 11;
+    ChannelProfile channel = 12;
+    CircleProfile circle = 13;
+    FabricatedBoxProfile fabricated_box = 14;
+    FabricatedISectionProfile fabricated_i_section = 15;
+    GeneralisedFabricatedBoxProfile generalised_fabricated_box = 16;
+    GeneralisedTSectionProfile generalised_t_section = 17;
+    ISectionProfile i_section = 18;
+    KiteProfile kite = 19;
+    RectangleProfile rectangle = 20;
+    TSectionProfile t_section = 21;
+    TaperFlangeChannelProfile taper_flange_channel = 22;
+    TaperFlangeISectionProfile taper_flange_i_section = 23;
+    TaperedProfile tapered = 24;
+    TubeProfile tube = 25;
+    VoidedISectionProfile voided_i_section = 26;
+    ZSectionProfile z_section = 27;
+  }
+}
+
+// Shape types
+
+enum ShapeType {
+  // Rectangle is zero in BHoM (not an unspecified sentinel); preserve wire numbers.
+  // buf:lint:ignore ENUM_ZERO_VALUE_SUFFIX -- BHoM ShapeType.Rectangle = 0
+  SHAPE_TYPE_RECTANGLE = 0;
+  SHAPE_TYPE_BOX = 1;
+  SHAPE_TYPE_ANGLE = 2;
+  SHAPE_TYPE_I_SECTION = 3;
+  SHAPE_TYPE_TEE = 4;
+  SHAPE_TYPE_CHANNEL = 5;
+  SHAPE_TYPE_TUBE = 6;
+  SHAPE_TYPE_CIRCLE = 7;
+  SHAPE_TYPE_ZED = 8;
+  SHAPE_TYPE_FREE_FORM = 9;
+  SHAPE_TYPE_DOUBLE_ANGLE = 22;
+  SHAPE_TYPE_DOUBLE_I_SECTION = 23;
+  SHAPE_TYPE_DOUBLE_CHANNEL = 25;
+  SHAPE_TYPE_CABLE = 30;
+}
+
+// L shaped
+message AngleProfile {
+  double height = 1;
+  double width = 2;
+  double web_thickness = 3;
+  double flange_thickness = 4;
+  double root_radius = 5;
+  double toe_radius = 6;
+  bool mirror_about_local_z = 7;
+  bool mirror_about_local_y = 8;
+}
+
+// Hollow rectangle with constant thickness
+message BoxProfile {
+  double height = 1;
+  double width = 2;
+  double thickness = 3;
+  double outer_radius = 4;
+  double inner_radius = 5;
+}
+
+// C shaped
+message ChannelProfile {
+  double height = 1;
+  double flange_width = 2;
+  double web_thickness = 3;
+  double flange_thickness = 4;
+  double root_radius = 5;
+  double toe_radius = 6;
+  bool mirror_about_local_z = 7;
+}
+
+// Solid circle
+message CircleProfile {
+  double diameter = 1;
+}
+
+// Hollow rect with varying flange/web thickness
+message FabricatedBoxProfile {
+  double height = 1;
+  double width = 2;
+  double web_thickness = 3;
+  double top_flange_thickness = 4;
+  double bot_flange_thickness = 5;
+  double weld_size = 6;
+}
+
+// I with independent flange sizes
+message FabricatedISectionProfile {
+  double height = 1;
+  double top_flange_width = 2;
+  double bot_flange_width = 3;
+  double web_thickness = 4;
+  double top_flange_thickness = 5;
+  double bot_flange_thickness = 6;
+  double weld_size = 7;
+}
+
+// Hollow rect and flange corbels
+message GeneralisedFabricatedBoxProfile {
+  double height = 1;
+  double width = 2;
+  double web_thickness = 3;
+  double top_flange_thickness = 4;
+  double bot_flange_thickness = 5;
+  double top_left_corbel_width = 6;
+  double top_right_corbel_width = 7;
+  double bot_left_corbel_width = 8;
+  double bot_right_corbel_width = 9;
+}
+
+// T with independent outstands
+message GeneralisedTSectionProfile {
+  double height = 1;
+  double web_thickness = 2;
+  double left_outstand_width = 3;
+  double left_outstand_thickness = 4;
+  double right_outstand_width = 5;
+  double right_outstand_thickness = 6;
+  bool mirror_about_local_y = 7;
+}
+
+// I section with parallel flanges and equal thickness
+message ISectionProfile {
+  double height = 1;
+  double width = 2;
+  double web_thickness = 3;
+  double flange_thickness = 4;
+  double root_radius = 5;
+  double toe_radius = 6;
+}
+
+// Diamond/kite
+message KiteProfile {
+  double width1 = 1;
+  double angle1 = 2;
+  double thickness = 3;
+}
+
+// Solid rectangle
+message RectangleProfile {
+  double height = 1;
+  double width = 2;
+  double corner_radius = 3;
+}
+
+// T shaped with constant flange thickness
+message TSectionProfile {
+  double height = 1;
+  double width = 2;
+  double web_thickness = 3;
+  double flange_thickness = 4;
+  double root_radius = 5;
+  double toe_radius = 6;
+  bool mirror_about_local_y = 7;
+}
+
+// C shape with tapered flanges
+message TaperFlangeChannelProfile {
+  double height = 1;
+  double flange_width = 2;
+  double web_thickness = 3;
+  double flange_thickness = 4;
+  double flange_slope = 5;
+  double root_radius = 6;
+  double toe_radius = 7;
+  bool mirror_about_local_z = 8;
+}
+
+// I shape with tapered flanges
+message TaperFlangeISectionProfile {
+  double height = 1;
+  double width = 2;
+  double web_thickness = 3;
+  double flange_thickness = 4;
+  double flange_slope = 5;
+  double root_radius = 6;
+  double toe_radius = 7;
+}
+
+// Profile that varies along the member length. Profiles at positions are
+// interpolated according to `interpolation_order`.
+message TaperedProfile {
+  repeated int32 interpolation_order = 1;
+  repeated ProfileAtPosition profiles = 2;
+}
+
+message ProfileAtPosition {
+  double position = 1;
+  Profile profile = 2;
+}
+
+// Hollow circle
+message TubeProfile {
+  double diameter = 1;
+  double thickness = 2;
+}
+
+// I shape with web opening
+message VoidedISectionProfile {
+  double height = 1;
+  double opening_height = 2;
+  double height_t_section = 3;
+  double width = 4;
+  double web_thickness = 5;
+  double flange_thickness = 6;
+  double root_radius = 7;
+  double toe_radius = 8;
+}
+
+// Z shaped
+message ZSectionProfile {
+  double height = 1;
+  double flange_width = 2;
+  double web_thickness = 3;
+  double flange_thickness = 4;
+  double root_radius = 5;
+  double toe_radius = 6;
+  bool mirror_about_local_z = 7;
+}

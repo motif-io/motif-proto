@@ -1,6 +1,7 @@
 syntax = "proto3";
 
-// Styling components: color, opacity, and line styling applied to entities.
+// Styling components: color, opacity, line, and font styling applied to
+// entities.
 package motif.data.style.v1;
 
 import "buf/validate/validate.proto";
@@ -108,4 +109,13 @@ message LinePatternElement {
 
   // A dot marker (no fields).
   message Dot {}
+}
+
+// Font identity that survives reload (family name, not an unstable runtime
+// font-database id). A plain embedded message, not a standalone component.
+message Font {
+  // Font family name, e.g. "Roboto".
+  string family = 1;
+  // star font style bits: BOLD = 0x1, ITALIC = 0x2. Unknown bits are ignored.
+  uint32 style_flags = 2;
 }
