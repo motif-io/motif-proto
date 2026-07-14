@@ -185,7 +185,7 @@ message Representation {
   // The MIME type of the representation.
   MimeType mime_type = 2;
   // The raw MIME type string, populated when `mime_type` is
-  // `MIME_TYPE_UNKNOWN` to preserve the original value (e.g.
+  // `MIME_TYPE_UNKNOWN` to preserve the original value.
   string mime_type_string = 3;
 
   // The media type of a representation.
@@ -211,6 +211,8 @@ message Representation {
     // Opaque/non-renderable payload (spreadsheets, documents, arbitrary blobs).
     MIME_TYPE_UNKNOWN = 9;
   }
+
+  
 }
 
 // Marker component indicating the entity represents some form of asset.
