@@ -205,7 +205,7 @@ message Representation {
   // The MIME type of the representation.
   MimeType mime_type = 2;
 
-  // The raw extension string (ex: `.rtf`), populated when `mime_type` is
+  // The extension string (ex: `.rtf`), populated when `mime_type` is
   // `MIME_TYPE_UNKNOWN`
   string extension = 3;
 }
