@@ -5,12 +5,12 @@
 
 # Default owner for the whole repo. This protects everything outside proto,
 # AND gates newly-added proto packages: a new package under proto/ that is not
-# listed below falls through to this rule, so the Motif 2.0 team must review
+# listed below falls through to this rule, so the Motif team must review
 # it — that review is where a new package's name gets approved.
-* @motif-io/motif-2-0
+* @motif-io/motif
 
 # --- Approved proto packages ---------------------------------------------
-# When the Motif 2.0 team approves a new package's name, add a line here
+# When the Motif team approves a new package's name, add a line here
 # assigning the package to its owner(s) so they own ongoing edits.
 #
 # Owners can be:
@@ -24,5 +24,5 @@
 # belong to motif-io. Cross-org contributors must be listed as individuals.
 # (No external packages approved yet.)
 
-# The motif package is owned by the Motif 2.0 team.
-/proto/motif/ @motif-io/motif-2-0
+# The motif package is owned by the Motif team.
+/proto/motif/ @motif-io/motif
