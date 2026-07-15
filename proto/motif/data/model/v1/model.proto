@@ -43,7 +43,7 @@ message Curve2 {
   motif.data.geometry.v1.Curve2 curve = 1;
 }
 
-// 3D point geometry (sketch / framing datum node).
+// 3D point geometry.
 message Point3 {
   option (motif.extension.v1.message).component = 138;
 
