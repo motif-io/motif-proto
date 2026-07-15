@@ -1,0 +1,402 @@
+syntax = "proto3";
+
+package motif.api.v1;
+
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+// The persistence service stores model state and changeset history.
+//
+// All RPCs require authorization. Missing or malformed bearer tokens return
+// UNAUTHENTICATED. Denied access returns PERMISSION_DENIED. Model-scoped RPCs
+// return NOT_FOUND when the model cannot be resolved (example: GetChanges
+// and RevertToVersion), unless otherwise stated (example: ApplyChangeset
+// and ApplyChangesetStream).
+//
+// Fields named *_id with type bytes are 16-byte UUIDs in RFC 4122 byte order.
+// Model IDs additionally reserve byte 0; it must be 0x00.
+//
+// buf:lint:ignore SERVICE_SUFFIX
+service Persistence {
+  // Deletes a model and its entities. Returns the deleted model id.
+  rpc DeleteModel(DeleteModelRequest) returns (DeleteModelResponse);
+
+  // Lists models in a project. Each model includes its current changeset version.
+  rpc ListModels(ListModelsRequest) returns (ListModelsResponse);
+
+  // Streams entities in a model.
+  //
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+  rpc Query(QueryRequest) returns (stream VersionedEntityResponse);
+
+  // Applies an atomic changeset.
+  //
+  // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+  rpc ApplyChangeset(Changeset) returns (ChangesetResponse);
+
+  // Lists changeset metadata for a model.
+  //
+  // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
+  rpc ListChangesets(ListChangesetRequest) returns (ListChangesetsResponse);
+
+  // Streams the diff between two model-history cursor positions.
+  //
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+  rpc GetChanges(GetChangesRequest) returns (stream VersionedEntityResponse);
+
+  // Applies a streamed changeset atomically.
+  //
+  // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+  rpc ApplyChangesetStream(stream ChangesetStream) returns (ChangesetResponse);
+
+  // Creates a new changeset that restores the model to a prior version.
+  rpc RevertToVersion(RevertToVersionRequest) returns (RevertToVersionResponse);
+}
+
+// A single component value attached to an entity.
+message Component {
+  // The Component ID (aka type tag).
+  int32 type_tag = 1;
+
+  // The value of the component (can be empty if it's a tag/marker component).
+  // If present, the `deleted` field cannot be present. If neither field is
+  // present, the component is considered a tag/marker component.
+  optional bytes value = 2;
+
+  // Marks the component as deleted. If present, the `value` field cannot be present.
+  optional google.protobuf.Empty deleted = 3;
+}
+
+// An entity and the set of component changes that apply to it.
+message Entity {
+  // The Entity ID this change applies to (`UUIDv4`).
+  // Entity IDs are only unique within a model; different models can use the same entity IDs.
+  // If you need to attach components to a model itself (e.g. for the name of the model), use
+  // 00000000-0000-4000-8000-000000000000
+  bytes entity_id = 1;
+
+  // The components for this entity.
+  // If non-empty, the `deleted` field cannot be present.
+  repeated Component components = 2;
+
+  // Marks the entity as deleted. If present, the `components` field cannot be non-empty.
+  optional google.protobuf.Empty deleted = 3;
+}
+
+// Identifies the model to delete.
+message DeleteModelRequest {
+  // Target model id. Globally unique across projects.
+  bytes model_id = 1;
+}
+
+// Confirms which model was deleted.
+message DeleteModelResponse {
+  // Deleted model id. Globally unique across projects.
+  bytes model_id = 1;
+}
+
+// Requests a page of models in a project.
+message ListModelsRequest {
+  // Target project id.
+  bytes project_id = 1;
+  // Maximum models to return. Server chooses a default.
+  optional uint32 page_size = 2;
+  // Token from a previous ListModelsResponse.
+  optional string page_token = 3;
+}
+
+// A page of models in a project.
+message ListModelsResponse {
+  // Target project id.
+  bytes project_id = 1;
+  // Collection of listed models.
+  repeated Model models = 2;
+  // Present when another page is available.
+  optional string next_page_token = 3;
+}
+
+message Model {
+  // Model id. Globally unique across projects.
+  bytes model_id = 1;
+  // The model's current committed version.
+  int32 changeset_version = 2;
+}
+
+// Streams entities in a model at latest state or as of a version.
+//
+// Component filters may be applied to select matching entities.
+// select_components controls the returned projection.
+message QueryRequest {
+  // Target model id. Globally unique across projects.
+  bytes model_id = 1;
+
+  // When set, query state as of that version; otherwise, latest.
+  optional int32 as_of_changeset_version = 2;
+
+  // Returned component projection. Empty returns all components.
+  repeated int32 select_components = 3;
+  // Entity must have all provided components.
+  repeated int32 where_all_components = 4;
+  // Entity must have at least one provided component.
+  repeated int32 where_any_components = 5;
+  // Entity-id filter applied after component filters. Empty matches all entities.
+  repeated bytes where_entity_ids = 6;
+}
+
+// Applies atomic entity changes for one model.
+//
+// The first changeset for a model creates it and binds it to project_id; later
+// changesets must use the same project. Stale max_known_version does not reject
+// the write; it is recorded as race condition metadata. changes contains client
+// changes; derived_changes contains system changes within the same version.
+//
+// Each stage rejects duplicate (entity_id, component_id) writes and entity
+// deletes that conflict with same-stage component writes. changes and
+// derived_changes are validated as separate stages. Duplicate-key violations
+// return INVALID_ARGUMENT.
+message Changeset {
+  // Project id.
+  bytes project_id = 1;
+
+  // Model id. Globally unique across projects.
+  bytes model_id = 2;
+
+  // Highest changeset version known when the client produced the changeset
+  // locally. A stale value does not reject the write; it is recorded as race
+  // condition metadata.
+  int32 max_known_version = 3;
+
+  // Client-authored entity changes. Within this stage each (entity_id,
+  // component_id) may appear at most once, and an entity delete conflicts with
+  // any same-stage component write for that entity.
+  repeated Entity changes = 7;
+  // System changes applied after client changes in the assigned version. This
+  // stage uses the same duplicate-key rules as changes but is validated separately.
+  repeated Entity derived_changes = 8;
+}
+
+// Requests changeset history for a model. Default: newest first.
+message ListChangesetRequest {
+  // Controls whether model history is listed before or after from_version.
+  //
+  // buf:lint:ignore ENUM_VALUE_PREFIX
+  // buf:lint:ignore ENUM_ZERO_VALUE_SUFFIX
+  enum Direction {
+    // Lists at or below from_version, newest first.
+    BEFORE_VERSION_INCLUSIVE = 0;
+
+    // Lists after from_version.
+    AFTER_VERSION_EXCLUSIVE = 1;
+  }
+
+  // Target model id. Globally unique across projects.
+  bytes model_id = 1;
+  // Controls whether model history is listed before or after from_version.
+  Direction direction = 2;
+  // Version from which changesets are listed with respect to direction.
+  optional int32 from_version = 3;
+  // Number of elements to return in each page. Default behavior is
+  // server-defined. Values must be 1..500, else returns INVALID_ARGUMENT.
+  optional uint32 page_size = 4;
+}
+
+// Metadata for one changeset in model history.
+message ChangesetListItem {
+  // buf:lint:ignore ENUM_VALUE_PREFIX
+  // buf:lint:ignore ENUM_ZERO_VALUE_SUFFIX
+  enum ChangesetRace {
+    // The client had seen the immediately prior version.
+    NO_RACE = 0;
+
+    // A version gap exists, but no changed entity overlapped.
+    RACE_POSSIBLE = 1;
+
+    // A version gap exists, and at least one changed entity overlapped.
+    RACE_ENTITY_COLLISION = 2;
+  }
+
+  // Server-assigned version associated with the changeset.
+  int32 version = 1;
+
+  // User id that authored the client changes associated with the changeset.
+  bytes author_id = 2;
+  // Timestamp assigned when the changeset was recorded.
+  google.protobuf.Timestamp created_at = 3;
+  // True when this changeset includes derived changes within its version.
+  bool has_derived = 4;
+
+  // Present when this changeset was produced by RevertToVersion. Value is the
+  // requested target version.
+  optional int32 reverted_to_version = 5;
+
+  // Classifies whether the changeset was created from a stale max_known_version
+  // and whether concurrent changes touched the same entities.
+  ChangesetRace race = 6;
+}
+
+// Changeset history page for a model.
+message ListChangesetsResponse {
+  // Page entries, ordered from newest to oldest.
+  repeated ChangesetListItem changesets = 1;
+
+  // True when more results exist in the requested direction.
+  bool has_more = 2;
+}
+
+// Position of a change (client changes or otherwise) within a changeset version.
+//
+// buf:lint:ignore ENUM_ZERO_VALUE_SUFFIX
+enum Stage {
+  // Start boundary for a version cursor.
+  STAGE_VERSION_BEGIN = 0;
+
+  // Stage for changes submitted by a client.
+  STAGE_CLIENT = 10;
+
+  // Stage for system-derived changes in the version.
+  STAGE_DERIVED = 69;
+
+  // End boundary for a version cursor.
+  STAGE_VERSION_END = 127;
+}
+
+// Requests a diff between two model-history cursor positions.
+//
+// A cursor is a (version, stage) pair. The response contains changes between
+// the two cursors; direction changes how values are selected.
+//
+// Both from and to are exclusive; the response contains the diff for changes
+// strictly between the two cursor positions. VERSION_BEGIN and VERSION_END are
+// cursor boundaries and do not contain data.
+//
+// If wait is true and the client is current, the server long-polls; timeout
+// returns an OK empty stream.
+//
+// When to > from, returns latest values for each changed entity component.
+// When to < from, returns values as of "to" for each changed entity component.
+message GetChangesRequest {
+  // Target model id. Globally unique across projects.
+  bytes model_id = 1;
+
+  // Start version.
+  int32 from_version = 2;
+
+  // End version. Omit to use the current version, or to long-poll when wait is
+  // true.
+  optional int32 to_version = 3;
+
+  // When true and to_version is unset, wait for a later committed version.
+  // Timeout returns an empty stream.
+  bool wait = 4;
+
+  // Start stage. Defaults to STAGE_VERSION_END.
+  optional Stage from_stage = 5;
+
+  // End stage. Requires to_version when set. Defaults to STAGE_VERSION_END.
+  optional Stage to_stage = 6;
+
+  // Only return changes to these components. Empty matches all components.
+  repeated int32 where_any_components = 7;
+
+  // Entity-id filter, combined with the component filter (set intersection). Empty matches all entities.
+  repeated bytes where_entity_ids = 8;
+}
+
+// Stream item containing either an entity or a changeset version.
+message VersionedEntityResponse {
+  // Either an entity or a changeset version.
+  oneof payload {
+    // Entity containing only changed components.
+    Entity entity = 1;
+
+    // Model-history version used for the returned data.
+    int32 changeset_version = 2;
+  }
+}
+
+// Response for a committed changeset.
+message ChangesetResponse {
+  // Project id.
+  bytes project_id = 1;
+
+  // Model id. Globally unique across projects.
+  bytes model_id = 2;
+
+  // Server-assigned version of the committed changeset.
+  optional int32 changeset_version = 3;
+}
+
+// Message in an ApplyChangesetStream request. Streamed changeset part: header,
+// batch, or footer.
+//
+// A Footer explicitly completes the changeset. Closing without receipt of a
+// Footer results in an unpersisted changeset.
+message ChangesetStream {
+  // Header, batch, or footer payload.
+  oneof payload {
+    // First stream message; identifies the target changeset.
+    Header header = 1;
+
+    // Carries one batch of entity changes.
+    Batch batch = 2;
+
+    // Required final message before half-close.
+    Footer footer = 3;
+  }
+
+  // Target model/project and concurrency metadata for the streamed changeset.
+  message Header {
+    // Target project id.
+    bytes project_id = 1;
+
+    // Target model id. Globally unique across projects.
+    bytes model_id = 2;
+
+    // Highest version known when the client produced the streamed changeset.
+    int32 max_known_version = 3;
+  }
+
+  // One ordered batch in a streamed changeset.
+  //
+  // Duplicate-key validation spans all batches in the stream, with changes and
+  // derived_changes tracked as separate stages. Duplicate-key violations return
+  // INVALID_ARGUMENT.
+  message Batch {
+    // Client-authored entity changes in this batch.
+    repeated Entity changes = 1;
+
+    // System-produced entity changes in this batch.
+    repeated Entity derived_changes = 2;
+  }
+
+  // Empty message that marks the streamed changeset complete.
+  message Footer {}
+}
+
+// Requests a new changeset which restores the model state at "latest" to a prior
+// model version.
+//
+// The target must satisfy 1 <= revert_to_version < latest_version.
+message RevertToVersionRequest {
+  // Target model id. Globally unique across projects.
+  bytes model_id = 1;
+
+  // Concurrency metadata; stale values do not reject the revert.
+  int32 max_known_version = 2;
+
+  // Version whose state will be restored. Must satisfy
+  // 1 <= revert_to_version < latest_version.
+  int32 revert_to_version = 3;
+}
+
+// Identifies the version created by a revert.
+message RevertToVersionResponse {
+  // Server-assigned version of the revert changeset.
+  int32 changeset_version = 1;
+}
