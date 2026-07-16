@@ -10,26 +10,30 @@ import "motif/extension/v1/options.proto";
 // a task in a particular way (project conventions, multi-step procedures, tool
 // guidance).
 //
-// A skill is stored as a component on its own entity, with an `AssignedName`
-// component carrying the skill's display name. What kind of artifact the
+// A skill is stored as a component on its own entity, conventionally composed
+// with:
+//   - `AssignedName` — the skill's display name,
+//   - `Representation` — the skill body (Markdown bytes in the representation
+//     service; `MIME_TYPE_UNKNOWN` with extension ".md").
+// Readers should tolerate the absence of either. What kind of artifact the
 // entity is follows from this component's presence; authorship and edit
-// history come from the entity's changesets.
+// history come from the entity's changesets. Editing a skill uploads a new
+// representation and updates the pointer, so a skill's history is a sequence
+// of representation ids.
 //
 // Skills for a scope live as entities in a dedicated, `Hidden`-marked model.
-// Retrieve a model's skills with a Query scoped to the model id and
-// where_all_components = [139], selecting `AssignedName` alongside for
-// display names.
+// Retrieve a catalog with a Query scoped to the model id and
+// where_all_components = [139], selecting `AssignedName` and `AgentSkill` —
+// listing never requires fetching a body. Load the body via the entity's
+// `Representation` only when the skill is actually used.
 //
-// The skill body is pure Markdown with no YAML frontmatter: the name and
-// description live in structured fields so any client can display a skill
-// catalog without parsing the body.
+// The body is pure Markdown with no YAML frontmatter: name and description
+// live in structured fields so any client can display a skill catalog without
+// parsing (or fetching) the body.
 message AgentSkill {
   option (motif.extension.v1.message).component = 139;
 
   // What the skill does and when an agent should load it, in one or two
   // sentences. Shown in skill catalogs and used by agents to decide relevance.
   string description = 1 [(buf.validate.field).string.max_len = 1024];
-
-  // The skill instructions, in Markdown. No frontmatter.
-  string markdown = 2 [(buf.validate.field).string.max_len = 65536];
 }
