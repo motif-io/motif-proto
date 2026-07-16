@@ -295,3 +295,16 @@ message IsOfType {
   // How the type's values relate to this entity.
   BindingMode binding_mode = 2;
 }
+
+// A marker component indicating an entity should be hidden from default UI
+// views.
+//
+// When present on a model's sentinel entity
+// (00000000-0000-4000-8000-000000000000), clients hide the model from default
+// model lists — like a Unix dotfile. The model stays fully accessible to
+// anything addressing it directly; the marker only affects default browsing
+// surfaces. Used, for example, by models that store agent artifacts (skills)
+// rather than design content.
+message Hidden {
+  option (motif.extension.v1.message).component = 140;
+}

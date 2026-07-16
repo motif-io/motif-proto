@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+// Component types for AI agent skills.
+package motif.data.ai.v1;
+
+import "buf/validate/validate.proto";
+import "motif/extension/v1/options.proto";
+
+// An agent skill: reusable instructions an AI agent loads on demand to perform
+// a task in a particular way (project conventions, multi-step procedures, tool
+// guidance).
+//
+// A skill is stored as a component on its own entity, with an `AssignedName`
+// component carrying the skill's display name. What kind of artifact the
+// entity is follows from this component's presence; authorship and edit
+// history come from the entity's changesets.
+//
+// Skills for a scope live as entities in a dedicated, `Hidden`-marked model.
+// Retrieve a model's skills with a Query scoped to the model id and
+// where_all_components = [139], selecting `AssignedName` alongside for
+// display names.
+//
+// The skill body is pure Markdown with no YAML frontmatter: the name and
+// description live in structured fields so any client can display a skill
+// catalog without parsing the body.
+message AgentSkill {
+  option (motif.extension.v1.message).component = 139;
+
+  // What the skill does and when an agent should load it, in one or two
+  // sentences. Shown in skill catalogs and used by agents to decide relevance.
+  string description = 1 [(buf.validate.field).string.max_len = 1024];
+
+  // The skill instructions, in Markdown. No frontmatter.
+  string markdown = 2 [(buf.validate.field).string.max_len = 65536];
+}
