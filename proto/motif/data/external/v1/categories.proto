@@ -4,6 +4,17 @@ package motif.data.external.v1;
 
 import "motif/extension/v1/options.proto";
 
+// Revit Family and Type
+message RevitFamilyTypeValue = {
+    option (motif.extension.v1.message).component = 131;
+    
+    string family = 1;
+    int64 family_id = 2;
+    
+    string type = 3;
+    int64 type_id = 4;
+}
+
 // Revit category
 message RevitCategoryValue {
   option (motif.extension.v1.message).component = 123;
