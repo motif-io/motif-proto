@@ -10,10 +10,8 @@ message RevitFamilyTypeValue {
   option (motif.extension.v1.message).component = 131;
 
   string family = 1 [(buf.validate.field).string.max_len = 255];
-  int64 family_id = 2;
 
-  string type = 3 [(buf.validate.field).string.max_len = 255];
-  int64 type_id = 4;
+  string type = 2 [(buf.validate.field).string.max_len = 255];
 }
 
 // Revit category
