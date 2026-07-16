@@ -14,7 +14,7 @@ import "motif/extension/v1/options.proto";
 // with:
 //   - `AssignedName` — the skill's display name,
 //   - `Representation` — the skill body (Markdown bytes in the representation
-//     service; `MIME_TYPE_UNKNOWN` with extension ".md").
+//     service; `MIME_TYPE_MARKDOWN`).
 // Readers should tolerate the absence of either. What kind of artifact the
 // entity is follows from this component's presence; authorship and edit
 // history come from the entity's changesets. Editing a skill uploads a new

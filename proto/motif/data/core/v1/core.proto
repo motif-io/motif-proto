@@ -192,6 +192,8 @@ enum MimeType {
   MIME_TYPE_JSON = 8;
   // Opaque/non-renderable payload (spreadsheets, documents, arbitrary blobs).
   MIME_TYPE_UNKNOWN = 9;
+  // text/markdown.
+  MIME_TYPE_MARKDOWN = 10;
 }
 
 // The representation of an asset. Entities carrying this component reference a
