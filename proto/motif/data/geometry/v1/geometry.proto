@@ -160,6 +160,13 @@ message Size2 {
   double height = 2;
 }
 
+// Closed boundary profile as an ordered sequence of line segments in
+// workplane-local coordinates. Each segment is a `Curve2` line; consecutive
+// segments share endpoints and the last segment connects back to the first.
+message Curve2List {
+  repeated Curve2 curves = 1;
+}
+
 // A planar surface in three-dimensional space.
 //
 // Parameter `(u, v)` evaluates to `origin + u * u_axis + v * (normal × u_axis)`
