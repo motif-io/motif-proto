@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+// FDE contained-sketch markers: closed-loop sketch objects authored in sketch
+// edit mode (pick proxy + edit-scope membership).
+//
+// Ported from Raven CPH overlay (`ContainedSketch` / `ContainedSketchMember`).
+// Legacy Raven draft IDs were 66–67; platform IDs are assigned here.
+package motif.data.fde.sketch.v1;
+
+import "motif/data/geometry/v1/geometry.proto";
+import "motif/extension/v1/options.proto";
+
+// Marker on a sketch element authored as part of a contained sketch object
+// (committed while a sketch-edit scope is active).
+message ContainedSketchMember {
+  option (motif.extension.v1.message).component = 142;
+}
+
+// Closed-loop boundary and object-mode pick metadata on a finished contained
+// sketch container entity.
+message ContainedSketch {
+  option (motif.extension.v1.message).component = 143;
+
+  // Closed boundary polyline in the sketch workplane's UV coordinates.
+  repeated motif.data.geometry.v1.Point2 boundary_uv = 1;
+}
