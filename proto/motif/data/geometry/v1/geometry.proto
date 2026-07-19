@@ -112,6 +112,8 @@ message Curve2 {
     Circle2 circle = 2;
     // An elliptical arc.
     Ellipse2 ellipse = 3;
+    // A NURBS curve (possibly unweighted / B-spline).
+    Nurbs2 nurbs = 4;
   }
 }
 
@@ -150,6 +152,20 @@ message Ellipse2 {
   Domain domain = 4;
   // Winding direction: false (proto3 default) = CCW; true = CW.
   bool is_cw = 5;
+}
+
+
+// A NURBS curve in two-dimensional space. Empty `weights` means unweighted
+// (B-spline). Knot vector length must be `len(control_points) + order`.
+message Nurbs2 {
+  // Polynomial order (degree + 1).
+  uint32 order = 1;
+  // Control polygon vertices.
+  repeated Point2 control_points = 2;
+  // Non-decreasing knot vector.
+  repeated double knots = 3;
+  // Per-control-point weights; empty means all weights are 1 (unweighted).
+  repeated double weights = 4;
 }
 
 // A width and height pair describing a two-dimensional size.
