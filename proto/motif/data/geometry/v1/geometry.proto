@@ -154,7 +154,6 @@ message Ellipse2 {
   bool is_cw = 5;
 }
 
-
 // A NURBS curve in two-dimensional space. Empty `weights` means unweighted
 // (B-spline). Knot vector length must be `len(control_points) + order`.
 message Nurbs2 {
