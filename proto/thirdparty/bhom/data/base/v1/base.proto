@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package bhom.data.base.v1;
+package thirdparty.bhom.data.base.v1;
 
 import "motif/extension/v1/options.proto";
 

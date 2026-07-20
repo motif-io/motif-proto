@@ -17,6 +17,9 @@ Schemas are grouped into these top-level packages, all versioned `v1`:
 - **`motif.event.v1`** — Message types for notification events.
 - **`motif.extension.v1`** — Custom Protobuf options and types used to extend the
   platform with new component types.
+- **`thirdparty.<partner>.data.<domain>.v1`** — Partner-owned component types
+  (e.g. `thirdparty.bhom.data.physical.v1`), under `proto/thirdparty/…` so they
+  sort after `motif` on the Buf Schema Registry.
 
 A file's package must match its path under `proto/`: a file in package
 `motif.data.core.v1` lives at `proto/motif/data/core/v1/<file>.proto`. Imports use
@@ -28,7 +31,8 @@ Every Motif component type **must** be defined in a `motif.data.<subpackage>.v1`
 package. Pick the subpackage that fits the domain (e.g. `core`, `model`, `view`,
 `style`, `fde`) or add a new `motif.data.<new>.v1` subpackage if none fits. Do
 **not** define component types in `motif.api.v1`, `motif.event.v1`, or
-`motif.extension.v1`.
+`motif.extension.v1`. Partner types use `thirdparty.<partner>.data.<domain>.v1`
+instead of living under `motif.data.*`.
 
 ## Defining a Motif component type
 

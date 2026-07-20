@@ -22,7 +22,10 @@
 #
 # NOTE: an owner CANNOT be a team from a different GitHub org — teams must
 # belong to motif-io. Cross-org contributors must be listed as individuals.
-# (No external packages approved yet.)
 
 # The motif package is owned by the Motif team.
 /proto/motif/ @motif-io/motif
+
+# Partner / third-party packages (e.g. thirdparty.bhom.data.*). Owned by Motif
+# until a dedicated team (e.g. motif-fde) is created for this tree.
+/proto/thirdparty/ @motif-io/motif

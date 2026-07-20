@@ -1,10 +1,10 @@
 syntax = "proto3";
 
-package bhom.data.structure.v1;
+package thirdparty.bhom.data.structure.v1;
 
-import "3p/bhom/physical/v1/physical.proto";
 import "motif/data/geometry/v1/geometry.proto";
 import "motif/extension/v1/options.proto";
+import "thirdparty/bhom/data/physical/v1/physical.proto";
 
 message Bar {
   option (motif.extension.v1.message).component = 137;
@@ -17,5 +17,5 @@ message Bar {
   // Orientation angle in radians about the member axis.
   double orientation_angle = 3;
 
-  bhom.data.physical.v1.Profile profile = 4;
+  thirdparty.bhom.data.physical.v1.Profile profile = 4;
 }

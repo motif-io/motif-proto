@@ -10,6 +10,11 @@ relative to that root — e.g. package `motif.extension.v1` is at
 `proto/motif/extension/v1/`, and `motif.data.ai.v1` is at
 `proto/motif/data/ai/v1/`.
 
+Partner-owned types use packages under `thirdparty.<partner>.data.<domain>.v1`
+(e.g. `thirdparty.bhom.data.base.v1` at `proto/thirdparty/bhom/data/base/v1/`) so
+they sort after `motif` on the Buf Schema Registry and stay out of the top-level
+partner namespace.
+
 One module (rather than one per package) keeps the schemas on a single buf
 repository. Add a new package by creating its package-mirrored directory under
 `proto/` (e.g. `proto/motif/data/<area>/v1/`) — no `buf.yaml` change is
