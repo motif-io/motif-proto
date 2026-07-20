@@ -156,6 +156,8 @@ message Ellipse2 {
 
 // A NURBS curve in two-dimensional space. Empty `weights` means unweighted
 // (B-spline). Knot vector length must be `len(control_points) + order`.
+// When `domain` is omitted, consumers should treat the active span as the full
+// knot-derived range `[knots[order-1], knots[len(knots)-order]]`.
 message Nurbs2 {
   // Polynomial order (degree + 1).
   uint32 order = 1;
@@ -165,6 +167,9 @@ message Nurbs2 {
   repeated double knots = 3;
   // Per-control-point weights; empty means all weights are 1 (unweighted).
   repeated double weights = 4;
+  // Active parametric extent. May be a sub-range of the knot span (trimmed /
+  // partially visible spline). Omit to mean the full knot-derived domain.
+  Domain domain = 5;
 }
 
 // A width and height pair describing a two-dimensional size.
