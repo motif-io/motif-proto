@@ -26,6 +26,7 @@
 # The motif package is owned by the Motif team.
 /proto/motif/ @motif-io/motif
 
-# Partner / third-party packages (e.g. thirdparty.bhom.data.*). Owned by Motif
-# until a dedicated team (e.g. motif-fde) is created for this tree.
-/proto/thirdparty/ @motif-io/motif
+# Partner / third-party packages. Ownership defaults to the FDE team.
+# Specific subpackages can be assigned third party owners that are
+# added as outside collaborators.
+/proto/thirdparty/ @motif-io/motif-fde
