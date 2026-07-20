@@ -4,10 +4,11 @@
 # Order matters: the LAST matching pattern for a changed file wins.
 
 # Default owner for the whole repo. This protects everything outside proto,
-# AND gates newly-added proto packages: a new package under proto/ that is not
-# listed below falls through to this rule, so the Motif team must review
-# it — that review is where a new package's name gets approved.
-* @motif-io/motif
+# AND gates newly-added top-level proto packages: a new package under proto/
+# that is not listed below falls through to this rule, so the Motif Data
+# Management team must review it — that review is where a new top-level
+# package's name gets approved.
+* @motif-io/motif-data-management
 
 # --- Approved proto packages ---------------------------------------------
 # When the Motif team approves a new package's name, add a line here
