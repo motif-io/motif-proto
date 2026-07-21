@@ -326,25 +326,23 @@ message ChangesetResponse {
   // Model id. Globally unique across projects.
   bytes model_id = 2;
 
-  // Either the successful application result or an application-level rejection.
+  // Either the committed version or an application-level rejection.
   oneof result {
-    // Successful changeset application.
-    Success success = 3;
+    // Server-assigned version of the committed changeset.
+    int32 changeset_version = 3;
 
-    // Reason the changeset was not applied.
+    // Reason the changeset was not committed.
     Error error = 4;
   }
 
-  // Successful changeset application.
-  message Success {
-    // Server-assigned version of the committed changeset.
-    int32 changeset_version = 1;
-  }
+  // Explains why a syntactically valid changeset was not committed.
+  enum Error {
+    // No rejection reason was specified.
+    ERROR_UNSPECIFIED = 0;
 
-  // Explains why a syntactically valid changeset was not applied.
-  message Error {
-    // Message to support triage & programmatic error handling.
-    string message = 1;
+    // The client's model is out of date because an entity in the changeset
+    // changed after max_known_version.
+    ERROR_OVERLAPPING_ENTITIES = 1;
   }
 }
 
