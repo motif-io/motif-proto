@@ -152,9 +152,8 @@ message QueryRequest {
 // Applies atomic entity changes for one model.
 //
 // The first changeset for a model creates it and binds it to project_id; later
-// changesets must use the same project. Stale max_known_version does not reject
-// the write; it is recorded as race condition metadata. changes contains client
-// changes; derived_changes contains system changes within the same version.
+// changesets must use the same project. Changes contains client changes;
+// derived_changes contains system changes within the same version.
 //
 // Each stage rejects duplicate (entity_id, component_id) writes and entity
 // deletes that conflict with same-stage component writes. changes and
@@ -168,8 +167,7 @@ message Changeset {
   bytes model_id = 2;
 
   // Highest changeset version known when the client produced the changeset
-  // locally. A stale value does not reject the write; it is recorded as race
-  // condition metadata.
+  // locally.
   int32 max_known_version = 3;
 
   // Client-authored entity changes. Within this stage each (entity_id,
@@ -235,8 +233,8 @@ message ChangesetListItem {
   // requested target version.
   optional int32 reverted_to_version = 5;
 
-  // Classifies whether the changeset was created from a stale max_known_version
-  // and whether concurrent changes touched the same entities.
+  // Classifies whether the created changeset's and concurrent changes touched
+  // the same entities. Certain race conditions will be rejected by the server.
   ChangesetRace race = 6;
 }
 
@@ -320,7 +318,7 @@ message VersionedEntityResponse {
   }
 }
 
-// Response for a committed changeset.
+// Result of applying a changeset.
 message ChangesetResponse {
   // Project id.
   bytes project_id = 1;
@@ -328,8 +326,26 @@ message ChangesetResponse {
   // Model id. Globally unique across projects.
   bytes model_id = 2;
 
-  // Server-assigned version of the committed changeset.
-  optional int32 changeset_version = 3;
+  // Either the successful application result or an application-level rejection.
+  oneof result {
+    // Successful changeset application.
+    Success success = 3;
+
+    // Reason the changeset was not applied.
+    Error error = 4;
+  }
+
+  // Successful changeset application.
+  message Success {
+    // Server-assigned version of the committed changeset.
+    int32 changeset_version = 1;
+  }
+
+  // Explains why a syntactically valid changeset was not applied.
+  message Error {
+    // Message to support triage & programmatic error handling.
+    string message = 1;
+  }
 }
 
 // Message in an ApplyChangesetStream request. Streamed changeset part: header,
@@ -387,7 +403,8 @@ message RevertToVersionRequest {
   // Target model id. Globally unique across projects.
   bytes model_id = 1;
 
-  // Concurrency metadata; stale values do not reject the revert.
+  // Concurrency metadata; must reflect the version of the model
+  // upon which client changes were made.
   int32 max_known_version = 2;
 
   // Version whose state will be restored. Must satisfy
