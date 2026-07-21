@@ -4,10 +4,11 @@
 # Order matters: the LAST matching pattern for a changed file wins.
 
 # Default owner for the whole repo. This protects everything outside proto,
-# AND gates newly-added proto packages: a new package under proto/ that is not
-# listed below falls through to this rule, so the Motif team must review
-# it — that review is where a new package's name gets approved.
-* @motif-io/motif
+# AND gates newly-added top-level proto packages: a new package under proto/
+# that is not listed below falls through to this rule, so the Motif Data
+# Management team must review it — that review is where a new top-level
+# package's name gets approved.
+* @motif-io/motif-data-management
 
 # --- Approved proto packages ---------------------------------------------
 # When the Motif team approves a new package's name, add a line here
@@ -23,9 +24,19 @@
 # NOTE: an owner CANNOT be a team from a different GitHub org — teams must
 # belong to motif-io. Cross-org contributors must be listed as individuals.
 
-# The motif package is owned by the Motif team.
+# The motif package is owned by the Motif team. Subpackages default to this
+# ownership. Order matters - list more specific ownership below this line.
 /proto/motif/ @motif-io/motif
 
-# Partner / third-party packages (e.g. thirdparty.bhom.data.*). Owned by Motif
-# until a dedicated team (e.g. motif-fde) is created for this tree.
-/proto/thirdparty/ @motif-io/motif
+# API and Extension packages are owned by the Motif Data Management team.
+/proto/motif/api/       @motif-io/motif-data-management
+/proto/motif/extension/ @motif-io/motif-data-management
+
+# The FDE package is owned by the Motif FDE team.
+/proto/motif/data/fde/ @motif-io/motif-fde
+
+# Partner / third-party packages. Ownership defaults to the FDE team.
+# Specific subpackages can be assigned third party owners that are
+# added as outside collaborators. Order matters - list more specific
+# third party package ownership below this line.
+/proto/thirdparty/ @motif-io/motif-fde
