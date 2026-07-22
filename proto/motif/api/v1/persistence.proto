@@ -62,16 +62,32 @@ service Persistence {
 
   // Creates a new changeset that restores the model to a prior version.
   rpc RevertToVersion(RevertToVersionRequest) returns (RevertToVersionResponse);
+}
 
+// InternalPersistence is the control-plane → persistence service-to-service API.
+//
+// These RPCs must NOT be registered on the public Persistence listener
+// (plaintext / grpc-web / browser / Raven). They are intended only for the
+// mTLS S2S listener. Control-plane owns end-user authorization for the copy
+// workflow; persistence trusts authenticated internal callers and does not
+// re-check source/destination project permissions.
+//
+// Fields named *_id with type bytes are 16-byte UUIDs in RFC 4122 byte order.
+// Model IDs additionally reserve byte 0; it must be 0x00. Invalid regional
+// Model IDs return INVALID_ARGUMENT. Soft-deleted ModelIds continue to occupy
+// their identity and return ALREADY_EXISTS when reused as a copy target.
+//
+// buf:lint:ignore SERVICE_SUFFIX
+service InternalPersistence {
   // Returns the pinned source version and representation IDs referenced by that
-  // snapshot. Intended for the source persistence route during model copy.
+  // snapshot. Called on the source persistence route during model copy.
   //
   // Returns INVALID_ARGUMENT for invalid regional ModelIds or source_version
   // < 1. Returns NOT_FOUND when the source model or version cannot be resolved.
   rpc GetModelCopyManifest(GetModelCopyManifestRequest) returns (GetModelCopyManifestResponse);
 
   // Creates a target model as an atomic shallow copy of a source snapshot.
-  // Intended for the destination persistence route during model copy.
+  // Called on the destination persistence route during model copy.
   //
   // Returns ALREADY_EXISTS when the target ModelId already exists, including
   // soft-deleted rows. Returns INVALID_ARGUMENT for invalid regional ModelIds
