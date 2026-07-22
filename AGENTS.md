@@ -21,21 +21,6 @@ Schemas are grouped into these top-level packages, all versioned `v1`:
   (e.g. `thirdparty.bhom.data.physical.v1`), under `proto/thirdparty/…` so they
   sort after `motif` on the Buf Schema Registry.
 
-### Public vs internal gRPC services in `motif.api.v1`
-
-Not every service in `motif.api.v1` is a public client API.
-
-- **`Persistence`** — public model/changeset API (browser / Raven / grpc-web and
-  native gRPC). End-user Bearer auth is enforced per RPC.
-- **`InternalPersistence`** — control-plane → persistence **service-to-service**
-  API (e.g. shallow model copy). Deployments must register it only on the mTLS
-  S2S listener, never on the public Persistence listener. Control-plane owns
-  end-user authorization; persistence trusts authenticated internal callers.
-
-Do **not** add orchestration / privileged copy / admin RPCs to `Persistence`.
-Put them on `InternalPersistence` (or another explicitly internal service) so
-public clients cannot invoke them directly.
-
 A file's package must match its path under `proto/`: a file in package
 `motif.data.core.v1` lives at `proto/motif/data/core/v1/<file>.proto`. Imports use
 the module-root-relative path, e.g. `import "motif/extension/v1/options.proto";`.

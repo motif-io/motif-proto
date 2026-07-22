@@ -14,12 +14,7 @@ import "google/protobuf/timestamp.proto";
 // and ApplyChangesetStream).
 //
 // Fields named *_id with type bytes are 16-byte UUIDs in RFC 4122 byte order.
-// Model IDs additionally reserve byte 0; it must be 0x00. Invalid regional
-// Model IDs return INVALID_ARGUMENT.
-//
-// Soft-deleted ModelIds continue to occupy their identity. Creating or
-// reserving a model with a soft-deleted ID returns ALREADY_EXISTS; soft-deleted
-// IDs are not reused.
+// Model IDs additionally reserve byte 0; it must be 0x00.
 //
 // buf:lint:ignore SERVICE_SUFFIX
 service Persistence {
@@ -62,38 +57,6 @@ service Persistence {
 
   // Creates a new changeset that restores the model to a prior version.
   rpc RevertToVersion(RevertToVersionRequest) returns (RevertToVersionResponse);
-}
-
-// InternalPersistence is the control-plane → persistence service-to-service API.
-//
-// These RPCs must NOT be registered on the public Persistence listener
-// (plaintext / grpc-web / browser / Raven). They are intended only for the
-// mTLS S2S listener. Control-plane owns end-user authorization for the copy
-// workflow; persistence trusts authenticated internal callers and does not
-// re-check source/destination project permissions.
-//
-// Fields named *_id with type bytes are 16-byte UUIDs in RFC 4122 byte order.
-// Model IDs additionally reserve byte 0; it must be 0x00. Invalid regional
-// Model IDs return INVALID_ARGUMENT. Soft-deleted ModelIds continue to occupy
-// their identity and return ALREADY_EXISTS when reused as a copy target.
-//
-// buf:lint:ignore SERVICE_SUFFIX
-service InternalPersistence {
-  // Returns the pinned source version and representation IDs referenced by that
-  // snapshot. Called on the source persistence route during model copy.
-  //
-  // Returns INVALID_ARGUMENT for invalid regional ModelIds or source_version
-  // < 1. Returns NOT_FOUND when the source model or version cannot be resolved.
-  rpc GetModelCopyManifest(GetModelCopyManifestRequest) returns (GetModelCopyManifestResponse);
-
-  // Creates a target model as an atomic shallow copy of a source snapshot.
-  // Called on the destination persistence route during model copy.
-  //
-  // Returns ALREADY_EXISTS when the target ModelId already exists, including
-  // soft-deleted rows. Returns INVALID_ARGUMENT for invalid regional ModelIds
-  // or source_version < 1. Returns NOT_FOUND when the source model or version
-  // cannot be resolved.
-  rpc CopyModel(CopyModelRequest) returns (CopyModelResponse);
 }
 
 // A single component value attached to an entity.
@@ -453,81 +416,4 @@ message RevertToVersionRequest {
 message RevertToVersionResponse {
   // Server-assigned version of the revert changeset.
   int32 changeset_version = 1;
-}
-
-// Requests the copy manifest for a source model snapshot.
-//
-// Discovers representation IDs by walking fields of type
-// motif.extension.v1.RepresentationReference in the pinned snapshot.
-message GetModelCopyManifestRequest {
-  // Source model id. Globally unique across projects.
-  bytes model_id = 1;
-
-  // Explicit source version to pin. Must be >= 1, else returns INVALID_ARGUMENT.
-  int32 source_version = 2;
-}
-
-// Copy manifest for one immutable source version.
-message GetModelCopyManifestResponse {
-  // Source model id. Globally unique across projects.
-  bytes model_id = 1;
-
-  // Pinned source version used for discovery. Equals the requested
-  // source_version when that version exists.
-  int32 source_version = 2;
-
-  // Distinct representation IDs referenced by the pinned snapshot, sorted
-  // ascending by UUID byte order. Deterministic for an immutable version.
-  repeated bytes representation_ids = 3;
-}
-
-// One old→new representation ID rewrite applied during CopyModel.
-message RepresentationIdMapping {
-  // Representation ID present in the source snapshot.
-  bytes old_representation_id = 1;
-
-  // Replacement representation ID written into the target model.
-  bytes new_representation_id = 2;
-}
-
-// Requests an atomic shallow copy of a source model snapshot into a new target
-// model.
-//
-// Control-plane supplies the complete old→new representation map. The server
-// rewrites only RepresentationReference fields; entity IDs, model references,
-// and other UUID bytes are preserved. Soft-deleted target ModelIds return
-// ALREADY_EXISTS and are not reused.
-message CopyModelRequest {
-  // Source model id. Globally unique across projects.
-  bytes source_model_id = 1;
-
-  // Explicit source version to copy. Must be >= 1, else returns INVALID_ARGUMENT.
-  int32 source_version = 2;
-
-  // Destination project id that will own the target model.
-  bytes target_project_id = 3;
-
-  // Caller-generated destination model id. Globally unique across projects.
-  // Must satisfy the regional ModelId invariant (byte 0 == 0x00).
-  bytes target_model_id = 4;
-
-  // Optional display name applied to the target model sentinel via AssignedName.
-  optional string assigned_name = 5;
-
-  // User id recorded as author of the target model's initial changeset.
-  bytes initial_author_user_id = 6;
-
-  // Complete map of every representation ID referenced by the source snapshot
-  // to its destination representation ID. Incomplete maps fail before the
-  // target becomes visible.
-  repeated RepresentationIdMapping representation_map = 7;
-}
-
-// Confirms the target model created by CopyModel.
-message CopyModelResponse {
-  // Destination model id. Globally unique across projects.
-  bytes model_id = 1;
-
-  // Initial changeset version on the target. Always 1 for a successful copy.
-  int32 changeset_version = 2;
 }
