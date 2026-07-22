@@ -65,6 +65,9 @@ service Persistence {
 
   // Returns the pinned source version and representation IDs referenced by that
   // snapshot. Intended for the source persistence route during model copy.
+  //
+  // Returns INVALID_ARGUMENT for invalid regional ModelIds or source_version
+  // < 1. Returns NOT_FOUND when the source model or version cannot be resolved.
   rpc GetModelCopyManifest(GetModelCopyManifestRequest) returns (GetModelCopyManifestResponse);
 
   // Creates a target model as an atomic shallow copy of a source snapshot.
