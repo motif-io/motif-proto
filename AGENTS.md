@@ -68,6 +68,22 @@ message AssignedName {
 There is also a field option, `option (motif.extension.v1.field).data_reference_expected_type`,
 which should be set on every `DataReference` field to declare its expected type.
 
+## Well-known reference types
+
+Relationship and representation targets are discovered **structurally** by
+message type from `motif/extension/v1/reference.proto`, not by field options:
+
+- `EntityReference` — target entity UUID
+- `ModelReference` — target model UUID + version
+- `DataReference` — typed data on an entity (plus `data_reference_expected_type`)
+- `RepresentationReference` — representation blob UUID
+
+Component fields that carry representation IDs must use
+`motif.extension.v1.RepresentationReference` so copy/manifest tooling can
+rewrite those UUIDs without touching unrelated bytes. Prefer this type for new
+fields; migrating existing raw `bytes` representation ID fields is a separate
+intentional break.
+
 ## Choosing the component ID
 
 Component IDs are **globally unique across the entire repository** — not per file
