@@ -81,8 +81,17 @@ message type from `motif/extension/v1/reference.proto`, not by field options:
 Component fields that carry representation IDs must use
 `motif.extension.v1.RepresentationReference` so copy/manifest tooling can
 rewrite those UUIDs without touching unrelated bytes. Prefer this type for new
-fields; migrating existing raw `bytes` representation ID fields is a separate
-intentional break.
+fields.
+
+The existing raw `bytes` representation IDs —
+`motif.data.core.v1.Representation.id` (component 4) and
+`motif.data.core.v1.ThumbnailRepresentation.id` (component 40) — must be
+migrated to `RepresentationReference` before structural discovery finds
+anything in real models. Reusing the same field number changes the field from
+raw 16 bytes to an encoded submessage, so this is an intentional wire break:
+land it in a dedicated PR labelled `buf skip breaking`, coordinated with a
+data-service-v2 stored-bytes migration (or a decode-time shim). It is out of
+scope for the additive PROTO-1 contract.
 
 ## Choosing the component ID
 
