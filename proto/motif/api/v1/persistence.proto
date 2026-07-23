@@ -89,18 +89,6 @@ message Entity {
   // be non-empty. Not set on the read path - for example, GetChanges will not set this field,
   // even if all components on an entity were deleted between `from_version` and `to_version`.
   optional google.protobuf.Empty deleted = 3;
-
-  // Set on GetChanges responses to mark that this entity did not exist as-of the
-  // `from_version` of the diff — i.e. it is newly created relative to `from_version`.
-  // Accompanies `components`; ignored on the write path.
-  //
-  // "Did not exist" means the entity had no live components as-of `from_version`.
-  // An entity is only its set of components, so an entity whose components were all
-  // deleted (individually or via the `deleted` field) is indistinguishable from one
-  // that never existed; writing a component to that entity ID again is therefore
-  // reported as created when the diff spans the time when no components existed and
-  // the later component write.
-  optional google.protobuf.Empty created = 4;
 }
 
 // Identifies the model to delete.
