@@ -35,7 +35,6 @@ message ModelReference {
 // message type (structurally, like EntityReference and ModelReference) so
 // tools can discover and rewrite representation UUIDs without touching
 // unrelated UUID bytes. Nested, repeated, and map fields of this type are
-// all discovered the same way.
 message RepresentationReference {
   // The representation ID, a 16-byte UUID. Required.
   bytes representation_id = 1 [(buf.validate.field).bytes.len = 16];
