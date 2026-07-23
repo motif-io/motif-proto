@@ -1,0 +1,15 @@
+---
+description: Public-repo commit/PR hygiene for motif-proto
+alwaysApply: true
+---
+
+# Public commit hygiene (motif-proto)
+
+This repository is (or will be) public-facing. For every git commit and PR:
+
+- Do **not** add `Co-authored-by`, `Made-with`, or any Cursor / AI attribution trailers.
+- Do **not** put work or personal emails (`@ambr.net`, Gmail, etc.) in author, committer, or message body.
+- Author and committer must use a GitHub `users.noreply.github.com` identity only (configure with `git config --local user.email`).
+- Do **not** link private or internal systems: no `gitlab.com/ambr1/...`, no internal Notion, no VPN-only URLs.
+- Do **not** put private ticket IDs or links in commit messages or PR descriptions.
+- Keep commit messages to a short subject plus optional technical rationale; no ticket footers.

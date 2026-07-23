@@ -7,6 +7,22 @@ an agent (or human) needs to add or change schemas correctly.
 Tooling is managed with [`mise`](https://mise.jdx.dev/) (see `.config/mise.toml`)
 and [`buf`](https://buf.build/). Run `mise run <task>` for the tasks below.
 
+## Public git hygiene
+
+This repository is (or will be) public. Treat every commit and PR as externally
+visible:
+
+- Use a GitHub `users.noreply.github.com` email for author/committer in this
+  repo (`git config --local user.email …`). Do not use `@ambr.net` or other
+  private addresses.
+- Do not add `Co-authored-by`, `Made-with`, or other AI/tool attribution
+  trailers to commits or PRs.
+- Do not link private systems (internal GitLab, Notion, VPN-only URLs) or put
+  private ticket IDs/links in commit messages or PR descriptions.
+- Prefer a short subject plus optional technical rationale; no ticket footers.
+
+Cursor agents: also see `.cursor/rules/public-commit-hygiene.mdc`.
+
 ## Protobuf package names
 
 Schemas are grouped into these top-level packages, all versioned `v1`:
