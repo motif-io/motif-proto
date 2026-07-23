@@ -7,21 +7,20 @@ an agent (or human) needs to add or change schemas correctly.
 Tooling is managed with [`mise`](https://mise.jdx.dev/) (see `.config/mise.toml`)
 and [`buf`](https://buf.build/). Run `mise run <task>` for the tasks below.
 
-## Public git hygiene
+## Commit and PR hygiene
 
-This repository is (or will be) public. Treat every commit and PR as externally
-visible:
+This repository is public, so treat every commit and pull request as externally
+visible. This applies to all contributors, internal and external:
 
-- Use a GitHub `users.noreply.github.com` email for author/committer in this
-  repo (`git config --local user.email …`). Do not use `@ambr.net` or other
-  private addresses.
-- Do not add `Co-authored-by`, `Made-with`, or other AI/tool attribution
+- Prefer a GitHub [`users.noreply.github.com`](https://docs.github.com/en/account-and-profile/how-tos/email-preferences/setting-your-commit-email-address#setting-your-email-address-for-a-single-repository)
+  email for your author/committer identity so you do not expose a personal
+  address. Using a public email you are comfortable sharing is also fine.
+- Do not add `Co-authored-by`, `Made-with`, or other tool/AI attribution
   trailers to commits or PRs.
-- Do not link private systems (internal GitLab, Notion, VPN-only URLs) or put
-  private ticket IDs/links in commit messages or PR descriptions.
+- Do not link to private or internal systems (such as private issue trackers)
+  or paste internal-only URLs or ticket IDs in commit messages or PR
+  descriptions.
 - Prefer a short subject plus optional technical rationale; no ticket footers.
-
-Cursor agents: also see `.cursor/rules/public-commit-hygiene.mdc`.
 
 ## Protobuf package names
 
