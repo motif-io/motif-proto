@@ -1,0 +1,562 @@
+syntax = "proto3";
+
+// Notification event message types published by the Motif platform. Events are
+// delivered to subscribers over WebSocket channels.
+package motif.events.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+
+// =============================================================================
+// Envelope
+// =============================================================================
+
+// One message on the notification queue. `payload` selects the stream the event
+// belongs to; exactly one branch is set on a published event.
+message NotificationEnvelope {
+  // A unique identifier for this event.
+  string event_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+
+  // When the change described by `payload` took effect. Required.
+  google.protobuf.Timestamp occurred_at = 2 [(buf.validate.field).required = true];
+
+  // The stream this event belongs to.
+  oneof payload {
+    option (buf.validate.oneof).required = true;
+
+    AccessControlNotification access_control = 10;
+    ContentNotification content = 11;
+  }
+}
+
+// =============================================================================
+// Access control
+// =============================================================================
+
+// A membership, role, or invitation change in exactly one scope. Subscribers
+// receive only the scope their channel is bound to — a `projectMembers`
+// subscription sees only the `project` branch.
+message AccessControlNotification {
+  // The scope is the namespace for this event; a branch must be set.
+  oneof scope {
+    option (buf.validate.oneof).required = true;
+
+    OrganizationAccessControl organization = 1;
+    ProjectAccessControl project = 2;
+    ModelAccessControl model = 3;
+    GlobalAccessControl global = 4;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Organization scope
+// ---------------------------------------------------------------------------
+
+// An organization membership, role, or invitation change, delivered on
+// `orgMembers/{org_id}`.
+//
+// Subscribers to this channel hold organization-level view access, which does
+// not imply access to any individual project. Organization-scoped events
+// therefore carry no project- or model-identifying fields: action variants MUST
+// NOT include `project_id`, `model_id`, or any similar field. Project lifecycle
+// ships on `ContentNotification`, which is authorized per project.
+//
+// An unset `action` signals an unspecified change to this organization.
+message OrganizationAccessControl {
+  // The organization this event is about, a 16-byte UUID. Required.
+  bytes organization_id = 1 [(buf.validate.field).bytes.len = 16];
+
+  oneof action {
+    OrganizationMemberAdded member_added = 10;
+    OrganizationMemberRemoved member_removed = 11;
+    OrganizationRoleChanged role_changed = 12;
+
+    OrganizationInvitationSent invitation_sent = 20;
+    OrganizationInvitationAccepted invitation_accepted = 21;
+    OrganizationInvitationRevoked invitation_revoked = 22;
+    OrganizationInvitationExpired invitation_expired = 23;
+    OrganizationInvitationDeclined invitation_declined = 24;
+  }
+}
+
+// A user became a member of the organization, holding `role`.
+message OrganizationMemberAdded {
+  bytes subject_user_id = 1 [(buf.validate.field).bytes.len = 16];
+  OrganizationRole role = 2 [(buf.validate.field).enum = {
+    not_in: [0]
+  }];
+  optional bytes actor_user_id = 3 [(buf.validate.field).bytes.len = 16];
+}
+
+// A user is no longer a member of the organization.
+message OrganizationMemberRemoved {
+  bytes subject_user_id = 1 [(buf.validate.field).bytes.len = 16];
+  optional bytes actor_user_id = 2 [(buf.validate.field).bytes.len = 16];
+}
+
+// An existing member's organization role changed.
+message OrganizationRoleChanged {
+  bytes subject_user_id = 1 [(buf.validate.field).bytes.len = 16];
+  OrganizationRole new_role = 2 [(buf.validate.field).enum = {
+    not_in: [0]
+  }];
+  optional OrganizationRole previous_role = 3 [(buf.validate.field).enum = {
+    not_in: [0]
+  }];
+  optional bytes actor_user_id = 4 [(buf.validate.field).bytes.len = 16];
+}
+
+// An invitation to join the organization was created. Carries no invitee
+// contact details; `invitation_id` identifies the invitation record.
+message OrganizationInvitationSent {
+  string invitation_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  OrganizationRole proposed_role = 2 [(buf.validate.field).enum = {
+    not_in: [0]
+  }];
+  optional bytes subject_user_id = 3 [(buf.validate.field).bytes.len = 16];
+  optional bytes actor_user_id = 4 [(buf.validate.field).bytes.len = 16];
+}
+
+// An invitee accepted an organization invitation. A separate envelope carries
+// the corresponding `OrganizationMemberAdded`.
+message OrganizationInvitationAccepted {
+  string invitation_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  bytes subject_user_id = 2 [(buf.validate.field).bytes.len = 16];
+  // The active role; usually equal to the invitation's proposed role.
+  OrganizationRole role = 3 [(buf.validate.field).enum = {
+    not_in: [0]
+  }];
+}
+
+// An organization invitation was withdrawn before being accepted.
+message OrganizationInvitationRevoked {
+  string invitation_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  optional bytes subject_user_id = 2 [(buf.validate.field).bytes.len = 16];
+  optional bytes actor_user_id = 3 [(buf.validate.field).bytes.len = 16];
+}
+
+// An organization invitation lapsed without being accepted.
+message OrganizationInvitationExpired {
+  string invitation_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  optional bytes subject_user_id = 2 [(buf.validate.field).bytes.len = 16];
+}
+
+// An invitee declined an organization invitation.
+message OrganizationInvitationDeclined {
+  string invitation_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  optional bytes subject_user_id = 2 [(buf.validate.field).bytes.len = 16];
+  optional bytes actor_user_id = 3 [(buf.validate.field).bytes.len = 16];
+}
+
+// ---------------------------------------------------------------------------
+// Project scope
+// ---------------------------------------------------------------------------
+
+// A project membership, role, or invitation change, delivered on the project's
+// `projectMembers/{project_id}` channel. An unset `action` signals an
+// unspecified change to this project.
+message ProjectAccessControl {
+  // The project this event is about, a 16-byte UUID. Required.
+  bytes project_id = 1 [(buf.validate.field).bytes.len = 16];
+
+  oneof action {
+    ProjectMemberAdded member_added = 10;
+    ProjectMemberRemoved member_removed = 11;
+    ProjectRoleChanged role_changed = 12;
+
+    ProjectInvitationSent invitation_sent = 20;
+    ProjectInvitationAccepted invitation_accepted = 21;
+    ProjectInvitationRevoked invitation_revoked = 22;
+    ProjectInvitationExpired invitation_expired = 23;
+    ProjectInvitationDeclined invitation_declined = 24;
+  }
+}
+
+// A user was granted a role on the project.
+message ProjectMemberAdded {
+  bytes subject_user_id = 1 [(buf.validate.field).bytes.len = 16];
+  ProjectRole role = 2 [(buf.validate.field).enum = {
+    not_in: [0]
+  }];
+  optional bytes actor_user_id = 3 [(buf.validate.field).bytes.len = 16];
+}
+
+// A user's last role on the project was revoked; they are no longer a member.
+message ProjectMemberRemoved {
+  bytes subject_user_id = 1 [(buf.validate.field).bytes.len = 16];
+  optional bytes actor_user_id = 2 [(buf.validate.field).bytes.len = 16];
+}
+
+// An existing project member's role changed.
+message ProjectRoleChanged {
+  bytes subject_user_id = 1 [(buf.validate.field).bytes.len = 16];
+  ProjectRole new_role = 2 [(buf.validate.field).enum = {
+    not_in: [0]
+  }];
+  optional ProjectRole previous_role = 3 [(buf.validate.field).enum = {
+    not_in: [0]
+  }];
+  optional bytes actor_user_id = 4 [(buf.validate.field).bytes.len = 16];
+}
+
+// An invitation to join the project was created. Carries no invitee contact
+// details; `invitation_id` identifies the invitation record.
+message ProjectInvitationSent {
+  string invitation_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  ProjectRole proposed_role = 2 [(buf.validate.field).enum = {
+    not_in: [0]
+  }];
+  optional bytes subject_user_id = 3 [(buf.validate.field).bytes.len = 16];
+  optional bytes actor_user_id = 4 [(buf.validate.field).bytes.len = 16];
+}
+
+// An invitee accepted a project invitation. A separate envelope carries the
+// corresponding `ProjectMemberAdded`.
+message ProjectInvitationAccepted {
+  string invitation_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  bytes subject_user_id = 2 [(buf.validate.field).bytes.len = 16];
+  ProjectRole role = 3 [(buf.validate.field).enum = {
+    not_in: [0]
+  }];
+}
+
+// A project invitation was withdrawn before being accepted.
+message ProjectInvitationRevoked {
+  string invitation_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  optional bytes subject_user_id = 2 [(buf.validate.field).bytes.len = 16];
+  optional bytes actor_user_id = 3 [(buf.validate.field).bytes.len = 16];
+}
+
+// A project invitation lapsed without being accepted.
+message ProjectInvitationExpired {
+  string invitation_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  optional bytes subject_user_id = 2 [(buf.validate.field).bytes.len = 16];
+}
+
+// An invitee declined a project invitation.
+message ProjectInvitationDeclined {
+  string invitation_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  optional bytes subject_user_id = 2 [(buf.validate.field).bytes.len = 16];
+  optional bytes actor_user_id = 3 [(buf.validate.field).bytes.len = 16];
+}
+
+// ---------------------------------------------------------------------------
+// Model scope
+// ---------------------------------------------------------------------------
+
+// A model membership, role, or invitation change. An unset `action` signals an
+// unspecified change to this model.
+message ModelAccessControl {
+  // The model this event is about, a 16-byte UUID. Required.
+  bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
+
+  // Denormalized for routing. The primary scope is `model_id`.
+  optional bytes project_id_context = 2 [(buf.validate.field).bytes.len = 16];
+
+  oneof action {
+    ModelMemberAdded member_added = 10;
+    ModelMemberRemoved member_removed = 11;
+    ModelRoleChanged role_changed = 12;
+
+    ModelInvitationSent invitation_sent = 20;
+    ModelInvitationAccepted invitation_accepted = 21;
+    ModelInvitationRevoked invitation_revoked = 22;
+    ModelInvitationExpired invitation_expired = 23;
+    ModelInvitationDeclined invitation_declined = 24;
+  }
+}
+
+// A user was granted a role on the model.
+message ModelMemberAdded {
+  bytes subject_user_id = 1 [(buf.validate.field).bytes.len = 16];
+  ModelRole role = 2 [(buf.validate.field).enum = {
+    not_in: [0]
+  }];
+  optional bytes actor_user_id = 3 [(buf.validate.field).bytes.len = 16];
+}
+
+// A user's last role on the model was revoked; they are no longer a member.
+message ModelMemberRemoved {
+  bytes subject_user_id = 1 [(buf.validate.field).bytes.len = 16];
+  optional bytes actor_user_id = 2 [(buf.validate.field).bytes.len = 16];
+}
+
+// An existing model member's role changed.
+message ModelRoleChanged {
+  bytes subject_user_id = 1 [(buf.validate.field).bytes.len = 16];
+  ModelRole new_role = 2 [(buf.validate.field).enum = {
+    not_in: [0]
+  }];
+  optional ModelRole previous_role = 3 [(buf.validate.field).enum = {
+    not_in: [0]
+  }];
+  optional bytes actor_user_id = 4 [(buf.validate.field).bytes.len = 16];
+}
+
+// An invitation to join the model was created. Carries no invitee contact
+// details; `invitation_id` identifies the invitation record.
+message ModelInvitationSent {
+  string invitation_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  ModelRole proposed_role = 2 [(buf.validate.field).enum = {
+    not_in: [0]
+  }];
+  optional bytes subject_user_id = 3 [(buf.validate.field).bytes.len = 16];
+  optional bytes actor_user_id = 4 [(buf.validate.field).bytes.len = 16];
+}
+
+// An invitee accepted a model invitation. A separate envelope carries the
+// corresponding `ModelMemberAdded`.
+message ModelInvitationAccepted {
+  string invitation_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  bytes subject_user_id = 2 [(buf.validate.field).bytes.len = 16];
+  ModelRole role = 3 [(buf.validate.field).enum = {
+    not_in: [0]
+  }];
+}
+
+// A model invitation was withdrawn before being accepted.
+message ModelInvitationRevoked {
+  string invitation_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  optional bytes subject_user_id = 2 [(buf.validate.field).bytes.len = 16];
+  optional bytes actor_user_id = 3 [(buf.validate.field).bytes.len = 16];
+}
+
+// A model invitation lapsed without being accepted.
+message ModelInvitationExpired {
+  string invitation_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  optional bytes subject_user_id = 2 [(buf.validate.field).bytes.len = 16];
+}
+
+// An invitee declined a model invitation.
+message ModelInvitationDeclined {
+  string invitation_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 64
+  }];
+  optional bytes subject_user_id = 2 [(buf.validate.field).bytes.len = 16];
+  optional bytes actor_user_id = 3 [(buf.validate.field).bytes.len = 16];
+}
+
+// ---------------------------------------------------------------------------
+// Global scope
+// ---------------------------------------------------------------------------
+
+// A change to a user's platform-wide role. Carries no organization, project, or
+// model identifier, because the role is not scoped to any of them.
+message GlobalAccessControl {
+  oneof action {
+    GlobalMemberAdded member_added = 10;
+    GlobalMemberRemoved member_removed = 11;
+    GlobalRoleChanged role_changed = 12;
+  }
+}
+
+// A user was granted a platform-wide role.
+message GlobalMemberAdded {
+  bytes subject_user_id = 1 [(buf.validate.field).bytes.len = 16];
+  GlobalRole role = 2 [(buf.validate.field).enum = {
+    not_in: [0]
+  }];
+  optional bytes actor_user_id = 3 [(buf.validate.field).bytes.len = 16];
+}
+
+// A user's platform-wide role was revoked.
+message GlobalMemberRemoved {
+  bytes subject_user_id = 1 [(buf.validate.field).bytes.len = 16];
+  optional bytes actor_user_id = 2 [(buf.validate.field).bytes.len = 16];
+}
+
+// A user's platform-wide role changed.
+message GlobalRoleChanged {
+  bytes subject_user_id = 1 [(buf.validate.field).bytes.len = 16];
+  GlobalRole new_role = 2 [(buf.validate.field).enum = {
+    not_in: [0]
+  }];
+  optional GlobalRole previous_role = 3 [(buf.validate.field).enum = {
+    not_in: [0]
+  }];
+  optional bytes actor_user_id = 4 [(buf.validate.field).bytes.len = 16];
+}
+
+// =============================================================================
+// Content
+// =============================================================================
+
+// A project lifecycle change, delivered either on a project's own channel or on
+// a single recipient's project list channel. An unset `action` signals an
+// unspecified change within the scope.
+message ContentNotification {
+  reserved 1; // Was `organization` (orgMembers lifecycle broadcast).
+
+  // The scope is the namespace for this event; a branch must be set.
+  oneof scope {
+    option (buf.validate.oneof).required = true;
+
+    ProjectContent project = 2;
+    UserProjects user_projects = 3;
+  }
+}
+
+// A change to the project itself, delivered on `projectMembers/{project_id}`.
+// View access is checked at subscribe time.
+message ProjectContent {
+  // The project this event is about, a 16-byte UUID. Required.
+  bytes project_id = 1 [(buf.validate.field).bytes.len = 16];
+
+  oneof action {
+    ProjectRenamed renamed = 10;
+  }
+}
+
+// A change to the set of projects visible to one user within one organization,
+// delivered on `user/{user_id}/projects/{organization_id}`. The producer
+// enumerates the users with view access to the project before publishing.
+//
+// `ProjectAdded` and `ProjectRemoved` are list-visibility events from the
+// recipient's point of view, not project create/delete events: a project
+// appears or disappears either because the project itself was created/deleted
+// or because the recipient's access to it changed.
+message UserProjects {
+  // The recipient of this envelope, a 16-byte UUID. Required.
+  bytes user_id = 1 [(buf.validate.field).bytes.len = 16];
+
+  // The organization whose project list changed, a 16-byte UUID. Required.
+  bytes organization_id = 2 [(buf.validate.field).bytes.len = 16];
+
+  oneof action {
+    // The project newly appeared in this user's project list, either because
+    // the project was just created/copied or because the user was granted
+    // access (first project role).
+    ProjectAdded project_added = 10;
+    ProjectRenamed project_renamed = 11;
+    // The project disappeared from this user's project list, either because the
+    // project was deleted or because the user's last project role was revoked.
+    ProjectRemoved project_removed = 12;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Shared project lifecycle payloads
+// ---------------------------------------------------------------------------
+
+// A project became visible to the recipient: created, copied, or newly granted
+// access.
+message ProjectAdded {
+  // The project newly visible to the recipient, a 16-byte UUID. Required.
+  bytes project_id = 1 [(buf.validate.field).bytes.len = 16];
+
+  // The user who triggered the event, when known.
+  optional bytes actor_user_id = 2 [(buf.validate.field).bytes.len = 16];
+}
+
+// A project's name changed. Under `ProjectContent`, `project_id` MUST equal
+// `ProjectContent.project_id`.
+message ProjectRenamed {
+  // The project that was renamed, a 16-byte UUID. Required.
+  bytes project_id = 1 [(buf.validate.field).bytes.len = 16];
+
+  // The user who triggered the event, when known.
+  optional bytes actor_user_id = 2 [(buf.validate.field).bytes.len = 16];
+}
+
+// A project stopped being visible to the recipient: deleted, or the recipient's
+// last role on it was revoked.
+message ProjectRemoved {
+  // The project no longer visible to the recipient, a 16-byte UUID. Required.
+  bytes project_id = 1 [(buf.validate.field).bytes.len = 16];
+
+  // The user who triggered the event, when known.
+  optional bytes actor_user_id = 2 [(buf.validate.field).bytes.len = 16];
+}
+
+// =============================================================================
+// Role enums
+// =============================================================================
+
+// Roles a user can hold on a project. `PROJECT_ROLE_UNSPECIFIED` is never
+// published on the wire.
+enum ProjectRole {
+  PROJECT_ROLE_UNSPECIFIED = 0;
+  PROJECT_ROLE_OWNER = 1;
+  PROJECT_ROLE_EDITOR = 2;
+  PROJECT_ROLE_REVIEWER = 3;
+  PROJECT_ROLE_VIEWER = 4;
+  PROJECT_ROLE_ORGANIZATION = 5;
+}
+
+// Roles a user can hold in an organization. `ORGANIZATION_ROLE_UNSPECIFIED` is
+// never published on the wire.
+enum OrganizationRole {
+  ORGANIZATION_ROLE_UNSPECIFIED = 0;
+  ORGANIZATION_ROLE_ADMIN = 1;
+  ORGANIZATION_ROLE_MEMBER = 2;
+  ORGANIZATION_ROLE_GUEST = 3;
+}
+
+// Roles a user can hold on a model. `MODEL_ROLE_UNSPECIFIED` is never published
+// on the wire.
+//
+// A distinct role ladder from `ProjectRole`, intentionally narrower (no
+// REVIEWER/ORGANIZATION) so changes to project semantics cannot accidentally
+// widen what is valid on a model.
+enum ModelRole {
+  MODEL_ROLE_UNSPECIFIED = 0;
+  MODEL_ROLE_OWNER = 1;
+  MODEL_ROLE_EDITOR = 2;
+  MODEL_ROLE_VIEWER = 3;
+}
+
+// Platform-wide roles, held independently of any organization, project, or
+// model. `GLOBAL_ROLE_UNSPECIFIED` is never published on the wire.
+enum GlobalRole {
+  GLOBAL_ROLE_UNSPECIFIED = 0;
+  GLOBAL_ROLE_SUPER_ADMIN = 1;
+  GLOBAL_ROLE_GLOBAL_ADMIN = 2;
+  GLOBAL_ROLE_SUPPORT = 3;
+  GLOBAL_ROLE_SUBSCRIBED_MEMBER = 4;
+}

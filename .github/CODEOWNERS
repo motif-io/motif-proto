@@ -28,8 +28,9 @@
 # ownership. Order matters - list more specific ownership below this line.
 /proto/motif/ @motif-io/motif
 
-# API and Extension packages are owned by the Motif Data Management team.
+# API, Events, and Extension packages are owned by the Motif Data Management team.
 /proto/motif/api/       @motif-io/motif-data-management
+/proto/motif/events/    @motif-io/motif-data-management
 /proto/motif/extension/ @motif-io/motif-data-management
 
 # The FDE package is owned by the Motif FDE team.

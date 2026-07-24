@@ -29,7 +29,7 @@ Schemas are grouped into these top-level packages, all versioned `v1`:
 - **`motif.api.v1`** — gRPC service API for the Motif platform.
 - **`motif.data.<subpackage>.v1`** — Component types defined by Motif, grouped by
   subpackage (e.g. `motif.data.core.v1`, `motif.data.model.v1`).
-- **`motif.event.v1`** — Message types for notification events.
+- **`motif.events.v1`** — Message types for notification events.
 - **`motif.extension.v1`** — Custom Protobuf options and types used to extend the
   platform with new component types.
 - **`thirdparty.<partner>.data.<domain>.v1`** — Partner-owned component types
@@ -45,7 +45,7 @@ the module-root-relative path, e.g. `import "motif/extension/v1/options.proto";`
 Every Motif component type **must** be defined in a `motif.data.<subpackage>.v1`
 package. Pick the subpackage that fits the domain (e.g. `core`, `model`, `view`,
 `style`, `fde`) or add a new `motif.data.<new>.v1` subpackage if none fits. Do
-**not** define component types in `motif.api.v1`, `motif.event.v1`, or
+**not** define component types in `motif.api.v1`, `motif.events.v1`, or
 `motif.extension.v1`. Partner types use `thirdparty.<partner>.data.<domain>.v1`
 instead of living under `motif.data.*`.
 

@@ -7,7 +7,7 @@ Protobuf schemas for the Motif platform.
 Schemas are grouped at a high level into the following packages:
 - **`motif.api.v1`** - gRPC service API for the Motif platform
 - **`motif.data.<subpackage>.v1`** — Component types defined by Motif, grouped by subpackage
-- **`motif.event.v1`** - Message types for notification events sent by the Motif platform
+- **`motif.events.v1`** - Message types for notification events sent by the Motif platform
 - **`motif.extension.v1`** — Custom protobuf options and types used to extend the Motif platform with new Component types
 
 ## Usage
