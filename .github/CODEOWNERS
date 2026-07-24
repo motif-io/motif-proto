@@ -35,6 +35,9 @@
 # The FDE package is owned by the Motif FDE team.
 /proto/motif/data/fde/ @motif-io/motif-fde
 
+# The AI package is owned by the Motif AI Extensibility team.
+/proto/motif/data/ai/ @motif-io/motif-ai-extensibility
+
 # Partner / third-party packages. Ownership defaults to the FDE team.
 # Specific subpackages can be assigned third party owners that are
 # added as outside collaborators. Order matters - list more specific
