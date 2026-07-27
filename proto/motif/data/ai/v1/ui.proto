@@ -9,12 +9,13 @@ import "motif/extension/v1/options.proto";
 import "motif/extension/v1/reference.proto";
 
 // A persisted UI: a durable, replayable surface (A2UI) that a user saved for
-// reuse, instead of letting it expire with the chat turn that produced it.
+// reuse. Unless it is explicitly saved, an agent-authored UI stays trapped in
+// the thread that created it and cannot be reused anywhere else.
 //
 // The component is the UI kind's marker: what kind of artifact the entity is
 // follows from this component's presence — there is no scalar kind field.
 // Retrieve a catalog with a Query scoped to the library model id and
-// where_all_components = [151], selecting `AssignedName` and `UI` — listing
+// where_all_components = [151], selecting `AssignedName` and `Ui` — listing
 // never requires fetching a body.
 //
 // The `Agent` prefix is deliberately absent. `motif.data.ai.v1` is a home, not a
@@ -34,11 +35,11 @@ import "motif/extension/v1/reference.proto";
 // The runtime declares how the body is validated and rendered. Saved bodies must
 // be self-contained: no conversation secrets, credentials, transient run
 // identifiers, or references to other Motif assets.
-message UI {
+message Ui {
   option (motif.extension.v1.message).component = 151;
 
   // How the UI body in `Representation` is validated and rendered.
-  UIRuntime runtime = 1 [
+  UiRuntime runtime = 1 [
     (buf.validate.field).enum.defined_only = true,
     (buf.validate.field).enum.not_in = 0
   ];
@@ -53,26 +54,39 @@ message UI {
 }
 
 // The runtime a persisted UI targets. Finer distinctions within a runtime (e.g.
-// the A2UI version) are fields on `UI`, and the body's media type comes from
+// the A2UI version) are fields on `Ui`, and the body's media type comes from
 // `Representation` — the runtime is not a general artifact discriminator.
-enum UIRuntime {
+//
+// Only runtimes with a writer today are declared. Adding a value is additive and
+// non-breaking, so a runtime is declared when it ships rather than ahead of it.
+enum UiRuntime {
   // Unspecified runtime.
   UI_RUNTIME_UNSPECIFIED = 0;
   // A declarative, replayable A2UI message bundle rendered by the host.
   UI_RUNTIME_A2UI = 1;
-  // Reserved for a future sandboxed-iframe HTML runtime. Defined so the enum is
-  // stable, but not accepted by any writer until that runtime clears its own
-  // security review and feature gate.
-  UI_RUNTIME_IFRAME_HTML = 2;
+  // TODO: UI_RUNTIME_IFRAME_HTML, for a sandboxed-iframe HTML runtime, once that
+  // runtime clears its own security review and feature gate.
 }
 
 // Where a UI instance is shown in the host, and how the user gets to it.
 //
 // Placed on a model-local entity that also carries `Instance`, pinning it to a
-// canonical `UI` in a library model. Placement is authoritative for host
-// placement: the host mints the runtime surface id from it, and any surface id
-// authored inside the saved body is a document-local label that is rewritten at
-// instantiation.
+// canonical `Ui` in a library model. This component's presence is how UI
+// instances are enumerated: list a model's instances with a Query scoped to the
+// model id and where_all_components = [152].
+//
+// Placement is authoritative for host placement: the host mints the runtime
+// surface id from it, and any surface id authored inside the saved body is a
+// document-local label that is rewritten at instantiation.
+//
+// A per-instance display name is an `AssignedName` on this entity. Absent that,
+// readers fall back to the canonical `Ui`'s `AssignedName`; there is no separate
+// title field here.
+//
+// Placement lives in the model's history rather than in a per-user store beside
+// it, which is what makes it a component at all. Collaborative sync, attribution
+// and rollback then come from the model's changesets for free: a corrupted
+// placement is reverted the same way any other bad edit is.
 //
 // Three independent axes, deliberately kept in separate fields. `enabled`
 // answers "does this instance participate in the model at all", the host slot
@@ -83,37 +97,41 @@ enum UIRuntime {
 // Revealing and dismissing a surface is a display toggle over a persistent
 // surface, not a create/delete cycle, and reveal state is ephemeral client state
 // that is never written back here.
-message UIPlacement {
+message UiPlacement {
   option (motif.extension.v1.message).component = 152;
 
   // Hard gate. A disabled instance never renders, whatever its triggers say.
   bool enabled = 1;
 
   // Which host slot renders the surface.
-  UIHost host = 2 [(buf.validate.field).enum.defined_only = true];
-
-  // Overrides the canonical UI's display name for this instance. Optional.
-  string title = 3 [(buf.validate.field).string.max_len = 256];
+  UiHost host = 2 [
+    (buf.validate.field).enum.defined_only = true,
+    (buf.validate.field).enum.not_in = 0
+  ];
 
   // How the surface gets on screen. Repeated because an instance can plausibly
   // want more than one route to it, e.g. a toolbar launcher and an automatic
   // reveal. An empty list means the instance is placed but never revealed.
-  repeated RevealTrigger reveal = 4;
+  repeated RevealTrigger reveal = 3;
 }
 
 // The host slot a UI instance renders in.
 //
+// The set of slots is expected to grow as the host gains places to put a
+// surface. Only slots that a host renders today are declared: adding an enum
+// value is additive and non-breaking, so a new slot is a one-line change when
+// its host support lands. A reader that does not recognise a value must not
+// render the surface rather than guessing a slot.
+//
 // There is no inline value: chat-panel surfaces are scoped to an agent thread,
 // hence to a user, and are never instantiated in a model.
-enum UIHost {
+enum UiHost {
   // Unspecified slot.
   UI_HOST_UNSPECIFIED = 0;
   // Floats over the editor canvas.
   UI_HOST_FLOATING_PANEL = 1;
-  // Reserved for a docked side panel.
-  UI_HOST_DOCKED_PANEL = 2;
-  // Reserved for a popover anchored to a host toolbar.
-  UI_HOST_TOOLBAR_POPOVER = 3;
+  // TODO: slots for a docked side panel, a popover anchored to a host toolbar,
+  // and the properties panel, each once the host renders it.
 }
 
 // One way a UI instance's surface gets on screen.
@@ -145,7 +163,9 @@ message Launcher {
   // accepts). Validated against that catalog when the placement is written.
   string icon = 1 [(buf.validate.field).string.max_len = 64];
 
-  // Text shown alongside or instead of the icon.
+  // Human-readable name for the affordance. Rendered as its visible text where
+  // the host shows text, and as its accessible name and tooltip where the
+  // affordance is icon-only.
   string label = 2 [(buf.validate.field).string.max_len = 128];
 
   // Host toolbar group the affordance belongs to.
@@ -170,9 +190,23 @@ message Launcher {
 // model-scoped query for entities carrying both `ActionBinding` and `Member`,
 // filtering on the member target; no traversal query is required.
 //
-// Uniqueness of `action` within one UI instance is not structural here — a map
-// key gave that for free, one-entity-per-binding does not — so it is enforced
-// when bindings are written.
+// Uniqueness of `action_name` within one UI instance is not structural here — a
+// map key gave that for free, one-entity-per-binding does not — so it is
+// enforced when bindings are written.
+//
+// The contract with the saved body has three parts, and no part of it is a
+// second copy of something the body already says:
+//   - Naming. The body declares an action by name on the component that fires it
+//     (an A2UI callback's action name), and `action_name` matches that name
+//     exactly. The binding names the action; it does not redescribe it.
+//   - Inputs. The payload the body sends with the action *is* the target's input
+//     map, keyed by the input names in the target's inputs schema. There is
+//     deliberately no mapping table here: the body already declares which of its
+//     values go into the payload, and a mapping would be a second copy of those
+//     paths, free to drift from them. Payload keys are checked against the
+//     target's inputs schema when the binding is written.
+//   - Results. The channel a run reports back on is derived from `action_name`,
+//     so it is not stored either.
 //
 // The target is referenced, never instantiated: binding a workflow places
 // nothing in the UI instance's model. Compare `Instance`, which is what marks an
@@ -182,7 +216,7 @@ message ActionBinding {
 
   // The action name declared by the UI body that this binding fires on. Unique
   // among the bindings of one UI instance.
-  string action = 1 [(buf.validate.field).string = {
+  string action_name = 1 [(buf.validate.field).string = {
     min_len: 1
     max_len: 128
   }];
