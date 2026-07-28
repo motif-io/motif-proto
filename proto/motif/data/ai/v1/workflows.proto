@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+// Component types for persisted workflows.
+package motif.data.ai.v1;
+
+import "buf/validate/validate.proto";
+import "motif/extension/v1/options.proto";
+
+// A persisted workflow: a saved, named, runnable procedure.
+//
+// The component is the workflow kind's marker: what kind of artifact the entity
+// is follows from this component's presence — there is no scalar kind field.
+// Retrieve a catalog with a Query scoped to the library model id and
+// where_all_components = [154], selecting `AssignedName` and `Workflow` —
+// listing never requires fetching the spec.
+//
+// A workflow is stored as an entity in a dedicated, `Hidden`-marked library
+// model (the same pattern as `AgentSkill`), conventionally composed with:
+//   - `AssignedName` — the workflow's display name,
+//   - `Representation` — the workflow spec, including its inputs schema
+//     (`MIME_TYPE_JSON`).
+// Readers should tolerate the absence of either. Editing a workflow uploads a
+// new representation and updates the pointer, so its history is a sequence of
+// representation ids.
+//
+// The fields here are catalog metadata and run defaults only. The spec and its
+// inputs schema live in the `Representation`, mirroring how workflow specs carry
+// their inputs today.
+//
+// A workflow stands on its own. It needs no UI and no binding: it can be invoked
+// directly, the way a skill is loaded directly. An `ActionBinding` pointing at it
+// is one way to invoke it, not a precondition for having it.
+//
+// The `Agent` prefix is deliberately absent, for the same reason as `Ui`:
+// `motif.data.ai.v1` is a home, not a claim about authorship.
+message Workflow {
+  option (motif.extension.v1.message).component = 154;
+
+  // What the workflow does and when to run it, in one or two sentences. Shown in
+  // workflow catalogs; not parsed from the spec.
+  string description = 1 [(buf.validate.field).string.max_len = 1024];
+
+  // Short label for a control that runs this workflow, for affordances too
+  // cramped to fit the display name. Not a second name: the workflow's name is
+  // its `AssignedName`, and a renderer with room for a name uses that. Falls
+  // back to `AssignedName` when unset.
+  string ui_label = 2 [(buf.validate.field).string.max_len = 128];
+
+  // How many times a failed run may be retried before it is reported as failed.
+  // Zero means no retry.
+  int32 max_retries = 3 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 10
+  }];
+}

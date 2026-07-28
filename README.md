@@ -50,6 +50,16 @@ motif.extension.v1.DataReference curve = 3 [
 ];
 ```
 
+Representation blob IDs use the well-known
+`motif.extension.v1.RepresentationReference` message (same structural discovery
+pattern as `EntityReference` / `ModelReference`):
+
+```proto
+motif.extension.v1.RepresentationReference representation = 1 [
+  (buf.validate.field).required = true
+];
+```
+
 ## Choosing a component ID
 
 Component IDs (the value of `option (motif.extension.v1.message).component`) are

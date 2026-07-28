@@ -29,6 +29,17 @@ message ModelReference {
   int32 model_version = 2 [(buf.validate.field).int32.gt = 0];
 }
 
+// A reference to a representation blob in the representation service.
+//
+// Component fields that carry representation IDs must use this well-known
+// message type (structurally, like EntityReference and ModelReference) so
+// tools can discover and rewrite representation UUIDs without touching
+// unrelated UUID bytes. Nested, repeated, and map fields of this type are
+message RepresentationReference {
+  // The representation ID, a 16-byte UUID. Required.
+  bytes representation_id = 1 [(buf.validate.field).bytes.len = 16];
+}
+
 // A reference to a component, or to a field within a component, on some entity.
 //
 // A DataReference always lands on typed data: the target entity says which

@@ -118,6 +118,33 @@ message Lighting {
   bool shadows = 1;
 }
 
+// Per-view display settings for model edges: the crease and boundary linework
+// derived from the view's shaded model geometry. Lives on the view entity.
+//
+// Absent from a view means model edges render with their default appearance,
+// which is enabled. Cut and projection linework in plan/section/elevation
+// views is produced by the view's projection pipeline (see `ProjectedGeometry`)
+// and is not governed by this component.
+message ModelEdges {
+  option (motif.extension.v1.message).component = 157;
+
+  // Whether model edges are drawn in this view.
+  bool enabled = 1;
+
+  // Stroke width of model edges, in logical screen pixels. Unset means the
+  // renderer's default width.
+  optional double width = 2 [(buf.validate.field).double.gt = 0];
+
+  // Whether model edges are anti-aliased. Unset means the renderer's default,
+  // which is anti-aliased.
+  optional bool antialiased = 3;
+
+  // Whether model edges are suppressed while the camera is moving, trading
+  // edge fidelity for frame rate when navigating large models. When false,
+  // edges stay drawn during navigation.
+  bool hide_during_navigation = 4;
+}
+
 // Defines the spatial clipping bounds for non-3D views.
 message ViewRange {
   option (motif.extension.v1.message).component = 46;

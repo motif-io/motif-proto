@@ -16,3 +16,30 @@ message BHoMBase {
   // Display name from `BHoMObject.Name`.
   string name = 3;
 }
+
+// Source-fidelity BHoM payload for round-tripping imported BHoM JSON Objects.
+message BHoMSource {
+  option (motif.extension.v1.message).component = 155;
+
+  // Source BHoM object GUID (`BHoM_Guid`).
+  string bhom_guid = 1;
+
+  // BHoM concrete type discriminator (`_t`), for example
+  // `BH.oM.Structure.Elements.Bar`.
+  string bhom_type = 2;
+
+  // Source BHoM version metadata (`_bhomVersion`).
+  string bhom_version = 3;
+
+  // Canonically-normalized source JSON payload used as the export base.
+  string source_payload_json = 4;
+
+  // Payload encoding/shape identifier, for example `bhom-json`.
+  string payload_format = 5;
+
+  // Version of the payload encoding/normalization contract.
+  string payload_format_version = 6;
+
+  // SHA-256 hash of `source_payload_json` bytes after normalization.
+  bytes payload_sha256 = 7;
+}
