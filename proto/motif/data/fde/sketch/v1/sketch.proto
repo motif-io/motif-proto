@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+// Contained-sketch components: closed-loop sketch objects and their member
+// elements.
+package motif.data.fde.sketch.v1;
+
+import "motif/data/geometry/v1/geometry.proto";
+import "motif/extension/v1/options.proto";
+
+// Marker on a sketch element that belongs to a contained sketch object.
+message ContainedSketchMember {
+  option (motif.extension.v1.message).component = 142;
+}
+
+// Closed-loop sketch container with its boundary in workplane UV coordinates.
+message ContainedSketch {
+  option (motif.extension.v1.message).component = 143;
+
+  // Closed boundary polyline in the sketch workplane's UV coordinates.
+  repeated motif.data.geometry.v1.Point2 boundary_uv = 1;
+}

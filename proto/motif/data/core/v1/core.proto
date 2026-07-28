@@ -170,36 +170,46 @@ message Presents {
   motif.extension.v1.EntityReference source = 1 [(buf.validate.field).required = true];
 }
 
-// The representation of an asset that should be rendered in the scene.
-//
-// NOTE: in the future the backend will provide a signed URL for the
-// representation. For now, `id` is used to fetch the representation URL from the
-// representation service.
-message RenderedRepresentation {
+// The media type of a representation.
+enum MimeType {
+  // Unspecified MIME type.
+  MIME_TYPE_UNSPECIFIED = 0;
+  // image/jpeg.
+  MIME_TYPE_JPEG = 1;
+  // image/png.
+  MIME_TYPE_PNG = 2;
+  // application/pdf.
+  MIME_TYPE_PDF = 3;
+  // image/svg+xml.
+  MIME_TYPE_SVG = 4;
+  // model/obj.
+  MIME_TYPE_OBJ = 5;
+  // model/gltf-binary.
+  MIME_TYPE_GLB = 6;
+  // font/ttf
+  MIME_TYPE_TTF = 7;
+  // application/json
+  MIME_TYPE_JSON = 8;
+  // Opaque/non-renderable payload (spreadsheets, documents, arbitrary blobs).
+  MIME_TYPE_UNKNOWN = 9;
+  // text/markdown.
+  MIME_TYPE_MARKDOWN = 10;
+}
+
+// The representation of an asset. Entities carrying this component reference a
+// blob in the representation service that clients may fetch, decode, and
+// (depending on the MIME type) render into the scene.
+message Representation {
   option (motif.extension.v1.message).component = 4;
 
   // Identifier used to fetch the representation.
-  bytes id = 1;
+  bytes id = 1 [(buf.validate.field).bytes.len = 16];
   // The MIME type of the representation.
   MimeType mime_type = 2;
 
-  // The media type of a rendered representation.
-  enum MimeType {
-    // Unspecified MIME type.
-    MIME_TYPE_UNSPECIFIED = 0;
-    // image/jpeg.
-    MIME_TYPE_JPEG = 1;
-    // image/png.
-    MIME_TYPE_PNG = 2;
-    // application/pdf.
-    MIME_TYPE_PDF = 3;
-    // image/svg+xml.
-    MIME_TYPE_SVG = 4;
-    // model/obj.
-    MIME_TYPE_OBJ = 5;
-    // model/gltf-binary.
-    MIME_TYPE_GLB = 6;
-  }
+  // The extension string (ex: `.rtf`), populated when `mime_type` is
+  // `MIME_TYPE_UNKNOWN`
+  string extension = 3;
 }
 
 // Marker component indicating the entity represents some form of asset.
@@ -300,8 +310,21 @@ message IsOfType {
 // concern (a `DrawingContent` anchors Z via its `DrawLayer` against the view's
 // `ViewRange`; a model-space image sits on its instance's plane).
 message ImageBounds {
-  option (motif.extension.v1.message).component = 129;
+  option (motif.extension.v1.message).component = 156;
 
   // Position, size, and rotation of the placed image on its plane.
   motif.data.geometry.v1.Box2d placement = 1;
+}
+
+// A marker component indicating an entity should be hidden from default UI
+// views.
+//
+// When present on a model's sentinel entity
+// (00000000-0000-4000-8000-000000000000), clients hide the model from default
+// model lists — like a Unix dotfile. The model stays fully accessible to
+// anything addressing it directly; the marker only affects default browsing
+// surfaces. Used, for example, by models that store agent artifacts (skills)
+// rather than design content.
+message Hidden {
+  option (motif.extension.v1.message).component = 140;
 }

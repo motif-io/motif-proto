@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package bhom.data.physical.v1;
+package thirdparty.bhom.data.physical.v1;
 
 import "motif/data/geometry/v1/geometry.proto";
 import "motif/extension/v1/options.proto";

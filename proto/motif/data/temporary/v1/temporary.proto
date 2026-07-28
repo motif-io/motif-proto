@@ -876,6 +876,54 @@ message CutGeometryBehavior {
   ];
 }
 
+// Extrudes a closed boundary profile perpendicular to a workplane.
+//
+// Regeneration reads the workplane coordinate system, a closed `Curve2List`
+// profile in workplane-local coordinates, and `thickness`, builds a planar face
+// from the closed wire, and extrudes it along ± the workplane normal (sign
+// baked on the asset via `extrude_along_workplane_normal`). The solid is
+// written to the `output` entity as a `Shape`.
+message ExtrudeBoundaryProfileBehavior {
+  option (motif.extension.v1.message).component = 141;
+
+  // Workplane the boundary profile lies in.
+  motif.extension.v1.DataReference workplane = 1 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.geometry.v1.CoordinateSystem3"
+    }
+  ];
+
+  // Closed profile loop as an ordered list of workplane-local `Curve2` segments.
+  motif.extension.v1.DataReference profile = 2 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.geometry.v1.Curve2List"
+    }
+  ];
+
+  // Extrusion distance (meters).
+  motif.extension.v1.DataReference thickness = 3 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}
+  ];
+
+  // When true, extrude along +workplane normal (ceiling); when false, along
+  // -normal (floor).
+  bool extrude_along_workplane_normal = 4;
+
+  // The entity the generated `Shape` is written to.
+  motif.extension.v1.DataReference output = 5 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.temporary.v1.Shape"
+    }
+  ];
+}
+
 // Points at the original asset that was materialized. The result of
 // materializing a parametric asset is pointed at by `Instance`; this points back
 // at the source. For non-parametric assets, this is not present.

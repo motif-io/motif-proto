@@ -1,10 +1,7 @@
 syntax = "proto3";
 
-// FDE sketch datums: reference planes and structural column grids used as sketch
+// Sketch datums: reference planes and structural column grids used as sketch
 // hosts.
-//
-// Component IDs here were reclaimed from previously-retired component IDs
-// (replacing the earlier provisional 9020-9023 placeholders).
 package motif.data.fde.datum.v1;
 
 import "motif/extension/v1/options.proto";

@@ -8,8 +8,10 @@
 #     git metadata. Scoped to main so only merged changes are published.
 #   - delete: archives the BSR label for the deleted branch/tag.
 #
-# Requires a BUF_TOKEN repository secret (Settings > Secrets and variables >
-# Actions) for the push and label-archive steps.
+# BUF_TOKEN is an environment secret on the `bsr-publish` environment, which is
+# restricted to the main branch. Only the publish job references that
+# environment, so the token is never present in pull_request runs and cannot be
+# exfiltrated by an untrusted fork PR.
 name: Buf CI
 
 on:
@@ -20,13 +22,28 @@ on:
     types: [opened, synchronize, reopened, labeled, unlabeled]
   delete:
 
-permissions:
-  contents: read
-  pull-requests: write
-
 jobs:
-  buf:
+  # PR checks: build, lint, format, and breaking-change detection. Runs without
+  # BSR credentials so untrusted fork PRs never have access to BUF_TOKEN.
+  check:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bufbuild/buf-action@v1
+
+  # Publish named modules to the BSR (push to main) and archive labels for
+  # deleted branches/tags (delete). Requires BUF_TOKEN, sourced from the
+  # main-restricted `bsr-publish` environment.
+  publish:
+    if: github.event_name == 'push' || github.event_name == 'delete'
+    runs-on: ubuntu-latest
+    environment: bsr-publish
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: bufbuild/buf-action@v1

@@ -7,6 +7,21 @@ an agent (or human) needs to add or change schemas correctly.
 Tooling is managed with [`mise`](https://mise.jdx.dev/) (see `.config/mise.toml`)
 and [`buf`](https://buf.build/). Run `mise run <task>` for the tasks below.
 
+## Commit and PR hygiene
+
+This repository is public, so treat every commit and pull request as externally
+visible. This applies to all contributors, internal and external:
+
+- Prefer a GitHub [`users.noreply.github.com`](https://docs.github.com/en/account-and-profile/how-tos/email-preferences/setting-your-commit-email-address#setting-your-email-address-for-a-single-repository)
+  email for your author/committer identity so you do not expose a personal
+  address. Using a public email you are comfortable sharing is also fine.
+- Do not add `Co-authored-by`, `Made-with`, or other tool/AI attribution
+  trailers to commits or PRs.
+- Do not link to private or internal systems (such as private issue trackers)
+  or paste internal-only URLs or ticket IDs in commit messages or PR
+  descriptions.
+- Prefer a short subject plus optional technical rationale; no ticket footers.
+
 ## Protobuf package names
 
 Schemas are grouped into these top-level packages, all versioned `v1`:
@@ -14,9 +29,12 @@ Schemas are grouped into these top-level packages, all versioned `v1`:
 - **`motif.api.v1`** — gRPC service API for the Motif platform.
 - **`motif.data.<subpackage>.v1`** — Component types defined by Motif, grouped by
   subpackage (e.g. `motif.data.core.v1`, `motif.data.model.v1`).
-- **`motif.event.v1`** — Message types for notification events.
+- **`motif.events.v1`** — Message types for notification events.
 - **`motif.extension.v1`** — Custom Protobuf options and types used to extend the
   platform with new component types.
+- **`thirdparty.<partner>.data.<domain>.v1`** — Partner-owned component types
+  (e.g. `thirdparty.bhom.data.physical.v1`), under `proto/thirdparty/…` so they
+  sort after `motif` on the Buf Schema Registry.
 
 A file's package must match its path under `proto/`: a file in package
 `motif.data.core.v1` lives at `proto/motif/data/core/v1/<file>.proto`. Imports use
@@ -27,8 +45,9 @@ the module-root-relative path, e.g. `import "motif/extension/v1/options.proto";`
 Every Motif component type **must** be defined in a `motif.data.<subpackage>.v1`
 package. Pick the subpackage that fits the domain (e.g. `core`, `model`, `view`,
 `style`, `fde`) or add a new `motif.data.<new>.v1` subpackage if none fits. Do
-**not** define component types in `motif.api.v1`, `motif.event.v1`, or
-`motif.extension.v1`.
+**not** define component types in `motif.api.v1`, `motif.events.v1`, or
+`motif.extension.v1`. Partner types use `thirdparty.<partner>.data.<domain>.v1`
+instead of living under `motif.data.*`.
 
 ## Defining a Motif component type
 

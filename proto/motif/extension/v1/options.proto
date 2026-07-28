@@ -3,8 +3,9 @@ syntax = "proto3";
 // This package provides the ability to extend the Motif platform by defining
 // new component data types.
 //
-// 50000 is a temporary internal-range placeholder; it will be replaced with a
-// single public extension number assigned by the protobuf maintainers.
+// 1309 is the public extension number assigned to Motif by the protobuf
+// maintainers. See
+// https://github.com/protocolbuffers/protobuf/blob/main/docs/options.md
 package motif.extension.v1;
 
 import "google/protobuf/descriptor.proto";
@@ -12,12 +13,12 @@ import "motif/extension/v1/type.proto";
 
 // Motif message options.
 extend google.protobuf.MessageOptions {
-  optional MotifMessageOptions message = 50000;
+  optional MotifMessageOptions message = 1309;
 }
 
 // Motif field options.
 extend google.protobuf.FieldOptions {
-  optional MotifFieldOptions field = 50000;
+  optional MotifFieldOptions field = 1309;
 }
 
 // Motif options applied to a message, via `option (motif.extension.v1.message)`.

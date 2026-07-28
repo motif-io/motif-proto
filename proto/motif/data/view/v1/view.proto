@@ -37,12 +37,31 @@ enum ViewKind {
   VIEW_KIND_RCP = 7;
 }
 
+// Distinguishes the documentation role of an elevation-family view (a view
+// whose `ViewKind` is `VIEW_KIND_ELEVATION`). Elevations and sections share a
+// single `ViewKind` because their camera/rendering behavior is identical; this
+// field records the authoring intent so the UI can label and default them
+// differently. Left `UNSPECIFIED` for views that are not elevation-family.
+enum ElevationRole {
+  // Not an elevation-family view, or the role is unknown.
+  ELEVATION_ROLE_UNSPECIFIED = 0;
+  // An exterior/interior elevation.
+  ELEVATION_ROLE_ELEVATION = 1;
+  // A section: an elevation-family view taken through a cut plane.
+  ELEVATION_ROLE_SECTION = 2;
+}
+
 // Marks an entity as a view.
 message View {
   option (motif.extension.v1.message).component = 41;
 
   // The kind of view.
   ViewKind kind = 1;
+
+  // For elevation-family views (`kind == VIEW_KIND_ELEVATION`), whether the
+  // view is authored as an elevation or a section. `UNSPECIFIED` for all other
+  // view kinds.
+  ElevationRole elevation_role = 2;
 }
 
 // A type definition for views. Carries the `ViewKind` and default parameter
