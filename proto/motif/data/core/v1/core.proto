@@ -298,6 +298,14 @@ message IsOfType {
   BindingMode binding_mode = 2;
 }
 
+// 2D placed extent of content on a plane — position, size, rotation.
+// On the placing entity, not the shared asset.
+message Placement2d {
+  option (motif.extension.v1.message).component = 156;
+
+  motif.data.geometry.v1.Box2d placement = 1;
+}
+
 // A marker component indicating an entity should be hidden from default UI
 // views.
 //
