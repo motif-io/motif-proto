@@ -126,7 +126,7 @@ message Lighting {
 // views is produced by the view's projection pipeline (see `ProjectedGeometry`)
 // and is not governed by this component.
 message ModelEdges {
-  option (motif.extension.v1.message).component = 155;
+  option (motif.extension.v1.message).component = 157;
 
   // Whether model edges are drawn in this view.
   bool enabled = 1;
