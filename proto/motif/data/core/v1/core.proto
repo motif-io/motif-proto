@@ -298,21 +298,23 @@ message IsOfType {
   BindingMode binding_mode = 2;
 }
 
-// The 2D placement of a placed image — position, size, and rotation on its
-// plane — via `motif.data.geometry.v1.Box2d`. The image analog of
-// `motif.data.annotation.v1.TextAnnotation`'s `placement`: seeded from the
-// presented asset's natural extent at placement, then edited by the 2D
-// box-transform (move / resize / rotate).
+// A 2D box-transform placement — position, size, and rotation on a plane, via
+// `motif.data.geometry.v1.Box2d`. The 2D analog of `Isometry`: where `Isometry`
+// gives a model-space placement its rigid pose (translation + rotation),
+// `Placement2d` gives an in-plane placement its full box transform, adding the
+// scale (`size`) that `Isometry` has no room for — which a raster placement
+// needs. Consistent with `motif.data.annotation.v1.TextAnnotation`'s `placement`.
 //
-// Placement-kind-neutral: attaches to any placement that presents an image
-// asset — a view-scoped `DrawingContent` (motif.data.view.v1, component 126) or
-// a model-space `Instance`. How the plane / world Z is resolved is a runtime
-// concern (a `DrawingContent` anchors Z via its `DrawLayer` against the view's
-// `ViewRange`; a model-space image sits on its instance's plane).
-message ImageBounds {
+// Placement-entity-scoped, not asset-scoped: attaches to the entity that places
+// content, alongside `Presents` — a view-scoped `DrawingContent` or a
+// model-space `Instance` — never to the shared asset it presents (the same asset
+// placed twice yields two placements). How the plane / world Z is resolved is a
+// runtime concern (a `DrawingContent` anchors Z via its `DrawLayer` against the
+// view's `ViewRange`; a model-space placement sits on its instance's plane).
+message Placement2d {
   option (motif.extension.v1.message).component = 156;
 
-  // Position, size, and rotation of the placed image on its plane.
+  // Position, size, and rotation of the placement on its plane.
   motif.data.geometry.v1.Box2d placement = 1;
 }
 
