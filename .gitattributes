@@ -3,3 +3,10 @@
 # `core.autocrlf` setting. Git for Windows defaults to `core.autocrlf=true`,
 # which would otherwise check files out with CRLF and fail `mise run lint`.
 * text=auto eol=lf
+
+# GitHub language statistics. Linguist classifies Protocol Buffer as a data
+# language, which is omitted from the stats by default, leaving the handful of
+# jq helper scripts as the only detected language. Count the .proto files that
+# make up nearly all of this repo, and leave the build tooling out.
+*.proto linguist-detectable=true
+tools/*.jq linguist-detectable=false
