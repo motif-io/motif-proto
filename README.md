@@ -77,3 +77,17 @@ Keep IDs dense: prefer the value from `mise run next-id` over assigning IDs far
 from the sequence. CI runs `mise run check-id-gaps`, which fails if more than 10
 consecutive IDs are left unused between two assigned IDs (a guard against typos
 like `600` for `60`).
+
+## License
+
+The schemas in this repository are licensed under the [MIT License](LICENSE).
+The license covers the schemas and the code you generate from them; use of the
+Motif platform itself is governed by your agreement with Motif.
+
+### Third-party schemas
+
+Packages under `thirdparty.<partner>.*` hold partner-owned component types,
+normally contributed by the partner themselves. A contributor retains copyright
+in what they contribute and licenses it under the MIT terms above.
+
+Partner names and marks are the property of their respective owners.
