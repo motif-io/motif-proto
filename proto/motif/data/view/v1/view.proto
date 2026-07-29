@@ -162,6 +162,23 @@ message ViewRange {
   LevelOffset view_depth = 4;
 }
 
+// The work plane a view drives placement from when nothing else overrides it.
+// Lives on the view entity.
+//
+// Opening or activating a view makes this the session's active work plane, and
+// clearing a selection-driven override restores it. Distinct from
+// `motif.data.model.v1.DefaultWorkplane`, which marks the model-wide default
+// rather than a per-view one.
+//
+// Only levels can be referenced for now; this widens to arbitrary saved work
+// planes once those exist.
+message ViewDefaultWorkplane {
+  option (motif.extension.v1.message).component = 158;
+
+  // The level acting as the view's default work plane. Required.
+  motif.extension.v1.EntityReference level = 1 [(buf.validate.field).required = true];
+}
+
 // A position relative to a level: the level entity plus a vertical offset.
 message LevelOffset {
   // The level entity this plane is relative to. Required.
