@@ -31,3 +31,15 @@ Then import the schemas by their module-root-relative path, for example:
 import "motif/extension/v1/options.proto";
 import "motif/extension/v1/reference.proto";
 ```
+
+## License
+
+These schemas are licensed under the MIT License. The license covers the schemas
+and the code you generate from them; use of the Motif platform itself is governed
+by your agreement with Motif.
+
+Packages under `thirdparty.<partner>.*` hold partner-owned component types,
+normally contributed by the partner themselves. A contributor retains copyright
+in what they contribute and licenses it under the MIT terms above.
+
+Partner names and marks are the property of their respective owners.

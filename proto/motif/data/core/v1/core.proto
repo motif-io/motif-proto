@@ -202,8 +202,8 @@ enum MimeType {
 message Representation {
   option (motif.extension.v1.message).component = 4;
 
-  // Identifier used to fetch the representation.
-  bytes id = 1 [(buf.validate.field).bytes.len = 16];
+  // Identifier used to fetch the representation. Required.
+  motif.extension.v1.RepresentationReference id = 1 [(buf.validate.field).required = true];
   // The MIME type of the representation.
   MimeType mime_type = 2;
 
@@ -271,8 +271,8 @@ message ForeignProperties {
 message ThumbnailRepresentation {
   option (motif.extension.v1.message).component = 40;
 
-  // Identifier used to fetch the thumbnail.
-  bytes id = 1;
+  // Identifier used to fetch the thumbnail. Required.
+  motif.extension.v1.RepresentationReference id = 1 [(buf.validate.field).required = true];
 }
 
 // How a type's values relate to the entity it is bound to.
