@@ -122,9 +122,11 @@ message Lighting {
 // derived from the view's shaded model geometry. Lives on the view entity.
 //
 // Absent from a view means model edges render with their default appearance,
-// which is enabled. Cut and projection linework in plan/section/elevation
-// views is produced by the view's projection pipeline (see `ProjectedGeometry`)
-// and is not governed by this component.
+// which is enabled. Cut linework in plan/section/elevation views is produced by
+// the view's projection pipeline (see `ProjectedGeometry`) and is not governed
+// by this component: that pipeline draws only the boundary of geometry the
+// view's cut plane slices, so this component covers every non-cut edge and the
+// two are styled independently.
 message ModelEdges {
   option (motif.extension.v1.message).component = 157;
 
@@ -143,6 +145,10 @@ message ModelEdges {
   // edge fidelity for frame rate when navigating large models. When false,
   // edges stay drawn during navigation.
   bool hide_during_navigation = 4;
+
+  // Stroke color of model edges. Unset means the renderer's default color.
+  // Independent of the cut linework's color, which comes from `ViewStyle`.
+  motif.data.style.v1.Color color = 5;
 }
 
 // Defines the spatial clipping bounds for non-3D views.
