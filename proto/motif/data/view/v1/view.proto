@@ -320,6 +320,14 @@ message Sheet {
   option (motif.extension.v1.message).component = 118;
 }
 
+// User-assigned sheet number (e.g. "A-101"). Optional on sheet entities.
+message SheetNumber {
+  option (motif.extension.v1.message).component = 159;
+
+  // The user-assigned sheet number.
+  string number = 1;
+}
+
 // A view/sheet-scoped, BIM-inert placement of content into a view — the
 // view-scoped analog of `Instance` (motif.data.core.v1). A marker: what it
 // renders is resolved from the definition it points at via
