@@ -13,6 +13,8 @@ message PluginTopLevelAsset {
   string document_id = 1;
   // MAC address of the originating machine.
   string mac_address = 2;
+  // Last changeset version successfully published by the plugin.
+  int32 changeset_version = 3;
 }
 
 // Identity of an object imported from Revit.
