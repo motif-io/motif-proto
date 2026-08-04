@@ -151,7 +151,14 @@ message ModelEdges {
   motif.data.style.v1.Color color = 5;
 }
 
-// Defines the spatial clipping bounds for non-3D views.
+// Defines a view's clipping bounds: the level-anchored planes that bound a
+// plan-family view's depth slice, plus the depth-clipping switch that applies to
+// every view kind.
+//
+// The planes are meaningful only for views whose depth is anchored to levels
+// (plan and reflected ceiling plan). Views that take their depth from the camera
+// instead — 3D, elevation and section — leave every plane unset and carry this
+// component only for `depth_clipping`.
 message ViewRange {
   option (motif.extension.v1.message).component = 46;
 
@@ -166,6 +173,17 @@ message ViewRange {
 
   // Extends visibility beyond the bottom plane with a lighter line style.
   LevelOffset view_depth = 4;
+
+  // Whether the view hides geometry beyond its clip plane — the far face of the
+  // view box, opposite the cut plane the view slices at. Which plane that is
+  // depends on the kind: the plane above furthest from the camera for
+  // plan-family views, the camera's `Projection.far_clip` otherwise.
+  //
+  // When false the clip plane is retained but ignored, so the view renders to
+  // the full depth of the model; the cut plane is unaffected either way. Unset
+  // means the clip plane applies, which is how views behaved before this field
+  // existed.
+  optional bool depth_clipping = 5;
 }
 
 // The work plane a view drives placement from when nothing else overrides it.
