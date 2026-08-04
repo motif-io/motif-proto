@@ -213,6 +213,14 @@ message SectionBox {
   motif.data.geometry.v1.Vector3 half_extents = 2;
   // Orientation of the box. If absent, the box is axis-aligned.
   motif.data.geometry.v1.AxisAngle rotation = 3;
+  // Whether the box actively clips the view. When false the box is retained
+  // but the view renders at full extent, so toggling sectioning off and back
+  // on restores the authored box rather than requiring it to be redrawn.
+  //
+  // Presence-tracked: a box written before this field existed leaves it unset
+  // and is treated as clipping, matching the behaviour those boxes were
+  // authored under.
+  optional bool enabled = 4;
 }
 
 // A 2D rectangle that clips the projected view to a bounded region.
