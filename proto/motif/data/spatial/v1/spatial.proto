@@ -4,7 +4,6 @@ syntax = "proto3";
 // bounding-element references, and portals linking openings to rooms.
 package motif.data.spatial.v1;
 
-import "buf/validate/validate.proto";
 import "motif/extension/v1/options.proto";
 import "motif/extension/v1/reference.proto";
 
