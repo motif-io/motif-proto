@@ -313,8 +313,12 @@ message Placement2d {
 // (00000000-0000-4000-8000-000000000000), clients hide the model from default
 // model lists — like a Unix dotfile. The model stays fully accessible to
 // anything addressing it directly; the marker only affects default browsing
-// surfaces. Used, for example, by models that store agent artifacts (skills)
-// rather than design content.
+// surfaces.
+//
+// This marker says only "do not show me in default model lists". Models that
+// store agent artifacts are usually hidden, but whether their artifacts are
+// surfaced in agent-artifact UI is a separate question, answered by
+// `motif.data.ai.v1.AgentArtifactStore` rather than by this component.
 message Hidden {
   option (motif.extension.v1.message).component = 140;
 }

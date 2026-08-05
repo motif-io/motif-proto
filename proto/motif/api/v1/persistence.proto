@@ -57,6 +57,10 @@ service Persistence {
 
   // Creates a new changeset that restores the model to a prior version.
   rpc RevertToVersion(RevertToVersionRequest) returns (RevertToVersionResponse);
+
+  // Creates a changeset that reverses the client-authored effect of one
+  // prior changeset version while preserving later non-conflicting changes.
+  rpc RevertOneChange(RevertOneChangeRequest) returns (RevertOneChangeResponse);
 }
 
 // A single component value attached to an entity.
@@ -417,3 +421,47 @@ message RevertToVersionResponse {
   // Server-assigned version of the revert changeset.
   int32 changeset_version = 1;
 }
+
+// Requests reversal of one client-authored changeset version.
+message RevertOneChangeRequest {
+  // Project containing the target model.
+  bytes project_id = 1;
+
+  // Target model id. Globally unique across projects.
+  bytes model_id = 2;
+
+  // Highest model version known to the caller.
+  int32 max_known_version = 3;
+
+  // Single history version whose client-authored effect should be
+  // reversed. Must be between 1 and max_known_version, inclusive.
+  int32 version_to_revert = 4;
+
+  // Changeset versions in the caller's local undo/redo lineage. The list
+  // must include version_to_revert, contain no duplicates, and contain only
+  // versions between 1 and max_known_version, inclusive. Listed versions are
+  // excluded from intervening-change conflict detection.
+  repeated int32 undo_redo_lineage_versions = 5;
+}
+
+// Result of attempting to reverse one changeset version.
+message RevertOneChangeResponse {
+  // Applied reversal or detected conflict.
+  oneof result {
+    // The reversal was committed.
+    RevertOneChangeApplied applied = 1;
+
+    // The reversal conflicted with an intervening change.
+    RevertOneChangeConflict conflict = 2;
+  }
+}
+
+// Identifies the version created by a selective reversal.
+message RevertOneChangeApplied {
+  // Server-assigned version of the reversing changeset.
+  int32 changeset_version = 1;
+}
+
+// Indicates that no changes were committed because the reversal
+// conflicted with an intervening change.
+message RevertOneChangeConflict {}
