@@ -8,7 +8,6 @@ import "motif/extension/v1/options.proto";
 import "motif/extension/v1/reference.proto";
 
 // Maps a WKB polygon ring/edge index to the element that bounds that edge.
-//
 // Ring 0 is the exterior; rings 1..N are holes. Segment i joins vertex i to
 // vertex i + 1 (wrapping to the first vertex for the final edge).
 message BoundarySegmentReference {
