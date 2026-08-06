@@ -108,6 +108,16 @@ message DeleteModelResponse {
 }
 
 // Requests a page of models in a project.
+//
+// `where_` fields are combined with a logical AND. An empty list disables that filter
+// rather than excluding every model. Note that it is possible to create filters that
+// logically exclude all models, such as adding the same component ID to the `all` and
+// `none` fields. Such requests are accepted but return no models.
+//
+// Filters are applied prior to pagination, so only matching models contribute to the
+// page size. A page token carries only a position, so the same filters must be sent on
+// the request for each page; changing them mid-listing applies the position to a
+// different result set, silently skipping or repeating models.
 message ListModelsRequest {
   // Target project id.
   bytes project_id = 1;
