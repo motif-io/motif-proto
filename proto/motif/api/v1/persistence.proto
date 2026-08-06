@@ -115,8 +115,8 @@ message DeleteModelResponse {
 // `none` fields. Such requests are accepted but return no models.
 //
 // Filters are applied prior to pagination, so only matching models contribute to the
-// page size. A page token carries only a position, so the same filters must be sent on
-// the request for each page; changing them mid-listing applies the position to a
+// page size. A page token encodes only a position, so the same filters must be sent
+// on the request for each page. Changing them mid-listing applies the position to a
 // different result set, silently skipping or repeating models.
 message ListModelsRequest {
   // Target project id.
