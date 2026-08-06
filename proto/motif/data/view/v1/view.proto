@@ -5,6 +5,7 @@ syntax = "proto3";
 package motif.data.view.v1;
 
 import "buf/validate/validate.proto";
+import "motif/data/external/v1/categories.proto";
 import "motif/data/geometry/v1/geometry.proto";
 import "motif/data/style/v1/style.proto";
 import "motif/extension/v1/options.proto";
@@ -258,6 +259,70 @@ message CropRegion {
   // enabled: the boundary can be shown without clipping, or hidden while
   // clipping.
   bool boundary_visible = 5;
+}
+
+// Per-view visibility rules: the ordered overrides that decide which elements
+// the view draws. Lives on the view entity.
+//
+// Absent from a view means every element is visible. Rules are evaluated in
+// order against each element and the last matching rule wins, so a broad hide
+// can be narrowed by a later rule that shows a subset. An element that no rule
+// matches is visible.
+message VisibilityRules {
+  option (motif.extension.v1.message).component = 174;
+
+  // The rules, in evaluation order. Later rules win over earlier ones.
+  repeated VisibilityRule rules = 1;
+
+  // The lowest reader version that can evaluate every rule in `rules`. Bumped
+  // when a rule uses a predicate variant that older readers cannot evaluate.
+  //
+  // A reader whose supported version is below this value must render the view
+  // read-only and must not write this component back: rewriting it would
+  // silently discard the rules the reader could not decode. Unset (0) is the
+  // baseline, where `category` is the only predicate.
+  uint32 min_reader_version = 2;
+
+  // One override: which elements it selects, and how they are drawn.
+  message VisibilityRule {
+    // Which elements this rule selects. A `oneof` from the start so that
+    // predicates over other ECS components are additive — adding an arm to an
+    // existing `oneof` is wire-compatible.
+    //
+    // Unset means a variant this reader does not know: skip the rule, never
+    // treat it as matching. An unknown predicate treated as matching would
+    // select every element and hide the whole view.
+    oneof predicate {
+      // The element's Revit category matches.
+      CategoryPredicate category = 1;
+    }
+
+    // Whether the selected elements are hidden. False is an explicit "show"
+    // that overrides an earlier rule's hide, and is what an element no rule
+    // matches gets, so this field needs no presence.
+    bool hidden = 3;
+
+    // Field-number allocation (the `predicate` oneof and the top-level fields
+    // share this message's number space): 1 = `category`; 2 = the next
+    // predicate arm; 3 = `hidden`; 4-6 = the per-category graphic overrides
+    // that follow (line weight, color, line pattern). Those numbers are left
+    // free rather than `reserved` because `buf breaking` counts dropping a
+    // reservation as a breaking change, which would block ever using them.
+  }
+
+  // Selects elements whose resolved category is this category.
+  //
+  // Resolution is the reader's, not a single component lookup. An element
+  // carrying `motif.data.external.v1.RevitCategoryValue` resolves to that
+  // value; an element without one is classified from its own type (a
+  // natively authored wall resolves to `WALLS`) or from imported IFC/Revit
+  // metadata. Keying on a category rather than on that component is the
+  // whole point: a wall is a wall whether it was authored natively or
+  // imported, and only the former carries the component.
+  message CategoryPredicate {
+    // The category to select. `UNSPECIFIED` selects nothing.
+    motif.data.external.v1.RevitCategory category = 1;
+  }
 }
 
 // The result of projecting a source entity's geometry through a view's
