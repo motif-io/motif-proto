@@ -952,6 +952,11 @@ message SourceAsset {
 // whose entries preserve the declared IDs. The asset's existing lifecycle
 // determines whether that resolved component belongs on an instance or on a
 // materialized asset.
+//
+// Every construction method produces coordinates in the local frame of the
+// entity that receives the resolved `ReferenceGeometry`. All entries in one
+// specification therefore share that single frame (even if they use different
+// construction methods).
 message ReferenceGeometrySpec {
   option (motif.extension.v1.message).component = 164;
 
@@ -1039,7 +1044,15 @@ message ReferenceGeometryParameterMapEntrySpec {
   ReferenceGeometryParameterMappingKind kind = 4 [(buf.validate.field).enum.defined_only = true];
 }
 
-// Concrete reference geometry resolved from a `ReferenceGeometrySpec` for an asset instance.
+// Concrete reference geometry resolved from a `ReferenceGeometrySpec`.
+//
+// Every primitive is expressed in the local frame of the entity carrying this
+// component. To use the geometry in model coordinates a client should apply
+// the transform of the particular instance being consumed. 
+// If the component is on an instance and the instance has no placement transform,
+// its local-to-model transform is identity. 
+// If the component is shared on a materialized asset, an instance of that asset
+// is required to establish model coordinates.
 message ReferenceGeometry {
   option (motif.extension.v1.message).component = 166;
 
@@ -1126,6 +1139,9 @@ message Curve2Input {
 }
 
 // A source that resolves to a three-dimensional coordinate system.
+//
+// When used to construct reference geometry, the coordinate-system value is
+// expressed in the local frame of the entity receiving `ReferenceGeometry`.
 message CoordinateSystem3Input {
   // How the coordinate-system value is supplied.
   oneof source {
@@ -1143,6 +1159,8 @@ message CoordinateSystem3Input {
 }
 
 // An authored method for constructing a planar reference.
+// Every construction method produces a plane in the local frame of the entity 
+// receiving the resolved `ReferenceGeometry`.
 message PlaneSpec {
   // The supported plane construction methods.
   oneof definition {
@@ -1329,6 +1347,8 @@ message PlaneUsingIsometryLocalOffsetSpec {
 }
 
 // An authored method for constructing a cylindrical reference.
+// Every construction method produces a cylinder in the local frame of the entity 
+// receiving the resolved `ReferenceGeometry`.
 message CylinderSpec {
   // The supported cylinder construction methods.
   oneof definition {
