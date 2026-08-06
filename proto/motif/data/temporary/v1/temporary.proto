@@ -1048,16 +1048,34 @@ message ReferenceGeometryParameterMapEntrySpec {
 //
 // Every primitive is expressed in the local frame of the entity carrying this
 // component. To use the geometry in model coordinates a client should apply
-// the transform of the particular instance being consumed. 
+// the transform of the particular instance being consumed.
 // If the component is on an instance and the instance has no placement transform,
-// its local-to-model transform is identity. 
+// its local-to-model transform is identity.
 // If the component is shared on a materialized asset, an instance of that asset
 // is required to establish model coordinates.
 message ReferenceGeometry {
   option (motif.extension.v1.message).component = 166;
 
   // The resolved references.
-  repeated ReferenceGeometryEntry entries = 1 [(buf.validate.field).repeated.min_items = 1];
+  // Empty if generation failed, so consumers do not accidentally use
+  // stale geometry produced from older input values.
+  repeated ReferenceGeometryEntry entries = 1;
+
+  // Whether generation of the reference geometries was successful.
+  ReferenceGeometryGenerationStatus generation_status = 2 [(buf.validate.field).enum.defined_only = true];
+}
+
+// Whether resolved ReferenceGeometry matches its current inputs.
+enum ReferenceGeometryGenerationStatus {
+  // No generation result has been recorded. Consumers should not use the entries.
+  REFERENCE_GEOMETRY_GENERATION_STATUS_UNSPECIFIED = 0;
+
+  // All declared reference geometries were successfully generated from the current inputs.
+  REFERENCE_GEOMETRY_GENERATION_STATUS_SUCCEEDED = 1;
+
+  // At least one declared reference geometry could not be generated.
+  // Consumers should assume any entries, if present, are stale.
+  REFERENCE_GEOMETRY_GENERATION_STATUS_FAILED = 2;
 }
 
 // One concrete reference resolved from a `ReferenceGeometryEntrySpec`.
@@ -1159,7 +1177,7 @@ message CoordinateSystem3Input {
 }
 
 // An authored method for constructing a planar reference.
-// Every construction method produces a plane in the local frame of the entity 
+// Every construction method produces a plane in the local frame of the entity
 // receiving the resolved `ReferenceGeometry`.
 message PlaneSpec {
   // The supported plane construction methods.
@@ -1312,7 +1330,6 @@ message PlaneUsingCurveLocationZOffsetSpec {
 message PlaneUsingIsometryLocalOffsetSpec {
   // Supported signed local axes for the plane normal.
   enum NormalDirection {
-
     // Plane normal direction not specified. This is invalid.
     NORMAL_DIRECTION_UNSPECIFIED = 0;
 
@@ -1361,7 +1378,7 @@ message PlaneUsingIsometryLocalOffsetSpec {
 }
 
 // An authored method for constructing a cylindrical reference.
-// Every construction method produces a cylinder in the local frame of the entity 
+// Every construction method produces a cylinder in the local frame of the entity
 // receiving the resolved `ReferenceGeometry`.
 message CylinderSpec {
   // The supported cylinder construction methods.
