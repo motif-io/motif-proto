@@ -951,7 +951,7 @@ message SourceAsset {
 // A resolver evaluates each entry in the selected output scope and writes a
 // `ReferenceGeometry` component whose entries preserve the declared IDs.
 message ReferenceGeometrySpec {
-  option (motif.extension.v1.message).component = 162;
+  option (motif.extension.v1.message).component = 164;
 
   // Determines which resolved entity receives the concrete reference geometry.
   enum OutputScope {
@@ -1027,7 +1027,7 @@ message CurveBasedGeometrySpec {
 
 // Authored mappings from asset parameters to reference geometry pairs.
 message ReferenceGeometryParameterMapSpec {
-  option (motif.extension.v1.message).component = 163;
+  option (motif.extension.v1.message).component = 165;
 
   // The asset's parameter-to-reference mappings.
   repeated ReferenceGeometryParameterMapEntrySpec entries = 1 [(buf.validate.field).repeated.min_items = 1];
@@ -1050,7 +1050,7 @@ message ReferenceGeometryParameterMapEntrySpec {
 
 // Concrete reference geometry resolved for an asset instance.
 message ReferenceGeometry {
-  option (motif.extension.v1.message).component = 164;
+  option (motif.extension.v1.message).component = 166;
 
   // The resolved references.
   repeated ReferenceGeometryEntry entries = 1 [(buf.validate.field).repeated.min_items = 1];
@@ -1081,7 +1081,7 @@ message ReferenceGeometryEntry {
 
 // Published mappings from logical asset parameters to concrete reference geometry pairs.
 message ReferenceGeometryParameterMap {
-  option (motif.extension.v1.message).component = 165;
+  option (motif.extension.v1.message).component = 167;
 
   // The validated parameter-to-reference mappings.
   repeated ReferenceGeometryParameterMapEntry entries = 1 [(buf.validate.field).repeated.min_items = 1];
