@@ -115,6 +115,12 @@ message ListModelsRequest {
   optional uint32 page_size = 2;
   // Token from a previous ListModelsResponse.
   optional string page_token = 3;
+  // The model sentinel entity ID must have all provided components.
+  repeated int32 where_all_components = 4;
+  // The model sentinel entity ID must have at least one provided component.
+  repeated int32 where_any_components = 5;
+  // The model sentinel entity ID must have none of the provided components.
+  repeated int32 where_none_components = 6;
 }
 
 // A page of models in a project.
