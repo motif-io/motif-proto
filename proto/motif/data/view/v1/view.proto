@@ -336,6 +336,22 @@ message SheetNumber {
   string number = 1;
 }
 
+// The number identifying one placed view within its sheet (e.g. "3"), the
+// detail half of the detail-over-sheet pair a view tag displays. Optional on
+// the placement entity that makes a view a viewport — the sheet member that
+// `motif.data.core.v1.Presents` a view — so the same view placed on two sheets
+// carries one number per placement.
+//
+// Applications assign the number at placement and a user may override it.
+// Numbers are not unique: two placements on one sheet can carry the same
+// number.
+message DetailNumber {
+  option (motif.extension.v1.message).component = 164;
+
+  // The number of the placed view within its sheet.
+  string number = 1;
+}
+
 // A view/sheet-scoped, BIM-inert placement of content into a view — the
 // view-scoped analog of `Instance` (motif.data.core.v1). A marker: what it
 // renders is resolved from the definition it points at via
