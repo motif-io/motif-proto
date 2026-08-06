@@ -1312,12 +1312,26 @@ message PlaneUsingCurveLocationZOffsetSpec {
 message PlaneUsingIsometryLocalOffsetSpec {
   // Supported signed local axes for the plane normal.
   enum NormalDirection {
+
+    // Plane normal direction not specified. This is invalid.
     NORMAL_DIRECTION_UNSPECIFIED = 0;
+
+    // Plane normal aligns with positive X in the local coordinate frame.
     NORMAL_DIRECTION_POSITIVE_X = 1;
+
+    // Plane normal aligns with negative X in the local coordinate frame.
     NORMAL_DIRECTION_NEGATIVE_X = 2;
+
+    // Plane normal aligns with positive Y in the local coordinate frame.
     NORMAL_DIRECTION_POSITIVE_Y = 3;
+
+    // Plane normal aligns with negative Y in the local coordinate frame.
     NORMAL_DIRECTION_NEGATIVE_Y = 4;
+
+    // Plane normal aligns with positive Z in the local coordinate frame.
     NORMAL_DIRECTION_POSITIVE_Z = 5;
+
+    // Plane normal aligns with negative Z in the local coordinate frame.
     NORMAL_DIRECTION_NEGATIVE_Z = 6;
   }
 
