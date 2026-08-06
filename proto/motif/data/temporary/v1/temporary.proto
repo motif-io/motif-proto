@@ -993,7 +993,7 @@ message ReferenceGeometryEntrySpec {
 // primitive depends on the concrete type of a Curve2.
 //
 // Each arm within a curve-type definition must only operate on that concrete
-// Curve2 type. This lets evaluation during change propagation determine the 
+// Curve2 type. This lets evaluation during change propagation determine the
 // applicable primitive type based solely on whether the resolved curve is
 // a line, circle, or other supported type.
 message CurveBasedGeometrySpec {
