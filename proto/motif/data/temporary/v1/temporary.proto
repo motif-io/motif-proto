@@ -983,18 +983,19 @@ message ReferenceGeometryEntrySpec {
 
     // A reference whose concrete primitive or construction method is selected
     // from the concrete type stored in the resolved Curve2.
+    // Useful for assets like wall whose center line reference geometry depends
+    // on whether the sketch line is straight or not
     CurveBasedGeometrySpec curve_based = 6;
   }
 }
 
-// Authored construction methods for a reference geometry whose resulting
-// primitive or construction method changes according to the concrete type
-// stored in the resolved Curve2. This is not a general container for every
-// construction method that reads a Curve2.
+// Authored construction methods for a reference geometry where the
+// primitive depends on the concrete type of a Curve2.
 //
 // Each arm within a curve-type definition must only operate on that concrete
-// Curve2 type. This lets evaluation select the applicable definition solely
-// from whether the resolved curve is a line, circle, or another supported type.
+// Curve2 type. This lets evaluation during change propagation determine the 
+// applicable primitive type based solely on whether the resolved curve is
+// a line, circle, or other supported type.
 message CurveBasedGeometrySpec {
   // How to construct the reference when the resolved Curve2 contains a Line2.
   oneof line_definition {
@@ -1036,7 +1037,7 @@ message ReferenceGeometryParameterMapEntrySpec {
   ReferenceGeometryParameterMappingKind kind = 4 [(buf.validate.field).enum.defined_only = true];
 }
 
-// Concrete reference geometry resolved for an asset instance.
+// Concrete reference geometry resolved from a `ReferenceGeometrySpec` for an asset instance.
 message ReferenceGeometry {
   option (motif.extension.v1.message).component = 166;
 
@@ -1095,13 +1096,13 @@ enum ReferenceGeometryParameterMappingKind {
   // Unspecified mapping kind.
   REFERENCE_GEOMETRY_PARAMETER_MAPPING_KIND_UNSPECIFIED = 0;
 
-  // A linear distance between compatible references.
+  // A linear distance between two reference geometries.
   REFERENCE_GEOMETRY_PARAMETER_MAPPING_KIND_LINEAR = 1;
 
-  // An angle between compatible orientation-bearing references.
+  // An angle between two reference geometries.
   REFERENCE_GEOMETRY_PARAMETER_MAPPING_KIND_ANGULAR = 2;
 
-  // A radius or radial distance associated with cylindrical references.
+  // A radius or radial distance between two (cylindrical) reference geometries.
   REFERENCE_GEOMETRY_PARAMETER_MAPPING_KIND_RADIAL = 3;
 }
 
