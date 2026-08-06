@@ -948,28 +948,16 @@ message SourceAsset {
 
 // Authored declarations for stable reference geometry on an asset.
 //
-// A resolver evaluates each entry in the selected output scope and writes a
-// `ReferenceGeometry` component whose entries preserve the declared IDs.
+// A resolver evaluates each entry and writes a `ReferenceGeometry` component
+// whose entries preserve the declared IDs. The asset's existing lifecycle
+// determines whether that resolved component belongs on an instance or on a
+// materialized asset.
 message ReferenceGeometrySpec {
   option (motif.extension.v1.message).component = 164;
-
-  // Determines which resolved entity receives the concrete reference geometry.
-  enum OutputScope {
-    OUTPUT_SCOPE_UNSPECIFIED = 0;
-
-    // Write reference geometry on each instance of the asset carrying this spec.
-    OUTPUT_SCOPE_INSTANCE = 1;
-
-    // Write reference geometry on a materialized copy of the asset carrying this spec.
-    OUTPUT_SCOPE_MATERIALIZED_ASSET = 2;
-  }
 
   // The asset's reference geometry declarations. IDs must be unique within
   // this component and remain stable across compatible recipe revisions.
   repeated ReferenceGeometryEntrySpec entries = 1 [(buf.validate.field).repeated.min_items = 1];
-
-  // Where the resolved ReferenceGeometry component is written.
-  OutputScope output_scope = 2;
 }
 
 // One authored stable reference geometry declaration.
