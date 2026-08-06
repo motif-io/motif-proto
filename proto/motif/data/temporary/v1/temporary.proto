@@ -989,28 +989,30 @@ message ReferenceGeometryEntrySpec {
   }
 }
 
-// Authored construction methods for a reference geometry where the
-// primitive depends on the concrete type of a Curve2.
+// Authored construction cases for a reference geometry where the primitive
+// depends on the concrete type of a Curve2.
 //
-// Each arm within a curve-type definition must only operate on that concrete
-// Curve2 type. This lets evaluation during change propagation determine the
-// applicable primitive type based solely on whether the resolved curve is
-// a line, circle, or other supported type.
+// A recipe lists only the curve types it supports. Each case arm identifies
+// both a concrete Curve2 type and a construction method that operates only on
+// that type. Adding support for another Curve2 type therefore adds a new case
+// arm without making that case mandatory in existing serialized recipes.
 message CurveBasedGeometrySpec {
-  // How to construct the reference when the resolved Curve2 contains a Line2.
-  oneof line_definition {
+  // Curve-specific construction cases supported by this recipe.
+  repeated CurveBasedGeometryCase cases = 1 [(buf.validate.field).repeated.min_items = 1];
+}
+
+// One curve-specific construction case in a CurveBasedGeometrySpec.
+message CurveBasedGeometryCase {
+  // The selected arm identifies both the supported Curve2 type and the
+  // construction method used for that type.
+  oneof definition {
     option (buf.validate.oneof).required = true;
 
-    // Construct a plane parallel to the line at a signed offset.
+    // Applies only when the resolved Curve2 contains a Line2.
     PlaneUsingLineOffsetSpec line_offset = 1;
-  }
 
-  // How to construct the reference when the resolved Curve2 contains a Circle2.
-  oneof circle_definition {
-    option (buf.validate.oneof).required = true;
-
-    // Construct a cylinder from the circle and a radius offset.
-    CylinderUsingCurveRadiusSpec curve_radius = 2;
+    // Applies only when the resolved Curve2 contains a Circle2.
+    CylinderUsingCurveRadiusSpec circle_radius = 2;
   }
 }
 
