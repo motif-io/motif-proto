@@ -958,7 +958,7 @@ message SourceAsset {
 // specification therefore share that single frame (even if they use different
 // construction methods).
 message ReferenceGeometrySpec {
-  option (motif.extension.v1.message).component = 164;
+  option (motif.extension.v1.message).component = 166;
 
   // The asset's reference geometry declarations. IDs must be unique within
   // this component and remain stable across compatible recipe revisions.
@@ -1030,7 +1030,7 @@ message CurveBasedGeometryCase {
 // The spec preserves authored intent even when validation fails, while the
 // published map is only generatd after its parameter and reference IDs have been validated.
 message ReferenceGeometryParameterMapSpec {
-  option (motif.extension.v1.message).component = 165;
+  option (motif.extension.v1.message).component = 167;
 
   // The asset's parameter-to-reference mappings.
   repeated ReferenceGeometryParameterMapEntrySpec entries = 1 [(buf.validate.field).repeated.min_items = 1];
@@ -1061,7 +1061,7 @@ message ReferenceGeometryParameterMapEntrySpec {
 // If the component is shared on a materialized asset, an instance of that asset
 // is required to establish model coordinates.
 message ReferenceGeometry {
-  option (motif.extension.v1.message).component = 166;
+  option (motif.extension.v1.message).component = 168;
 
   // The resolved references.
   // Empty if generation failed, so consumers do not accidentally use
@@ -1112,7 +1112,7 @@ message ReferenceGeometryEntry {
 // This derived component is separate from its authored spec, despite the two being virtually
 // identical. See the `ReferenceGeometryParameterMapSpec` comment for the rationale.
 message ReferenceGeometryParameterMap {
-  option (motif.extension.v1.message).component = 167;
+  option (motif.extension.v1.message).component = 169;
 
   // The validated parameter-to-reference mappings.
   repeated ReferenceGeometryParameterMapEntry entries = 1 [(buf.validate.field).repeated.min_items = 1];
