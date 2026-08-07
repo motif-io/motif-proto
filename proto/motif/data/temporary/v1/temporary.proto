@@ -914,6 +914,13 @@ message ExtrudeBoundaryProfileBehavior {
   // -normal (floor).
   bool extrude_along_workplane_normal = 4;
 
+  // Resolved parameter: when true, flip the asset family's default extrusion
+  // direction (e.g. floor up, ceiling/roof down). Unset or false keeps the
+  // family default encoded in `extrude_along_workplane_normal`.
+  motif.extension.v1.DataReference extrude_direction_flip = 6 [
+    (motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_BOOL}
+  ];
+
   // The entity the generated `Shape` is written to.
   motif.extension.v1.DataReference output = 5 [
     (buf.validate.field).required = true,
