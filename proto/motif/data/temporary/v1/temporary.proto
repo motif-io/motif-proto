@@ -1022,6 +1022,13 @@ message CurveBasedGeometryCase {
 }
 
 // Authored mappings from asset parameters to reference geometry pairs.
+//
+// This authored component is intentionally distinct from the published
+// ReferenceGeometryParameterMap, even though the two are virtually identical.
+// This allows the asset to own the spec while the instance owns the published map.
+// (On a materialized instance both can coexist)
+// The spec preserves authored intent even when validation fails, while the
+// published map is only generatd after its parameter and reference IDs have been validated.
 message ReferenceGeometryParameterMapSpec {
   option (motif.extension.v1.message).component = 165;
 
@@ -1102,6 +1109,8 @@ message ReferenceGeometryEntry {
 }
 
 // Published mappings from logical asset parameters to concrete reference geometry pairs.
+// This derived component is separate from its authored spec, despite the two being virtually
+// identical. See the `ReferenceGeometryParameterMapSpec` comment for the rationale.
 message ReferenceGeometryParameterMap {
   option (motif.extension.v1.message).component = 167;
 
