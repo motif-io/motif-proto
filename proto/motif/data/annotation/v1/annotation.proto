@@ -5,6 +5,7 @@ package motif.data.annotation.v1;
 
 import "buf/validate/validate.proto";
 import "motif/data/geometry/v1/geometry.proto";
+import "motif/data/model/v1/model.proto";
 import "motif/data/style/v1/style.proto";
 import "motif/extension/v1/options.proto";
 import "motif/extension/v1/reference.proto";
@@ -174,12 +175,95 @@ message Dimension {
     // 4 reserved: shared (DimensionChain reference) — Shift-run placement.
   }
 
+  // This dimension's own look. Sparse throughout: an unset field inherits the
+  // application default, and an absent message means the dimension draws at
+  // the application default entirely.
+  //
+  // Inline rather than a component of its own, so that style and geometry
+  // cannot end up on separate entities and a delete cannot strand one without
+  // the other. The cost is that a commit serializes the whole component, so a
+  // restyle and a placement edit made concurrently on the same dimension are
+  // last-writer-wins rather than merging.
+  DimensionStyle style = 5;
+
   // Field-number allocation (kind/placement oneofs and top-level fields share
   // this message's number space): 1-2 kind arms; 3-4 placement arms (4 =
-  // shared/DimensionChain, Shift-run placement); 5 = style assignment
-  // (named-style reference + override, once the style model carries units
-  // instead of raw pixels); future kind arms (linear_projected, radial) and
-  // other extensions take 6+.
+  // shared/DimensionChain, Shift-run placement); 5 = style; future kind arms
+  // (linear_projected, radial) and other extensions take 6+.
+}
+
+// A dimension's look: label text, the linework, the sizes that position the
+// parts, and the units the value is displayed in.
+//
+// Every field is sparse: an unset field inherits the application default
+// rather than meaning "zero". That is why the scalars are `optional` instead
+// of using 0 as a sentinel — 0 is a legitimate authored value for every offset
+// and extension here, and has to stay distinguishable from "inherit".
+//
+// Sizes are millimeters measured on the printed page, so a dimension holds its
+// printed size across view scales.
+//
+// The text and line properties are grouped rather than flattened because the
+// intended end state is a composed style, where each group is either given
+// inline (as here) or referenced as a shared style asset. Grouping now is what
+// makes that additive later: a single field can be moved into a `oneof`
+// alongside a reference without breaking the wire format, as long as only one
+// arm is ever set. A reference to a whole dimension style is field 10, and
+// arrives as a plain field with documented precedence for the same reason.
+message DimensionStyle {
+  // Label text style.
+  message Text {
+    // Text color.
+    motif.data.style.v1.Color color = 1;
+    // Em size, millimeters on paper — the ordinary meaning of a "12 pt" text
+    // size, not the cap height.
+    optional float size = 2;
+    // 3 reserved: font (motif.data.style.v1.Font), once more than one family
+    // is available to choose from.
+    // 4 reserved: width factor (horizontal glyph scale), once the text stack
+    // can render one.
+  }
+
+  // Style of the dimension line, the extension lines, and the terminators,
+  // which are drawn as one stroke and so share one look.
+  message Line {
+    // Line color.
+    motif.data.style.v1.Color color = 1;
+    // Stroke weight. A pen size of 0 means the renderer draws a
+    // screen-constant hairline.
+    motif.data.style.v1.LineStyle weight = 2;
+    // 3 reserved: dash pattern, once the renderer honors one on this stroke.
+  }
+
+  // Label text.
+  Text text = 1;
+  // Linework.
+  Line line = 2;
+  // 3 reserved: terminator style (tick vs arrow, and its size), grouped like
+  // Text and Line so that it too can gain a shared-style reference.
+
+  // Gap between the dimension line and the label.
+  optional float text_offset = 4;
+  // Gap between the measured geometry and the start of an extension line
+  // (a.k.a. witness line).
+  optional float extension_line_offset = 5;
+  // How far an extension line continues past the dimension line.
+  optional float extension_line_extension = 6;
+  // How far the dimension line continues past the extension lines. Linear
+  // dimensions only — an angular dimension's arc has no such overrun, while
+  // the offsets above apply to both.
+  optional float dimension_line_extension = 7;
+
+  // Length unit, notation, and precision for a linear dimension's value.
+  // Unset inherits the model's unit settings.
+  motif.data.model.v1.LengthUnitGroup length_units = 8;
+  // Angle unit, notation, and precision for an angular dimension's value.
+  // Unset inherits the model's unit settings.
+  motif.data.model.v1.AngleUnitGroup angle_units = 9;
+
+  // 10 reserved: a reference to a shared dimension style asset. When it
+  // arrives it takes precedence over every field above, per the composed-style
+  // model where referencing a dimension style takes the whole style from it.
 }
 
 // Rich-text content + styling for a text annotation. Box geometry stays in

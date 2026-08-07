@@ -4,8 +4,10 @@ syntax = "proto3";
 // descriptors for sketch placement.
 package motif.data.tag.v1;
 
+import "buf/validate/validate.proto";
 import "motif/data/geometry/v1/geometry.proto";
 import "motif/extension/v1/options.proto";
+import "motif/extension/v1/reference.proto";
 
 // Category of a tag asset.
 enum TagCategory {
@@ -21,6 +23,10 @@ enum TagCategory {
   TAG_CATEGORY_GRID = 4;
   // Sheet border title blocks (line geometry in V1; fields in V2).
   TAG_CATEGORY_TITLE_BLOCK = 5;
+  // Tags that mark a view: section heads, elevation markers, callout bubbles.
+  TAG_CATEGORY_VIEW = 6;
+  // Level datum heads. The datum analogue of TAG_CATEGORY_GRID.
+  TAG_CATEGORY_LEVEL = 7;
   // TODO: TAG_CATEGORY_WALL in a follow-up MR.
 }
 
@@ -76,4 +82,17 @@ message TagType {
   TagCategory category = 1;
   // Field descriptors defining the type's layout.
   repeated TagFieldDescriptor fields = 2;
+}
+
+// The element a tag annotates: a View for section, elevation, and callout tags;
+// a Level for level heads.
+//
+// Distinct from Member, which is the tag's container. A title block tag needs no
+// TagTarget because its container and its subject are the same sheet; a view tag
+// is a Member of the model while its subject is one view.
+message TagTarget {
+  option (motif.extension.v1.message).component = 163;
+
+  // The annotated element. Required.
+  motif.extension.v1.EntityReference target = 1 [(buf.validate.field).required = true];
 }

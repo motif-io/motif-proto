@@ -231,6 +231,14 @@ message SectionBox {
   motif.data.geometry.v1.Vector3 half_extents = 2;
   // Orientation of the box. If absent, the box is axis-aligned.
   motif.data.geometry.v1.AxisAngle rotation = 3;
+  // Whether the box actively clips the view. When false the box is retained
+  // but the view renders at full extent, so toggling sectioning off and back
+  // on restores the authored box rather than requiring it to be redrawn.
+  //
+  // Presence-tracked: a box written before this field existed leaves it unset
+  // and is treated as clipping, matching the behaviour those boxes were
+  // authored under.
+  optional bool enabled = 4;
 }
 
 // A 2D rectangle that clips the projected view to a bounded region.
@@ -318,6 +326,30 @@ message HomeView {
 // views for documentation and export.
 message Sheet {
   option (motif.extension.v1.message).component = 118;
+}
+
+// User-assigned sheet number (e.g. "A-101"). Optional on sheet entities.
+message SheetNumber {
+  option (motif.extension.v1.message).component = 159;
+
+  // The user-assigned sheet number.
+  string number = 1;
+}
+
+// The number identifying one placed view within its sheet (e.g. "3"), the
+// detail half of the detail-over-sheet pair a view tag displays. Optional on
+// the placement entity that makes a view a viewport — the sheet member that
+// `motif.data.core.v1.Presents` a view — so the same view placed on two sheets
+// carries one number per placement.
+//
+// Applications assign the number at placement and a user may override it.
+// Numbers are not unique: two placements on one sheet can carry the same
+// number.
+message DetailNumber {
+  option (motif.extension.v1.message).component = 164;
+
+  // The number of the placed view within its sheet.
+  string number = 1;
 }
 
 // A view/sheet-scoped, BIM-inert placement of content into a view — the

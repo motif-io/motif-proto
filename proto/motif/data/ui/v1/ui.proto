@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+// Components relevant for UI-related functionality
+package motif.data.ui.v1;
+
+import "buf/validate/validate.proto";
+import "motif/extension/v1/options.proto";
+
+// A list of models from the same project that should be shown in the UI when
+// the model whose sentinel entity contains this component is active.
+message ExternalModelList {
+  option (motif.extension.v1.message).component = 165;
+
+  // The list of models to show in the UI.
+  repeated bytes model_ids = 1 [
+    (buf.validate.field).repeated.items.bytes.len = 16,
+    (buf.validate.field).repeated.unique = true
+  ];
+}

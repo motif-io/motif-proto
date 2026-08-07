@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+// Component types shared across every kind of agent artifact.
+package motif.data.ai.v1;
+
+import "motif/extension/v1/options.proto";
+
+// A marker component indicating a model's agent artifacts should be surfaced in
+// agent-artifact UI.
+//
+// When present on a model's sentinel entity
+// (00000000-0000-4000-8000-000000000000), clients treat the model as a store of
+// agent artifacts — `AgentSkill`, `Ui`, `Workflow` entities — and offer its
+// contents wherever artifacts are browsed and managed. This is what a client
+// filters on to list artifact stores.
+//
+// The marker is about presentation, not contents. It does not claim the model
+// holds *only* agent artifacts, and nothing enforces that; other entities
+// alongside them are allowed, if unlikely in practice, since a marked model is
+// not obviously openable through the normal model-browsing UI.
+//
+// Independent of `motif.data.core.v1.Hidden`, which answers a separate question:
+// whether a model appears in default model lists. A store normally carries both,
+// but a client should not infer either marker from the other — a model can be
+// hidden without being an artifact store.
+message AgentArtifactStore {
+  option (motif.extension.v1.message).component = 162;
+}
