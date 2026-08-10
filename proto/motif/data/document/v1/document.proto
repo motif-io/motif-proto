@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+// Component types for storing documents in Motif.
+package motif.data.document.v1;
+
+import "motif/extension/v1/options.proto";
+
+// A marker component indicating a model contains documents for the project.
+//
+// When present on a model's sentinel entity
+// (00000000-0000-4000-8000-000000000000), clients treat the model as a store of
+// documents — `Document` entities — and offer its contents wherever documents
+// are browsed and managed. This is what a client filters on to list document
+// stores.
+//
+// The marker is about presentation, not contents. It does not claim the model
+// holds *only* documents, and nothing enforces that; other entities alongside
+// them are allowed, if unlikely in practice, since a marked model is not
+// obviously openable through the normal model-browsing UI.
+//
+// Independent of `motif.data.core.v1.Hidden`, which answers a separate question:
+// whether a model appears in default model lists. A store normally carries both,
+// but a client should not infer either marker from the other — a model can be
+// hidden without being a document store.
+message DocumentStore {
+  option (motif.extension.v1.message).component = 166;
+}
+
+// A marker component indicating an entity is a document: content authored and
+// read as a standalone unit, such as a specification or standards.
+//
+// The content is not stored on this component. A document entity holds its
+// content in a `motif.data.core.v1.Representation` component, which names the
+// blob in the representation service and its MIME type. An entity so marked
+// normally also carries a name (e.g. `motif.data.core.v1.AssignedName`), and
+// lives in a model marked with `DocumentStore`.
+message Document {
+  option (motif.extension.v1.message).component = 167;
+}
