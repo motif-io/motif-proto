@@ -78,35 +78,32 @@ message ResolvedParameters {
   map<string, google.protobuf.Any> values = 1;
 }
 
-// A scalar expression node over f64 values. Consumers distinguish between its
-// two binding-leaf kinds:
+// A scalar expression node over f64 values.
 //
-//   * Change-propagation parameter bindings use the `binding` (`DataReference`)
-//     leaf, addressing a `TYPE_DOUBLE` slot that must hold a `DoubleValue`
-//     payload. The `parameter` leaf is rejected.
-//   * Built-in asset geometry configurations use the `parameter` leaf, a name
-//     looked up in the instance's resolved-parameter scope. The `binding`
-//     (`DataReference`) leaf is rejected.
-//   * Reference geometry specifications may use the `parameter` leaf for the
-//     current instance's resolved-parameter scope or the `binding`
-//     (`DataReference`) leaf for an explicitly addressed scalar input.
+// A value can come from three leaf forms:
 //
-// The invalid leaf for a given consumer is rejected at decode.
+//   * `literal` contains the number directly.
+//   * `parameter` names a parameter in the consumer's evaluation scope.
+//   * `binding` reads a specifically addressed `TYPE_DOUBLE` value through a
+//     `DataReference`.
+//
+// All consumers accept `literal`.
+// Change-propagation parameter bindings accept `binding` but reject `parameter`.
+// Built-in asset geometry configurations accept `parameter` but reject `binding`.
+// Reference geometry specifications accept both `parameter` and `binding`.
 message ParametricExpression {
   // The expression node.
   oneof node {
     // A literal f64 value.
     double literal = 1;
 
-    // Change-propagation slot-ref leaf (parameter bindings only): a reference to
-    // a `TYPE_DOUBLE` slot supplying the value.
+    // A `DataReference` to a specifically addressed `TYPE_DOUBLE` value.
     motif.extension.v1.DataReference binding = 2 [(motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}];
 
     // A binary operation over two sub-expressions.
     ParametricBinaryOp binary_op = 3;
 
-    // Named-parameter leaf, looked up in the evaluation scope (geometry configs
-    // only).
+    // A parameter name looked up in the consumer's evaluation scope.
     string parameter = 4;
 
     // Arithmetic negation of a sub-expression.
