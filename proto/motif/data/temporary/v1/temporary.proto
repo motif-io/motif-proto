@@ -1056,7 +1056,10 @@ message ReferenceGeometryParameterMapEntrySpec {
   uint32 end_reference_id = 3 [(buf.validate.field).uint32.gt = 0];
 
   // How the parameter relates to the two references.
-  ReferenceGeometryParameterMappingKind kind = 4 [(buf.validate.field).enum.defined_only = true];
+  ReferenceGeometryParameterMappingKind kind = 4 [
+    (buf.validate.field).enum.defined_only = true,
+    (buf.validate.field).enum.not_in = 0
+  ];
 }
 
 // Concrete reference geometry resolved from a `ReferenceGeometrySpec`.
@@ -1137,12 +1140,15 @@ message ReferenceGeometryParameterMapEntry {
   uint32 end_reference_id = 3 [(buf.validate.field).uint32.gt = 0];
 
   // How the parameter relates to the two references.
-  ReferenceGeometryParameterMappingKind kind = 4 [(buf.validate.field).enum.defined_only = true];
+  ReferenceGeometryParameterMappingKind kind = 4 [
+    (buf.validate.field).enum.defined_only = true,
+    (buf.validate.field).enum.not_in = 0
+  ];
 }
 
 // How a scalar parameter relates to a pair of reference geometries.
 enum ReferenceGeometryParameterMappingKind {
-  // Unspecified mapping kind.
+  // No mapping kind specified. This is invalid for a mapping entry.
   REFERENCE_GEOMETRY_PARAMETER_MAPPING_KIND_UNSPECIFIED = 0;
 
   // A linear distance between two reference geometries.
