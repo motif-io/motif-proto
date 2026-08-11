@@ -1003,7 +1003,8 @@ message ReferenceGeometryEntrySpec {
 // needed, use the relevant direct spec such as PlaneSpec.
 message CurveBasedGeometrySpec {
   // Construction cases supported by this recipe.
-  // Each construction method may appear at most once
+  // Each construction method may appear at most once. (We do not choose between 
+  // duplicates; ReferenceGeometrySpec with duplicates is treated as invalid).
   repeated CurveBasedGeometryCase cases = 1 [(buf.validate.field).repeated.min_items = 2];
 }
 
@@ -1027,6 +1028,9 @@ message CurveBasedGeometryCase {
 // ReferenceGeometryParameterMap, even though the two are virtually identical.
 // This allows the asset to own the spec while the instance owns the published map.
 // (On a materialized instance both can coexist)
+// The spec preserves authored intent, whereas the published map includes entries
+// only after their parameter names and reference IDs validate, and its validity_status
+// reports whether they are usable with the current ReferenceGeometry.
 message ReferenceGeometryParameterMapSpec {
   option (motif.extension.v1.message).component = 167;
 
@@ -1120,10 +1124,7 @@ message ReferenceGeometryParameterMap {
   repeated ReferenceGeometryParameterMapEntry entries = 1;
 
   // Whether every mapping refers to a declared parameter and currently generated references.
-  ReferenceGeometryParameterMapValidityStatus validity_status = 2 [(buf.validate.field).enum = {
-    defined_only: true
-    not_in: 0
-  }];
+  ReferenceGeometryParameterMapValidityStatus validity_status = 2 [(buf.validate.field).enum.defined_only = true];
 }
 
 // One published mapping from a logical asset parameter to reference geometry.
