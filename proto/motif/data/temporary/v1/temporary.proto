@@ -973,7 +973,7 @@ message ReferenceGeometryEntrySpec {
   // Optional human-readable name.
   optional string name = 2;
 
-  // Selection priority.
+  // Selection priority. Larger values have higher priority.
   int32 priority = 3;
 
   // How to construct the reference geometry.
