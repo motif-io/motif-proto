@@ -1027,8 +1027,6 @@ message CurveBasedGeometryCase {
 // ReferenceGeometryParameterMap, even though the two are virtually identical.
 // This allows the asset to own the spec while the instance owns the published map.
 // (On a materialized instance both can coexist)
-// The spec preserves authored intent even when validation fails, while the
-// published map is only generatd after its parameter and reference IDs have been validated.
 message ReferenceGeometryParameterMapSpec {
   option (motif.extension.v1.message).component = 167;
 
@@ -1116,8 +1114,16 @@ message ReferenceGeometryEntry {
 message ReferenceGeometryParameterMap {
   option (motif.extension.v1.message).component = 169;
 
-  // The validated parameter-to-reference mappings.
-  repeated ReferenceGeometryParameterMapEntry entries = 1 [(buf.validate.field).repeated.min_items = 1];
+  // Parameter to reference mappings
+  // They may remain present while validity_status is INVALID due to the corresponding
+  // concrete reference geometry being unavailable.
+  repeated ReferenceGeometryParameterMapEntry entries = 1;
+
+  // Whether every mapping refers to a declared parameter and currently generated references.
+  ReferenceGeometryParameterMapValidityStatus validity_status = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
 }
 
 // One published mapping from a logical asset parameter to reference geometry.
@@ -1136,6 +1142,21 @@ message ReferenceGeometryParameterMapEntry {
     (buf.validate.field).enum.defined_only = true,
     (buf.validate.field).enum.not_in = 0
   ];
+}
+
+// Whether the published parameter map is usable
+// It could be invalid for several reasons, such as if a mapping names an unsuitable
+// parameter, names an ID absent from ReferenceGeometrySpec, or its referenced
+// concrete geometry was not successfully generated.
+enum ReferenceGeometryParameterMapValidityStatus {
+  // No validation result has been recorded. Consumers should not use the entries.
+  REFERENCE_GEOMETRY_PARAMETER_MAP_VALIDITY_STATUS_UNSPECIFIED = 0;
+
+  // Every mapping refers to a declared parameter and currently generated references.
+  REFERENCE_GEOMETRY_PARAMETER_MAP_VALIDITY_STATUS_VALID = 1;
+
+  // The mappings cannot currently be used. Validated entries may remain available for inspection.
+  REFERENCE_GEOMETRY_PARAMETER_MAP_VALIDITY_STATUS_INVALID = 2;
 }
 
 // How a scalar parameter relates to a pair of reference geometries.
