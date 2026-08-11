@@ -1108,10 +1108,10 @@ message ReferenceGeometryEntry {
     option (buf.validate.oneof).required = true;
 
     // A planar reference.
-    Plane plane = 4;
+    UnboundedPlane plane = 4;
 
     // A cylindrical reference.
-    Cylinder cylinder = 5;
+    UnboundedCylinder cylinder = 5;
   }
 }
 
@@ -1423,7 +1423,7 @@ message CylinderUsingCurveRadiusSpec {
 }
 
 // A concrete unbounded planar reference.
-message Plane {
+message UnboundedPlane {
   // A point on the plane.
   motif.data.geometry.v1.Point3 origin = 1 [(buf.validate.field).required = true];
 
@@ -1432,7 +1432,7 @@ message Plane {
 }
 
 // A concrete unbounded cylindrical reference.
-message Cylinder {
+message UnboundedCylinder {
   // A point on the cylinder axis.
   motif.data.geometry.v1.Point3 origin = 1 [(buf.validate.field).required = true];
 
