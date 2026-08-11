@@ -1089,7 +1089,6 @@ enum ReferenceGeometryGenerationStatus {
   REFERENCE_GEOMETRY_GENERATION_STATUS_SUCCEEDED = 1;
 
   // At least one declared reference geometry could not be generated.
-  // Consumers should assume any entries, if present, are stale.
   REFERENCE_GEOMETRY_GENERATION_STATUS_FAILED = 2;
 }
 
