@@ -1429,7 +1429,7 @@ message Plane {
   motif.data.geometry.v1.Point3 origin = 1 [(buf.validate.field).required = true];
 
   // The plane's normal.
-  motif.data.geometry.v1.Vector3 normal = 2 [(buf.validate.field).required = true];
+  motif.data.geometry.v1.UnitVector3 normal = 2 [(buf.validate.field).required = true];
 }
 
 // A concrete unbounded cylindrical reference.
@@ -1438,7 +1438,7 @@ message Cylinder {
   motif.data.geometry.v1.Point3 origin = 1 [(buf.validate.field).required = true];
 
   // The cylinder axis.
-  motif.data.geometry.v1.Vector3 axis = 2 [(buf.validate.field).required = true];
+  motif.data.geometry.v1.UnitVector3 axis = 2 [(buf.validate.field).required = true];
 
   // The cylinder radius.
   double radius = 3 [(buf.validate.field).double.gt = 0];
