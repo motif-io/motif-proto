@@ -276,6 +276,13 @@ message TextBlock {
   TextStyle default_style = 1;
   TextLayout layout = 2;
   repeated TextSpan spans = 3;
+  // Per-paragraph list styling, one entry per "\n"-delimited paragraph of
+  // the concatenated span text, in paragraph order. Empty (including every
+  // pre-list writer) means no paragraph is a list item; a vector shorter
+  // than the paragraph count leaves trailing paragraphs unlisted; extra
+  // entries are ignored. Numbered ordinals are never persisted — they
+  // derive from paragraph position at render time.
+  repeated ListKind paragraph_lists = 4;
 }
 
 // A run of uniformly-styled text. Message-typed fields carry presence in
@@ -318,4 +325,13 @@ enum LineBreak {
   LINE_BREAK_ANY_CHARACTER = 2;
   LINE_BREAK_WORD_OR_CHARACTER = 3;
   LINE_BREAK_NO_WRAP = 4;
+}
+
+// Paragraph-level list styling for TextBlock paragraphs. UNSPECIFIED decodes
+// the same as NONE (not a list item).
+enum ListKind {
+  LIST_KIND_UNSPECIFIED = 0;
+  LIST_KIND_NONE = 1;
+  LIST_KIND_BULLETED = 2;
+  LIST_KIND_NUMBERED = 3;
 }
