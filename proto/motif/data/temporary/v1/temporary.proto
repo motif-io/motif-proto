@@ -984,9 +984,9 @@ message ReferenceGeometryEntrySpec {
     CylinderSpec cylinder = 5;
 
     // A reference whose concrete primitive or construction method is selected
-    // from at least two supported concrete Curve2 types. Use `plane` or
-    // `cylinder` directly when the recipe expects only one curve type and one
-    // resulting primitive.
+    // at runtime from at least two supported construction cases. Use `plane`
+    // or `cylinder` directly when the recipe needs only one construction
+    // method.
     //
     // Useful for assets like a wall whose center-line reference geometry is a
     // plane for a straight curve and a cylinder for a circular curve.
@@ -994,27 +994,22 @@ message ReferenceGeometryEntrySpec {
   }
 }
 
-// Authored construction cases for a reference geometry whose primitive depends
-// on the concrete type of a Curve2.
+// Authored construction cases for a reference geometry whose primitive or
+// construction method is selected at runtime.
 //
-// Use this only for reference geometries where the primitive or construction method cannot
-// be known ahead of time (such as a wall centerline which could be planar or cylindrical
-// depending on curve type), and where runtime selection will happen between at least two
-// different cases for different curve types.
-// If the recipe supports only one known curve type then this should not be used;
-// instead the relevant spec such as PlaneSpec should be used directly.
-// Also note that each concrete primitive construction type may appear at most once in `cases`.
+// Use this only where runtime selection is needed between at least two
+// construction cases, such as a wall centerline that can be planar or
+// cylindrical depending on the wall curve type. If only one construction method is
+// needed, use the relevant direct spec such as PlaneSpec.
 message CurveBasedGeometrySpec {
-  // Curve-specific construction cases supported by this recipe.
-  // Note that there should only be one of each case type (so for example there should not
-  // be more than one PlaneUsingLineOffsetSpec case)
+  // Construction cases supported by this recipe.
+  // Each construction method may appear at most once
   repeated CurveBasedGeometryCase cases = 1 [(buf.validate.field).repeated.min_items = 2];
 }
 
-// One curve-specific construction case in a CurveBasedGeometrySpec.
+// One construction case in a CurveBasedGeometrySpec.
 message CurveBasedGeometryCase {
-  // The selected arm identifies both the supported Curve2 type and the
-  // construction method used for that type.
+  // The selected arm identifies the construction method.
   oneof definition {
     option (buf.validate.oneof).required = true;
 
