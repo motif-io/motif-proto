@@ -955,7 +955,7 @@ message SourceAsset {
 // specification therefore share that single frame (even if they use different
 // construction methods).
 message ReferenceGeometrySpec {
-  option (motif.extension.v1.message).component = 166;
+  option (motif.extension.v1.message).component = 168;
 
   // The asset's reference geometry declarations. IDs must be unique within
   // this component and remain stable across compatible recipe revisions.
@@ -1003,7 +1003,7 @@ message ReferenceGeometryEntrySpec {
 // needed, use the relevant direct spec such as PlaneSpec.
 message CurveBasedGeometrySpec {
   // Construction cases supported by this recipe.
-  // Each construction method may appear at most once. (We do not choose between 
+  // Each construction method may appear at most once. (We do not choose between
   // duplicates; ReferenceGeometrySpec with duplicates is treated as invalid).
   repeated CurveBasedGeometryCase cases = 1 [(buf.validate.field).repeated.min_items = 2];
 }
@@ -1032,7 +1032,7 @@ message CurveBasedGeometryCase {
 // only after their parameter names and reference IDs validate, and its validity_status
 // reports whether they are usable with the current ReferenceGeometry.
 message ReferenceGeometryParameterMapSpec {
-  option (motif.extension.v1.message).component = 167;
+  option (motif.extension.v1.message).component = 169;
 
   // The asset's parameter-to-reference mappings.
   repeated ReferenceGeometryParameterMapEntrySpec entries = 1 [(buf.validate.field).repeated.min_items = 1];
@@ -1066,7 +1066,7 @@ message ReferenceGeometryParameterMapEntrySpec {
 // If the component is shared on a materialized asset, an instance of that asset
 // is required to establish model coordinates.
 message ReferenceGeometry {
-  option (motif.extension.v1.message).component = 168;
+  option (motif.extension.v1.message).component = 170;
 
   // The resolved references.
   // Empty if generation failed, so consumers do not accidentally use
@@ -1116,7 +1116,7 @@ message ReferenceGeometryEntry {
 // This derived component is separate from its authored spec, despite the two being virtually
 // identical. See the `ReferenceGeometryParameterMapSpec` comment for the rationale.
 message ReferenceGeometryParameterMap {
-  option (motif.extension.v1.message).component = 169;
+  option (motif.extension.v1.message).component = 171;
 
   // Parameter to reference mappings
   // They may remain present while validity_status is INVALID due to the corresponding
