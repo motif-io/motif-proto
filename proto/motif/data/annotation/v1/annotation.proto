@@ -328,10 +328,16 @@ enum LineBreak {
 }
 
 // Paragraph-level list styling for TextBlock paragraphs. UNSPECIFIED decodes
-// the same as NONE (not a list item).
+// the same as NONE (not a list item). Ordinals of the ordered kinds
+// (numbered and lettered) are never persisted — they derive from paragraph
+// position at render time.
 enum ListKind {
   LIST_KIND_UNSPECIFIED = 0;
   LIST_KIND_NONE = 1;
   LIST_KIND_BULLETED = 2;
   LIST_KIND_NUMBERED = 3;
+  // Ordered items labeled A., B., ... Z., AA., ...
+  LIST_KIND_UPPERCASE_LETTER = 4;
+  // Ordered items labeled a., b., ... z., aa., ...
+  LIST_KIND_LOWERCASE_LETTER = 5;
 }
