@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package motif.api.v1;
 
+import "buf/validate/validate.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 
@@ -61,6 +62,12 @@ service Persistence {
   // Creates a changeset that reverses the client-authored effect of one
   // prior changeset version while preserving later non-conflicting changes.
   rpc RevertOneChange(RevertOneChangeRequest) returns (RevertOneChangeResponse);
+
+  // Streams last-changed metadata for a collection of models.
+  rpc ModelDetail(ModelDetailRequest) returns (stream ModelDetailResponse);
+
+  // Streams last-changed metadata for a collection of entities in one model.
+  rpc EntityDetail(EntityDetailRequest) returns (stream EntityDetailResponse);
 }
 
 // A single component value attached to an entity.
@@ -481,3 +488,70 @@ message RevertOneChangeApplied {
 // Indicates that no changes were committed because the reversal
 // conflicted with an intervening change.
 message RevertOneChangeConflict {}
+
+// Requests last-changed metadata for a collection of models.
+//
+// Models are resolved independently. A model with no committed changeset is
+// omitted from the response rather than reported; absence is the signal.
+// Response items may arrive in any order.
+message ModelDetailRequest {
+  // Target model ids. Globally unique across projects.
+  repeated bytes model_ids = 1 [(buf.validate.field).repeated = {
+    min_items: 1
+    items: {
+      bytes: {len: 16}
+    }
+  }];
+}
+
+// Last-changed metadata for one model.
+message ModelDetailResponse {
+  // Model id. Globally unique across projects.
+  bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
+
+  // Highest committed version across every entity component in the model.
+  int32 last_changed_version = 2 [(buf.validate.field).int32.gt = 0];
+
+  // User id that authored the client changes in last_changed_version.
+  bytes last_changed_by = 3 [(buf.validate.field).bytes.len = 16];
+
+  // Timestamp recorded for last_changed_version.
+  google.protobuf.Timestamp last_changed_at = 4 [(buf.validate.field).required = true];
+}
+
+// Requests last-changed metadata for a collection of entities in one model.
+//
+// Entity IDs are only unique within a model, so the request carries the model
+// that scopes them. References are not followed: details for an entity in a
+// referenced model must be requested against that referenced model id.
+//
+// Entities are resolved independently. An entity with no committed changeset is
+// omitted from the response rather than reported; absence is the signal.
+// Response items may arrive in any order.
+message EntityDetailRequest {
+  // Target model id. Globally unique across projects.
+  bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
+
+  // Target entity ids, scoped to model_id.
+  repeated bytes entity_ids = 2 [(buf.validate.field).repeated = {
+    min_items: 1
+    items: {
+      bytes: {len: 16}
+    }
+  }];
+}
+
+// Last-changed metadata for one entity.
+message EntityDetailResponse {
+  // Entity id, scoped to the requested model id.
+  bytes entity_id = 1 [(buf.validate.field).bytes.len = 16];
+
+  // Highest committed version across all of the entity's components.
+  int32 last_changed_version = 2 [(buf.validate.field).int32.gt = 0];
+
+  // User id that authored the client changes in last_changed_version.
+  bytes last_changed_by = 3 [(buf.validate.field).bytes.len = 16];
+
+  // Timestamp recorded for last_changed_version.
+  google.protobuf.Timestamp last_changed_at = 4 [(buf.validate.field).required = true];
+}
