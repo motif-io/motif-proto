@@ -822,6 +822,16 @@ message HostedBehavior {
       type_name: "motif.data.core.v1.Isometry"
     }
   ];
+
+  // Turns the hosted element to face the host's other side.
+  //
+  // A host surface has two sides and no inherent front, so which way an element faces
+  // otherwise follows the host's own frame — for a wall, the direction it was drawn. This
+  // carries the choice per element instead.
+  //
+  // Unset, or false, leaves the element facing the way the host's frame implies, which is
+  // what every element placed before this field did.
+  motif.extension.v1.DataReference facing_flip = 4 [(motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_BOOL}];
 }
 
 // A behavior which subtracts one profile solid from a target geometry.
