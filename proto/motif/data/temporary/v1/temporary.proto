@@ -19,13 +19,6 @@ message MockModel {
   option (motif.extension.v1.message).component = 39;
 }
 
-// An in-development component which informs the change-propagation server to
-// construct a rectangular prism by converting width and height into a vertical
-// rectangular profile swept along a curve.
-message SweepWidthHeightAlongCurveBehavior {
-  option (motif.extension.v1.message).component = 63;
-}
-
 // A component which defines a set of exposed parameters.
 //
 // Generally added to parametric asset entities whose children wire the values

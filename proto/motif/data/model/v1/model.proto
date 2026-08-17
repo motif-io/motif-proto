@@ -132,8 +132,7 @@ message ExtrudedWall {
   // calculated as the distance to the referenced plane minus the offset.
   // Otherwise set by the user.
   double depth = 1;
-  // Extrusion direction. Will be reset by change propagation if an
-  // `ExtrusionDirectionReference` exists.
+  // Extrusion direction.
   motif.data.geometry.v1.UnitVector3 direction = 2;
   // Offset of the extrusion start along the direction.
   double start_offset = 3;
@@ -255,14 +254,6 @@ message PlanarReference {
   option (motif.extension.v1.message).component = 28;
 
   // The entity supplying the plane. Required.
-  motif.extension.v1.EntityReference target = 1 [(buf.validate.field).required = true];
-}
-
-// Reference for extrusion direction.
-message ExtrusionDirectionReference {
-  option (motif.extension.v1.message).component = 29;
-
-  // The entity supplying the extrusion direction. Required.
   motif.extension.v1.EntityReference target = 1 [(buf.validate.field).required = true];
 }
 
