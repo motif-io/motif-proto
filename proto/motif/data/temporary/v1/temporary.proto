@@ -19,16 +19,6 @@ message MockModel {
   option (motif.extension.v1.message).component = 39;
 }
 
-// Marks a parametric asset as a built-in (Motif-defined) asset assembly: a
-// marker the asset materializer keys on to expand a placed instance into baked
-// geometry. The assembly's part recipe is carried as data in a sibling
-// `BuiltinAssetConfiguration` component (evaluated against the instance's
-// resolved parameters). Distinct from future user-defined assets, which carry
-// no built-in marker.
-message BuiltinAssetAssembly {
-  option (motif.extension.v1.message).component = 106;
-}
-
 // An in-development component which informs the change-propagation server to
 // construct a rectangular prism by converting width and height into a vertical
 // rectangular profile swept along a curve.
@@ -130,9 +120,6 @@ message ParametricExpression {
     // Arithmetic negation of a sub-expression.
     ParametricExpression neg = 5;
 
-    // A conditional selecting between two sub-expressions.
-    ParametricConditional conditional = 6;
-
     // A sub-expression selected by a choice parameter's text value.
     ParametricSelect select = 7;
   }
@@ -182,38 +169,6 @@ enum ParametricOperator {
   PARAMETRIC_OPERATOR_MIN = 5;
   // Maximum of the two operands.
   PARAMETRIC_OPERATOR_MAX = 6;
-}
-
-// Ordering predicates for `ParametricConditional`. Equality comparisons are
-// deliberately absent: float equality over real-valued parameters is not
-// meaningful.
-enum ParametricComparisonOp {
-  // Unspecified comparison operator.
-  PARAMETRIC_COMPARISON_OP_UNSPECIFIED = 0;
-  // Strictly less than.
-  PARAMETRIC_COMPARISON_OP_LESS = 1;
-  // Less than or equal.
-  PARAMETRIC_COMPARISON_OP_LESS_EQUAL = 2;
-  // Strictly greater than.
-  PARAMETRIC_COMPARISON_OP_GREATER = 3;
-  // Greater than or equal.
-  PARAMETRIC_COMPARISON_OP_GREATER_EQUAL = 4;
-}
-
-// `if (lhs <op> rhs) then `then` else `otherwise``. Predicates exist only here,
-// keeping the language single-typed over doubles. Only the taken branch is
-// evaluated.
-message ParametricConditional {
-  // The comparison predicate applied to `lhs` and `rhs`.
-  ParametricComparisonOp op = 1;
-  // The comparison's left operand.
-  ParametricExpression lhs = 2;
-  // The comparison's right operand.
-  ParametricExpression rhs = 3;
-  // The value when the predicate holds.
-  ParametricExpression then = 4;
-  // The value when the predicate does not hold.
-  ParametricExpression otherwise = 5;
 }
 
 // A parameter binding supplied by an instance to satisfy one entry in
@@ -417,15 +372,14 @@ message BuiltinAssetPartBehaviorV2 {
   ];
 }
 
-// Stored, expression-driven definition of a built-in asset assembly's parts.
+// Stored, expression-driven definition of a built-in asset's parts.
 //
-// Placed permanently on a `CONFIGURATION_DRIVEN` asset entity alongside its
-// `BuiltinAssetAssembly` marker. Each part's geometry is a sweep/extrude recipe
-// whose scalars are expression trees over named parameters; evaluating the
-// configuration against an instance's resolved parameter scope yields the same
-// engine-agnostic parts vocabulary the code-authored recipes produce
-// (`builtin_asset_recipes::geometry_parts::AssetPart`), so consumers bake
-// configured and code-authored assemblies identically.
+// Placed permanently on a `CONFIGURATION_DRIVEN` asset entity. Each part's
+// geometry is a sweep/extrude recipe whose scalars are expression trees over
+// named parameters; evaluating the configuration against an instance's resolved
+// parameter scope yields the same engine-agnostic parts vocabulary the
+// code-authored recipes produce (`builtin_asset_recipes::geometry_parts::AssetPart`),
+// so consumers bake configured and code-authored assemblies identically.
 //
 // The expression language is single-typed (every expression is a finite double
 // in meters) and exactly IEEE-754-specified, so evaluation is deterministic.
@@ -449,8 +403,7 @@ message BuiltinAssetConfiguration {
   // Scalar expressions over named parameters use the shared
   // `ParametricExpression`. Built-in asset configurations accept its
   // `literal`/`parameter`/`binary_op`/`neg` leaves; the `binding`
-  // (`DataReference`), `conditional`, and `select` leaves are rejected here at
-  // decode.
+  // (`DataReference`) and `select` leaves are rejected at decode.
 
   // A 2D point whose coordinates are parametric expressions.
   message Point2Expr {
