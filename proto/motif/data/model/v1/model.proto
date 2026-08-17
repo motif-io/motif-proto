@@ -5,10 +5,13 @@ syntax = "proto3";
 package motif.data.model.v1;
 
 import "buf/validate/validate.proto";
+import "google/protobuf/any.proto";
 import "google/protobuf/empty.proto";
 import "motif/data/geometry/v1/geometry.proto";
+import "motif/data/style/v1/style.proto";
 import "motif/extension/v1/options.proto";
 import "motif/extension/v1/reference.proto";
+import "motif/extension/v1/type.proto";
 
 // A marker component identifying a workplane.
 message Workplane {
@@ -323,4 +326,1632 @@ message ResolvedWallSweepInputs {
   //   `top_level_elev - base_level_elev - base_offset + top_offset`.
   // - In `unattachedUp` mode: `top_offset`.
   double height = 2;
+}
+
+// A component which defines a set of exposed parameters.
+//
+// Generally added to parametric asset entities whose children wire the values
+// into behaviors.
+message ParameterDeclarations {
+  option (motif.extension.v1.message).component = 89;
+
+  // The declared parameters, keyed by parameter name.
+  map<string, ParameterDeclaration> declarations = 1;
+}
+
+// The definition of a single parameter.
+//
+// `expected_type` is the declared payload type the corresponding
+// `ResolvedParameters` entry must carry. Behaviors that consume the resolved
+// value declare a `data_reference_expected_type` matching the same `TypeSpec`.
+message ParameterDeclaration {
+  // The parameter name.
+  string name = 1;
+  // A human-readable description of the parameter.
+  string description = 2;
+  // The declared payload type for this parameter.
+  motif.extension.v1.TypeSpec expected_type = 3;
+
+  // Optional default literal for hive/UI/placement authoring (meters for
+  // TYPE_DOUBLE). Not read by change propagation; instance bindings supply CP
+  // values at placement.
+  optional google.protobuf.Any default_value = 4;
+
+  // The closed, ordered set of permitted values for a TYPE_STRING parameter.
+  // Empty when the parameter has no fixed choice set.
+  repeated ParameterChoice choices = 5;
+}
+
+// One option in a TYPE_STRING parameter's closed choice set.
+message ParameterChoice {
+  // The canonical stored value. Non-empty: an unset TYPE_STRING parameter resolves to
+  // the empty string, so an empty choice value would be indistinguishable from "nothing
+  // selected" and would match `ParametricSelect.cases[""]`.
+  string value = 1 [(buf.validate.field).string.min_len = 1];
+  // The human-readable label for this value.
+  string label = 2;
+}
+
+// The map of resolved parameters.
+//
+// Generally constructed by a `ParameterBindingsBehavior` as part of
+// regeneration. Each entry's `Any` payload type is constrained by the
+// corresponding `ParameterDeclaration.expected_type`.
+message ResolvedParameters {
+  option (motif.extension.v1.message).component = 90;
+
+  // The resolved parameter values, keyed by parameter name.
+  map<string, google.protobuf.Any> values = 1;
+}
+
+// A scalar expression node over f64 values.
+//
+// A value can come from three leaf forms:
+//
+//   * `literal` contains the number directly.
+//   * `parameter` names a parameter in the consumer's evaluation scope.
+//   * `binding` reads a specifically addressed `TYPE_DOUBLE` value through a
+//     `DataReference`.
+//
+// All consumers accept `literal`.
+// Change-propagation parameter bindings accept `binding` but reject `parameter`.
+// Built-in asset geometry configurations accept `parameter` but reject `binding`.
+// Reference geometry specifications accept both `parameter` and `binding`.
+message ParametricExpression {
+  // The expression node.
+  oneof node {
+    // A literal f64 value.
+    double literal = 1;
+
+    // A `DataReference` to a specifically addressed `TYPE_DOUBLE` value.
+    motif.extension.v1.DataReference binding = 2 [(motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}];
+
+    // A binary operation over two sub-expressions.
+    ParametricBinaryOp binary_op = 3;
+
+    // A parameter name looked up in the consumer's evaluation scope.
+    string parameter = 4;
+
+    // Arithmetic negation of a sub-expression.
+    ParametricExpression neg = 5;
+
+    // A sub-expression selected by a choice parameter's text value.
+    ParametricSelect select = 7;
+  }
+}
+
+// A sub-expression chosen by the text value of a `TYPE_STRING` parameter.
+// Evaluation picks the case matching the parameter's value, or `fallback`
+// when none matches (failing the evaluation when `fallback` is unset).
+message ParametricSelect {
+  // Name of the `TYPE_STRING` parameter supplying the discriminant. A name (not a
+  // `DataReference`) keeps the discriminant tied to the parameter's declaration, so a
+  // consumer can validate `cases` against the declared choices at decode. A pointer
+  // discriminant (for binding-time or cross-scope branching) could be added later as an
+  // additive alternative field without changing this one.
+  string parameter = 1 [(buf.validate.field).string.min_len = 1];
+
+  // The sub-expression evaluated for each value.
+  map<string, ParametricExpression> cases = 2 [(buf.validate.field).map.min_pairs = 1];
+
+  // Evaluated when the parameter's value matches no case.
+  optional ParametricExpression fallback = 3;
+}
+
+// A binary arithmetic operation applied to two sub-expressions.
+message ParametricBinaryOp {
+  // The operator applied to `left` and `right`.
+  ParametricOperator operator = 1;
+  // The left operand.
+  ParametricExpression left = 2;
+  // The right operand.
+  ParametricExpression right = 3;
+}
+
+// Arithmetic operators supported in parametric expressions.
+enum ParametricOperator {
+  // Unspecified operator.
+  PARAMETRIC_OPERATOR_UNSPECIFIED = 0;
+  // Addition.
+  PARAMETRIC_OPERATOR_ADD = 1;
+  // Subtraction.
+  PARAMETRIC_OPERATOR_SUB = 2;
+  // Multiplication.
+  PARAMETRIC_OPERATOR_MUL = 3;
+  // Division.
+  PARAMETRIC_OPERATOR_DIV = 4;
+  // Minimum of the two operands.
+  PARAMETRIC_OPERATOR_MIN = 5;
+  // Maximum of the two operands.
+  PARAMETRIC_OPERATOR_MAX = 6;
+}
+
+// A parameter binding supplied by an instance to satisfy one entry in
+// `ParameterDeclarations`.
+//
+// A binding is a literal `Any` payload (matching the declared `expected_type`),
+// a `DataReference` pointing at a concrete value, or an arithmetic expression
+// whose `binding` leaves are resolved against sibling bindings in the same
+// behavior.
+message ParameterBinding {
+  // How the parameter value is supplied.
+  oneof source {
+    // A literal value matching the declared `expected_type`.
+    google.protobuf.Any value = 1;
+
+    // The bound value's type is resolved per `ParameterDeclaration` at runtime,
+    // so a static data_reference_expected_type is intentionally not set here.
+    // buf:lint:ignore MOTIF_DATA_REFERENCE_MISSING_EXPECTED_TYPE
+    motif.extension.v1.DataReference data_ref = 2;
+
+    // An arithmetic expression whose `binding` leaves resolve against sibling
+    // bindings in the same behavior.
+    ParametricExpression expression = 3;
+  }
+}
+
+// The behavior which operates on `ParameterDeclarations` and `ResolvedParameters`.
+//
+// This behavior's regeneration logic is as follows:
+// * Find the `ParameterDeclarations` component by following the `declarations`
+//   pointer.
+// * Construct a `ResolvedParameters` component from the keys in
+//   `ParameterDeclarations` and values in `bindings`.
+// * Write the `ResolvedParameters` component to the `resolved` entity.
+message ParameterBindingsBehavior {
+  option (motif.extension.v1.message).component = 91;
+
+  // Pointer to the source `ParameterDeclarations`.
+  motif.extension.v1.DataReference declarations = 1 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.model.v1.ParameterDeclarations"
+    }
+  ];
+
+  // Pointer to the `ResolvedParameters` destination.
+  motif.extension.v1.DataReference resolved = 2 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.model.v1.ResolvedParameters"
+    }
+  ];
+
+  // The bindings used to resolve each declared parameter, keyed by name.
+  map<string, ParameterBinding> bindings = 3;
+}
+
+// A behavior which generates a three-dimensional solid.
+//
+// The solid is constructed as follows:
+// * A rectangular profile is created from the `width` and `height` values in a
+//   plane perpendicular to the one defined by `coordinate_system`. The profile
+//   is centered on `curve`.
+// * The generated profile is swept along the curve from start to end.
+// * The generated solid is written to the `output` entity as a `Shape`.
+message SweepWidthHeightAlongCurveBehaviorV2 {
+  option (motif.extension.v1.message).component = 92;
+
+  // The profile width.
+  motif.extension.v1.DataReference width = 1 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}
+  ];
+
+  // The profile height.
+  motif.extension.v1.DataReference height = 2 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}
+  ];
+
+  // The curve to sweep the profile along.
+  motif.extension.v1.DataReference curve = 3 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.geometry.v1.Curve2"
+    }
+  ];
+
+  // The coordinate system that places the curve and profile in world space.
+  motif.extension.v1.DataReference coordinate_system = 4 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.geometry.v1.CoordinateSystem3"
+    }
+  ];
+
+  // The entity the generated `Shape` is written to.
+  motif.extension.v1.DataReference output = 5 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.model.v1.Shape"
+    }
+  ];
+}
+
+// Sweeps a closed profile along a spine, where both the profile and the spine
+// are ordered lists of `Curve2` segments (one `Curve2List` parameter value
+// each), rather than a width/height rectangle. The spine `curves` are swept in
+// the `coordinate_system`; a single spine segment produces a smooth solid pipe
+// while multiple segments produce a pipe-shell with right-corner transitions at
+// the joints. The generated solid is written to the `output` entity as a
+// `Shape`.
+message SweepProfileAlongCurvesBehaviorV2 {
+  option (motif.extension.v1.message).component = 129;
+
+  // Spine: ordered `Curve2` segments. One segment sweeps a smooth pipe; many
+  // sweep a mitered pipe-shell.
+  motif.extension.v1.DataReference curves = 1 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.core.v1.Curve2List"
+    }
+  ];
+
+  // Closed profile loop, as one `Curve2List` value.
+  motif.extension.v1.DataReference profile = 2 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.core.v1.Curve2List"
+    }
+  ];
+
+  // Coordinate system the spine/profile curves live in.
+  motif.extension.v1.DataReference coordinate_system = 3 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.geometry.v1.CoordinateSystem3"
+    }
+  ];
+
+  // The entity the generated `Shape` is written to.
+  motif.extension.v1.DataReference output = 4 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.model.v1.Shape"
+    }
+  ];
+}
+
+// A behavior which generates one part of a built-in parametric asset assembly.
+//
+// Regeneration resolves the named `inputs` into a parameter map, evaluates the
+// asset's stored `configuration` against it to obtain the engine-agnostic asset
+// parts, looks up the part selected by `part_index`, sweeps or extrudes it (in
+// the part's own self-placing frame), and writes the result to the `output`
+// entity as a `Shape`.
+//
+// Distinct from `SweepWidthHeightAlongCurveBehaviorV2` (which only sweeps a
+// *centered rectangle* along a *single* curve): asset parts are arbitrary
+// non-rectangular profiles, anchored origin-on-spine, swept along multi-segment
+// / closed spines (or extruded, for e.g. a glazing pane).
+message BuiltinAssetPartBehaviorV2 {
+  option (motif.extension.v1.message).component = 105;
+
+  // Resolved parameter inputs keyed by parameter name (e.g. "width" /
+  // "height"). The configuration's decoder validates the value types it needs;
+  // types are not constrained per-entry here.
+  // buf:lint:ignore MOTIF_DATA_REFERENCE_MISSING_EXPECTED_TYPE
+  map<string, motif.extension.v1.DataReference> inputs = 2;
+
+  // Index into the evaluated configuration's parts selecting which part this
+  // behavior builds.
+  uint32 part_index = 3;
+
+  // The entity the generated `Shape` is written to.
+  motif.extension.v1.DataReference output = 4 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.model.v1.Shape"
+    }
+  ];
+
+  // The asset entity's stored configuration the parts are evaluated from.
+  // Required.
+  motif.extension.v1.DataReference configuration = 5 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.model.v1.BuiltinAssetConfiguration"
+    }
+  ];
+}
+
+// Stored, expression-driven definition of a built-in asset's parts.
+//
+// Placed permanently on a `CONFIGURATION_DRIVEN` asset entity. Each part's
+// geometry is a sweep/extrude recipe whose scalars are expression trees over
+// named parameters; evaluating the configuration against an instance's resolved
+// parameter scope yields the same engine-agnostic parts vocabulary the
+// code-authored recipes produce (`builtin_asset_recipes::geometry_parts::AssetPart`),
+// so consumers bake configured and code-authored assemblies identically.
+//
+// The expression language is single-typed (every expression is a finite double
+// in meters) and exactly IEEE-754-specified, so evaluation is deterministic.
+// Structural limits (expression depth, part and point counts) are enforced at
+// decode.
+message BuiltinAssetConfiguration {
+  option (motif.extension.v1.message).component = 119;
+
+  // Minimum reader version required to interpret this configuration. Readers
+  // built against an older supported version reject higher-versioned payloads
+  // up front. Bump only for semantic extensions an older evaluator cannot
+  // represent (new ops, new geometry kinds); purely additive optional fields do
+  // not bump it. The encoder sets the minimum a payload actually needs: 2 when
+  // any part uses curve geometry (`curve_sweep`/`curve_extrude`), otherwise 1.
+  uint32 version = 1;
+
+  // The assembly's parts, in stable authoring order (a per-part behavior's
+  // `part_index` indexes this list).
+  repeated Part parts = 2;
+
+  // Scalar expressions over named parameters use the shared
+  // `ParametricExpression`. Built-in asset configurations accept its
+  // `literal`/`parameter`/`binary_op`/`neg` leaves; the `binding`
+  // (`DataReference`) and `select` leaves are rejected at decode.
+
+  // A 2D point whose coordinates are parametric expressions.
+  message Point2Expr {
+    // The x-coordinate expression.
+    ParametricExpression x = 1;
+    // The y-coordinate expression.
+    ParametricExpression y = 2;
+  }
+
+  // A 3D point whose coordinates are parametric expressions.
+  message Point3Expr {
+    // The x-coordinate expression.
+    ParametricExpression x = 1;
+    // The y-coordinate expression.
+    ParametricExpression y = 2;
+    // The z-coordinate expression.
+    ParametricExpression z = 3;
+  }
+
+  // A single spine/profile curve segment, built on the fly from expression
+  // points at evaluation time (the concrete `Curve2` is never persisted). Each
+  // variant maps to a point-based constructor in the `geometry` crate. Nurbs
+  // curves are deliberately unsupported.
+  message CurveExpr {
+    // The curve segment kind.
+    oneof curve {
+      // Straight segment `start -> end` (`geometry::Line2::from_points`).
+      LineCurve line = 1;
+      // Circular arc through three points
+      // (`geometry::Circle2::from_arc_points`).
+      ArcCurve arc = 2;
+      // Elliptical arc through start/end plus a middle point
+      // (`geometry::Ellipse2::from_ellipse_points`).
+      EllipseArcCurve ellipse_arc = 3;
+    }
+  }
+
+  // A straight segment defined by two expression endpoints.
+  message LineCurve {
+    // The segment start point.
+    Point2Expr start = 1;
+    // The segment end point.
+    Point2Expr end = 2;
+  }
+
+  // A circular arc through three expression points.
+  message ArcCurve {
+    // The arc start point.
+    Point2Expr start = 1;
+    // A point on the arc between `start` and `end`.
+    Point2Expr mid = 2;
+    // The arc end point.
+    Point2Expr end = 3;
+  }
+
+  // An elliptical arc through start/end plus a middle point.
+  message EllipseArcCurve {
+    // The arc start point.
+    Point2Expr start = 1;
+    // The arc end point.
+    Point2Expr end = 2;
+    // A point on the arc between `start` and `end`.
+    Point2Expr middle = 3;
+  }
+
+  // Sweep an ordered curve profile along an ordered curve spine. Unlike
+  // `SweepExpr`, spine and profile are curve segments (lines/arcs) rather than
+  // straight-polyline points: spine connectivity is explicit in the ordered
+  // curves, and the profile curves must themselves form a closed loop.
+  message CurveSweepExpr {
+    // The ordered spine curve segments.
+    repeated CurveExpr spine = 1;
+    // The ordered profile curve segments (a closed loop).
+    repeated CurveExpr profile = 2;
+  }
+
+  // Extrude a closed curve profile (lines/arcs) along the frame's `+Z`.
+  message CurveExtrudeExpr {
+    // The closed profile curve segments.
+    repeated CurveExpr profile = 1;
+    // The extrusion depth, in meters.
+    ParametricExpression depth_m = 2;
+    // The extrusion start offset along `+Z`, in meters.
+    ParametricExpression depth_start_m = 3;
+  }
+
+  // The frame embedding a part's 2D recipe into 3D: expression origin, *literal*
+  // unit axes (a parameter-dependent rotation would require normalization, which
+  // the language cannot express; no recipe needs it).
+  message FrameExpr {
+    // The frame origin.
+    Point3Expr origin = 1;
+    // The frame x-axis.
+    motif.data.geometry.v1.UnitVector3 x_axis = 2;
+    // The frame z-axis.
+    motif.data.geometry.v1.UnitVector3 z_axis = 3;
+  }
+
+  // A single part of the assembly.
+  message Part {
+    // Display label (e.g. "Jamb"); becomes the materialized child entity's
+    // name.
+    string name = 1;
+    // The part's display color.
+    motif.data.style.v1.Color.Srgb color = 2;
+    // Display opacity in [0, 1]; absent = fully opaque.
+    optional float opacity = 3;
+    // The part's geometry recipe.
+    oneof geometry {
+      // Sweep a curve profile along a curve spine.
+      CurveSweepExpr curve_sweep = 7;
+      // Extrude a curve profile along the frame's `+Z`.
+      CurveExtrudeExpr curve_extrude = 8;
+    }
+    // The frame embedding the 2D recipe into 3D.
+    FrameExpr frame = 6;
+  }
+}
+
+// Identifies a behavior whose regeneration function is as follows:
+// * Read the `Shape` component from the `shape` reference.
+// * Convert the `Shape` into a triangular mesh.
+// * Write the mesh to the `mesh` reference.
+message ConvertShapeToMeshBehavior {
+  option (motif.extension.v1.message).component = 93;
+
+  // The source shape to convert.
+  motif.extension.v1.DataReference shape = 1 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.model.v1.Shape"
+    }
+  ];
+
+  // The entity the generated `Mesh` is written to.
+  motif.extension.v1.DataReference mesh = 2 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.core.v1.Mesh"
+    }
+  ];
+}
+
+// B-rep geometry.
+//
+// `bodies` carries one OCCT BRepTools binary payload per body in the shape.
+message Shape {
+  option (motif.extension.v1.message).component = 94;
+
+  // One OCCT BRepTools binary payload per body.
+  repeated bytes bodies = 1;
+}
+
+// The type of join represented.
+enum JoinKind {
+  // Unspecified join kind.
+  JOIN_KIND_UNSPECIFIED = 0;
+  // A butt join.
+  JOIN_KIND_BUTT = 1;
+}
+
+// Which part of the participant's curve is anchored at the join.
+//
+// `START` / `END` point at a specific spine endpoint. `CURVE` indicates that
+// the participant's whole curve takes part in the join (the participant
+// passes through the join location rather than terminating at it). A
+// participant with `CURVE` is always treated as the through wall regardless
+// of its position in `JoinBehavior.participants`; the other participant must
+// then carry a `START` or `END` endpoint that lies on the through wall's
+// curve. A join with two `CURVE` participants is rejected.
+enum JoinEndpointKind {
+  // Unspecified endpoint kind.
+  JOIN_ENDPOINT_KIND_UNSPECIFIED = 0;
+  // The participant's curve start is anchored at the join.
+  JOIN_ENDPOINT_KIND_START = 1;
+  // The participant's curve end is anchored at the join.
+  JOIN_ENDPOINT_KIND_END = 2;
+  // The participant's whole curve takes part in the join.
+  JOIN_ENDPOINT_KIND_CURVE = 3;
+}
+
+// Per-entity layout description that turns an entity into a join participant.
+//
+// Holds four `DataReference`s naming the participant's `curve`, `width`,
+// `coordinate_system`, and `shape` slots.
+//
+// ## Two manual copy steps
+//
+// `JoinableMetadata` is the source of truth for "where does this entity keep
+// its joinable layout?". It is currently propagated by **two manual copies**
+// performed outside change propagation:
+//
+//  1. **Asset → Instance (at instance-creation time).** When a tool/runtime
+//     spawns an instance of an asset that has `JoinableMetadata`, it copies
+//     the component verbatim onto the instance entity. Because the inner
+//     `DataReference`s use `this_entity`, the same wire bytes naturally resolve
+//     to the instance's own slots when re-decoded on the instance.
+//
+//     **Why this is manual, not a behavior:** the obvious alternative is an
+//     asset-attached "AssignJoinableMetadata" behavior that materializes the
+//     instance copy at regen time. Change propagation does not currently
+//     support regenerating data that itself contains `DataReference`s and then
+//     consuming those `DataReference`s in the same regeneration pass — the
+//     framework has no story for "this slot was just produced by a regen and
+//     also needs its inner pointers to be honored by downstream resolve calls
+//     in the same pass." When that capability is added, this copy should become
+//     a behavior.
+//
+//  2. **Instance → Join (at join-creation time).** When a tool authors a new
+//     `JoinBehavior`, it reads each participant entity's `JoinableMetadata`
+//     and copies the four inner `DataReference`s into the corresponding
+//     `JoinParticipant` fields on the join entity. The copy must **remap
+//     `this_entity` to an explicit `entity_id` (the participant entity id)**
+//     because the join entity is *not* the participant entity, so leaving the
+//     wire form as `this_entity` would resolve to the wrong host.
+//
+//     **Why this is also manual:** the natural alternative is for
+//     `JoinParticipant` to hold a single `DataReference` to the participant's
+//     `JoinableMetadata` and have the framework follow that pointer to
+//     discover the four leaf refs. Change propagation's persistence loader
+//     does **single-hop** `DataReference` walks — it loads what a relationship's
+//     direct refs point at, but does not then walk the loaded component's
+//     own refs. As a result, the participant's `Shape`/`ResolvedParameters`
+//     never enter the model and `JoinBehavior::register` cannot resolve
+//     them. Until the loader grows multi-hop / recursive walks (an explicit
+//     framework change), the join carries the leaf refs directly.
+//
+// **Why the copies are safe:** in both cases we are copying *structural*
+// pointers (slot kinds + paths), not the values they point at. The inner
+// `DataReference`s do not change once the asset is authored — only the values at
+// the targeted slots do, and those are re-resolved at each regen via the
+// (single) hop the framework already performs.
+message JoinableMetadata {
+  option (motif.extension.v1.message).component = 95;
+
+  // The participant's spine curve slot.
+  motif.extension.v1.DataReference curve = 1 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.geometry.v1.Curve2"
+    }
+  ];
+
+  // The participant's width slot.
+  motif.extension.v1.DataReference width = 2 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}
+  ];
+
+  // The participant's coordinate-system slot.
+  motif.extension.v1.DataReference coordinate_system = 3 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.geometry.v1.CoordinateSystem3"
+    }
+  ];
+
+  // The participant's shape slot.
+  motif.extension.v1.DataReference shape = 4 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.model.v1.Shape"
+    }
+  ];
+}
+
+// Data references to one participant's state needed by the join.
+message JoinParticipant {
+  // The participant's spine curve slot.
+  motif.extension.v1.DataReference curve = 1 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.geometry.v1.Curve2"
+    }
+  ];
+
+  // The participant's width slot.
+  motif.extension.v1.DataReference width = 2 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}
+  ];
+
+  // The participant's coordinate-system slot.
+  motif.extension.v1.DataReference coordinate_system = 3 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.geometry.v1.CoordinateSystem3"
+    }
+  ];
+
+  // The participant's shape slot.
+  motif.extension.v1.DataReference shape = 4 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.model.v1.Shape"
+    }
+  ];
+
+  // Which part of the participant's curve is anchored at the join.
+  JoinEndpointKind endpoint = 5;
+}
+
+// A behavior which defines a join between one or more participants.
+//
+// Participants are assigned priority based on the order of the `participants`
+// collection. The first and second participants are the primary definers of the
+// result geometry, and all other participants adapt to that geometry. In the
+// future we will allow changing priority without modifying the collection.
+message JoinBehavior {
+  option (motif.extension.v1.message).component = 96;
+
+  // The kind of join.
+  JoinKind kind = 1;
+  // The participants in the join, in priority order.
+  repeated JoinParticipant participants = 2;
+}
+
+// A planar hosting surface trimmed to the valid placement region on a host
+// entity.
+//
+// The hosting plane is computed from the same inputs as the host's swept
+// geometry so the two stay consistent: `curve` + `coordinate_system` give the
+// plane's origin (curve start), its u-axis (curve start tangent) and normal (the
+// host's thickness direction), and the u-extent (the curve length); `height` is
+// the v-extent (the host height, measured from the base up).
+message TrimmedHostingSurface {
+  option (motif.extension.v1.message).component = 97;
+
+  // The trimmed hosting plane.
+  motif.data.geometry.v1.Plane surface = 1;
+
+  // The host's spine curve, in `coordinate_system` space. Supplies the plane
+  // origin, u-axis and u-extent (the curve length).
+  motif.extension.v1.DataReference curve = 2 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.geometry.v1.Curve2"
+    }
+  ];
+
+  // Plane height extent (v) in the plane's parametric coordinates.
+  motif.extension.v1.DataReference height = 3 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}
+  ];
+
+  // The coordinate system that lifts `curve` into world space (the host spine
+  // frame).
+  motif.extension.v1.DataReference coordinate_system = 4 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.geometry.v1.CoordinateSystem3"
+    }
+  ];
+}
+
+// A behavior which identifies an entity as a host for other hosted entities.
+message HostBehavior {
+  option (motif.extension.v1.message).component = 98;
+
+  // The host's trimmed hosting surface.
+  motif.extension.v1.DataReference hosting_surface = 1 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.model.v1.TrimmedHostingSurface"
+    }
+  ];
+}
+
+// A behavior which identifies an entity as hosted on another entity's hosting
+// surface.
+//
+// Regeneration reads the host's trimmed hosting surface and the stored
+// parametric coordinate, then writes the hosted entity's absolute transform.
+message HostedBehavior {
+  option (motif.extension.v1.message).component = 99;
+
+  // The host's trimmed hosting surface.
+  motif.extension.v1.DataReference host_surface = 1 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.model.v1.TrimmedHostingSurface"
+    }
+  ];
+
+  // The parametric coordinate on the hosting surface.
+  motif.extension.v1.DataReference parametric_coordinate = 2 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.geometry.v1.Point2"
+    }
+  ];
+
+  // The entity the computed absolute transform is written to.
+  motif.extension.v1.DataReference absolute_transform = 3 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.core.v1.Isometry"
+    }
+  ];
+
+  // Turns the hosted element to face the host's other side.
+  motif.extension.v1.DataReference facing_flip = 4 [(motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_BOOL}];
+}
+
+// A behavior which subtracts one profile solid from a target geometry.
+//
+// Regeneration reads the target geometry, builds a profile solid from the
+// supplied dimensions and placement on the host surface, and writes the cut
+// result back to the target geometry slot using a pipeline write sequence.
+message CutGeometryBehavior {
+  option (motif.extension.v1.message).component = 100;
+
+  // The geometry to cut into; the cut result is written back here.
+  motif.extension.v1.DataReference target_geometry = 1 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.model.v1.Shape"
+    }
+  ];
+
+  // The hosted element's world-space placement transform (e.g. the `Isometry` a
+  // `HostedBehavior` writes). Its translation is the cut center; its rotation
+  // supplies the host-surface frame from which the cut derives the profile plane
+  // and the extrusion direction.
+  motif.extension.v1.DataReference cut_transform = 2 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.core.v1.Isometry"
+    }
+  ];
+
+  // World-space extrusion vector for the cutter prism. Thickness is
+  // `|extrusion|`.
+  motif.extension.v1.DataReference extrusion = 3 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.geometry.v1.Vector3"
+    }
+  ];
+
+  // The profile width.
+  motif.extension.v1.DataReference profile_width = 4 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}
+  ];
+
+  // The profile height.
+  motif.extension.v1.DataReference profile_height = 5 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}
+  ];
+}
+
+// Extrudes a closed boundary profile perpendicular to a workplane.
+//
+// Regeneration reads the workplane coordinate system, a closed `Curve2List`
+// profile in workplane-local coordinates, and `thickness`, builds a planar face
+// from the closed wire, and extrudes it along ± the workplane normal (sign
+// baked on the asset via `extrude_along_workplane_normal`). The solid is
+// written to the `output` entity as a `Shape`.
+message ExtrudeBoundaryProfileBehavior {
+  option (motif.extension.v1.message).component = 141;
+
+  // Workplane the boundary profile lies in.
+  motif.extension.v1.DataReference workplane = 1 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.geometry.v1.CoordinateSystem3"
+    }
+  ];
+
+  // Closed profile loop as an ordered list of workplane-local `Curve2` segments.
+  motif.extension.v1.DataReference profile = 2 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.geometry.v1.Curve2List"
+    }
+  ];
+
+  // Extrusion distance (meters).
+  motif.extension.v1.DataReference thickness = 3 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}
+  ];
+
+  // Deprecated: use `extrude_along_normal`, which carries the same meaning as a
+  // resolved parameter rather than a value baked into the asset family. When
+  // true, extrude along the +workplane normal (ceiling); when false, along the
+  // -normal (floor). Still honored, but only as the fallback when
+  // `extrude_along_normal` is unset.
+  bool extrude_along_workplane_normal = 4 [deprecated = true];
+
+  // Resolved parameter: when true, extrude along the +workplane normal; when
+  // false, along the -workplane normal. When set this wins over the deprecated
+  // `extrude_along_workplane_normal`.
+  motif.extension.v1.DataReference extrude_along_normal = 6 [(motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_BOOL}];
+
+  // The entity the generated `Shape` is written to.
+  motif.extension.v1.DataReference output = 5 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.model.v1.Shape"
+    }
+  ];
+}
+
+// Points at the original asset that was materialized. The result of
+// materializing a parametric asset is pointed at by `Instance`; this points back
+// at the source. For non-parametric assets, this is not present.
+message SourceAsset {
+  option (motif.extension.v1.message).component = 130;
+
+  // The source asset entity that was materialized. Required.
+  motif.extension.v1.EntityReference entity = 1 [(buf.validate.field).required = true];
+
+  // Optional. When set, the source entity is resolved against this model and
+  // version rather than the materialized entity's own model.
+  motif.extension.v1.ModelReference model = 2;
+}
+
+// Authored declarations for stable reference geometry on an asset.
+//
+// A resolver evaluates each entry and writes a `ReferenceGeometry` component
+// whose entries preserve the declared IDs. The asset's existing lifecycle
+// determines whether that resolved component belongs on an instance or on a
+// materialized asset.
+//
+// Every construction method produces coordinates in the local frame of the
+// entity that receives the resolved `ReferenceGeometry`. All entries in one
+// specification therefore share that single frame (even if they use different
+// construction methods).
+message ReferenceGeometrySpec {
+  option (motif.extension.v1.message).component = 168;
+
+  // The asset's reference geometry declarations. IDs must be unique within
+  // this component and remain stable across compatible recipe revisions.
+  repeated ReferenceGeometryEntrySpec entries = 1 [(buf.validate.field).repeated.min_items = 1];
+}
+
+// One authored stable reference geometry declaration.
+message ReferenceGeometryEntrySpec {
+  // Stable identifier scoped to the containing `ReferenceGeometrySpec`.
+  uint32 id = 1 [(buf.validate.field).uint32.gt = 0];
+
+  // Optional human-readable name.
+  optional string name = 2;
+
+  // Selection priority. Larger values have higher priority.
+  int32 priority = 3;
+
+  // How to construct the reference geometry.
+  oneof primitive {
+    option (buf.validate.oneof).required = true;
+
+    // A planar reference.
+    PlaneSpec plane = 4;
+
+    // A cylindrical reference.
+    CylinderSpec cylinder = 5;
+
+    // A reference whose concrete primitive or construction method is selected
+    // at runtime from at least two supported construction cases. Use `plane`
+    // or `cylinder` directly when the recipe needs only one construction
+    // method.
+    //
+    // Useful for assets like a wall whose center-line reference geometry is a
+    // plane for a straight curve and a cylinder for a circular curve.
+    CurveBasedGeometrySpec curve_based = 6;
+  }
+}
+
+// Authored construction cases for a reference geometry whose primitive or
+// construction method is selected at runtime.
+//
+// Use this only where runtime selection is needed between at least two
+// construction cases, such as a wall centerline that can be planar or
+// cylindrical depending on the wall curve type. If only one construction method is
+// needed, use the relevant direct spec such as PlaneSpec.
+message CurveBasedGeometrySpec {
+  // Construction cases supported by this recipe.
+  // Each construction method may appear at most once. (We do not choose between
+  // duplicates; ReferenceGeometrySpec with duplicates is treated as invalid).
+  repeated CurveBasedGeometryCase cases = 1 [(buf.validate.field).repeated.min_items = 2];
+}
+
+// One construction case in a CurveBasedGeometrySpec.
+message CurveBasedGeometryCase {
+  // The selected arm identifies the construction method.
+  oneof definition {
+    option (buf.validate.oneof).required = true;
+
+    // Applies only when the resolved Curve2 contains a Line2.
+    PlaneUsingLineOffsetSpec line_offset = 1;
+
+    // Applies only when the resolved Curve2 contains a Circle2.
+    CylinderUsingCurveRadiusSpec circle_radius = 2;
+  }
+}
+
+// Authored mappings from asset parameters to reference geometry pairs.
+//
+// This authored component is intentionally distinct from the published
+// ReferenceGeometryParameterMap, even though the two are virtually identical.
+// This allows the asset to own the spec while the instance owns the published map.
+// (On a materialized instance both can coexist)
+// The spec preserves authored intent, whereas the published map includes entries
+// only after their parameter names and reference IDs validate, and its validity_status
+// reports whether they are usable with the current ReferenceGeometry.
+message ReferenceGeometryParameterMapSpec {
+  option (motif.extension.v1.message).component = 169;
+
+  // The asset's parameter-to-reference mappings.
+  repeated ReferenceGeometryParameterMapEntrySpec entries = 1 [(buf.validate.field).repeated.min_items = 1];
+}
+
+// One authored mapping from a scalar parameter to reference geometry.
+message ReferenceGeometryParameterMapEntrySpec {
+  // The name of the declared asset parameter controlled by this reference pair.
+  string parameter_name = 1 [(buf.validate.field).string.min_len = 1];
+
+  // The first reference geometry ID.
+  uint32 start_reference_id = 2 [(buf.validate.field).uint32.gt = 0];
+
+  // The second reference geometry ID.
+  uint32 end_reference_id = 3 [(buf.validate.field).uint32.gt = 0];
+
+  // How the parameter relates to the two references.
+  ReferenceGeometryParameterMappingKind kind = 4 [
+    (buf.validate.field).enum.defined_only = true,
+    (buf.validate.field).enum.not_in = 0
+  ];
+}
+
+// Concrete reference geometry resolved from a `ReferenceGeometrySpec`.
+//
+// Every primitive is expressed in the local frame of the entity carrying this
+// component. To use the geometry in model coordinates a client should apply
+// the transform of the particular instance being consumed.
+// If the component is on an instance and the instance has no placement transform,
+// its local-to-model transform is identity.
+// If the component is shared on a materialized asset, an instance of that asset
+// is required to establish model coordinates.
+message ReferenceGeometry {
+  option (motif.extension.v1.message).component = 170;
+
+  // The resolved references.
+  // Empty if generation failed, so consumers do not accidentally use
+  // stale geometry produced from older input values.
+  repeated ReferenceGeometryEntry entries = 1;
+
+  // Whether generation of the reference geometries was successful.
+  ReferenceGeometryGenerationStatus generation_status = 2 [(buf.validate.field).enum.defined_only = true];
+}
+
+// Whether resolved ReferenceGeometry matches its current inputs.
+enum ReferenceGeometryGenerationStatus {
+  // No generation result has been recorded. Consumers should not use the entries.
+  REFERENCE_GEOMETRY_GENERATION_STATUS_UNSPECIFIED = 0;
+
+  // All declared reference geometries were successfully generated from the current inputs.
+  REFERENCE_GEOMETRY_GENERATION_STATUS_SUCCEEDED = 1;
+
+  // At least one declared reference geometry could not be generated.
+  REFERENCE_GEOMETRY_GENERATION_STATUS_FAILED = 2;
+}
+
+// One concrete reference resolved from a `ReferenceGeometryEntrySpec`.
+message ReferenceGeometryEntry {
+  // Stable identifier copied from the authored declaration.
+  uint32 id = 1 [(buf.validate.field).uint32.gt = 0];
+
+  // Optional human-readable name copied from the authored declaration.
+  optional string name = 2;
+
+  // Selection priority copied from the authored declaration.
+  int32 priority = 3;
+
+  // The resolved reference geometry.
+  oneof primitive {
+    option (buf.validate.oneof).required = true;
+
+    // A planar reference.
+    UnboundedPlane plane = 4;
+
+    // A cylindrical reference.
+    UnboundedCylinder cylinder = 5;
+  }
+}
+
+// Published mappings from logical asset parameters to concrete reference geometry pairs.
+// This derived component is separate from its authored spec, despite the two being virtually
+// identical. See the `ReferenceGeometryParameterMapSpec` comment for the rationale.
+message ReferenceGeometryParameterMap {
+  option (motif.extension.v1.message).component = 171;
+
+  // Parameter to reference mappings
+  // They may remain present while validity_status is INVALID due to the corresponding
+  // concrete reference geometry being unavailable.
+  repeated ReferenceGeometryParameterMapEntry entries = 1;
+
+  // Whether every mapping refers to a declared parameter and currently generated references.
+  ReferenceGeometryParameterMapValidityStatus validity_status = 2 [(buf.validate.field).enum.defined_only = true];
+}
+
+// One published mapping from a logical asset parameter to reference geometry.
+message ReferenceGeometryParameterMapEntry {
+  // The logical parameter name copied from the authored mapping.
+  string parameter_name = 1 [(buf.validate.field).string.min_len = 1];
+
+  // The first reference geometry ID.
+  uint32 start_reference_id = 2 [(buf.validate.field).uint32.gt = 0];
+
+  // The second reference geometry ID.
+  uint32 end_reference_id = 3 [(buf.validate.field).uint32.gt = 0];
+
+  // How the parameter relates to the two references.
+  ReferenceGeometryParameterMappingKind kind = 4 [
+    (buf.validate.field).enum.defined_only = true,
+    (buf.validate.field).enum.not_in = 0
+  ];
+}
+
+// Whether the published parameter map is usable
+// It could be invalid for several reasons, such as if a mapping names an unsuitable
+// parameter, names an ID absent from ReferenceGeometrySpec, or its referenced
+// concrete geometry was not successfully generated.
+enum ReferenceGeometryParameterMapValidityStatus {
+  // No validation result has been recorded. Consumers should not use the entries.
+  REFERENCE_GEOMETRY_PARAMETER_MAP_VALIDITY_STATUS_UNSPECIFIED = 0;
+
+  // Every mapping refers to a declared parameter and currently generated references.
+  REFERENCE_GEOMETRY_PARAMETER_MAP_VALIDITY_STATUS_VALID = 1;
+
+  // The mappings cannot currently be used. Validated entries may remain available for inspection.
+  REFERENCE_GEOMETRY_PARAMETER_MAP_VALIDITY_STATUS_INVALID = 2;
+}
+
+// How a scalar parameter relates to a pair of reference geometries.
+enum ReferenceGeometryParameterMappingKind {
+  // No mapping kind specified. This is invalid for a mapping entry.
+  REFERENCE_GEOMETRY_PARAMETER_MAPPING_KIND_UNSPECIFIED = 0;
+
+  // A linear distance between two reference geometries.
+  REFERENCE_GEOMETRY_PARAMETER_MAPPING_KIND_LINEAR = 1;
+
+  // An angle between two reference geometries.
+  REFERENCE_GEOMETRY_PARAMETER_MAPPING_KIND_ANGULAR = 2;
+
+  // A radius or radial distance between two (cylindrical) reference geometries.
+  REFERENCE_GEOMETRY_PARAMETER_MAPPING_KIND_RADIAL = 3;
+}
+
+// A source that resolves to a two-dimensional curve.
+message Curve2Input {
+  // How the curve value is supplied.
+  oneof source {
+    option (buf.validate.oneof).required = true;
+
+    // Name in the current instance's resolved-parameter scope.
+    string parameter = 1;
+
+    // Direct reference to Curve2 data.
+    motif.extension.v1.DataReference data_ref = 2 [(motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.geometry.v1.Curve2"
+    }];
+  }
+}
+
+// A source that resolves to a three-dimensional coordinate system.
+//
+// When used to construct reference geometry, the coordinate-system value is
+// expressed in the local frame of the entity receiving `ReferenceGeometry`.
+message CoordinateSystem3Input {
+  // How the coordinate-system value is supplied.
+  oneof source {
+    option (buf.validate.oneof).required = true;
+
+    // Name in the current instance's resolved-parameter scope.
+    string parameter = 1;
+
+    // Direct reference to CoordinateSystem3 data.
+    motif.extension.v1.DataReference data_ref = 2 [(motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.geometry.v1.CoordinateSystem3"
+    }];
+  }
+}
+
+// An authored method for constructing a planar reference.
+// Every construction method produces a plane in the local frame of the entity
+// receiving the resolved `ReferenceGeometry`.
+message PlaneSpec {
+  // The supported plane construction methods.
+  oneof definition {
+    option (buf.validate.oneof).required = true;
+
+    // Construct a plane from an origin and normal.
+    PlaneUsingOriginNormalSpec origin_normal = 1;
+
+    // Construct a plane from a location and tangent on a curve.
+    PlaneUsingCurveLocationSpec using_curve_location = 2;
+
+    // Construct a plane parallel to a line at a signed perpendicular offset.
+    PlaneUsingLineOffsetSpec using_line_offset = 3;
+
+    // Construct a plane at a curve location, offset along a coordinate system's Z axis.
+    PlaneUsingCurveLocationZOffsetSpec using_curve_location_z_offset = 4;
+
+    // Construct a plane from an Isometry-relative origin and signed local-axis normal.
+    PlaneUsingIsometryLocalOffsetSpec using_isometry_local_offset = 5;
+  }
+}
+
+// Constructs a plane by evaluating its origin and normal coordinates.
+message PlaneUsingOriginNormalSpec {
+  // Plane-origin X coordinate.
+  ParametricExpression origin_x = 1 [(buf.validate.field).required = true];
+
+  // Plane-origin Y coordinate.
+  ParametricExpression origin_y = 2 [(buf.validate.field).required = true];
+
+  // Plane-origin Z coordinate.
+  ParametricExpression origin_z = 3 [(buf.validate.field).required = true];
+
+  // Plane-normal X component.
+  ParametricExpression normal_x = 4 [(buf.validate.field).required = true];
+
+  // Plane-normal Y component.
+  ParametricExpression normal_y = 5 [(buf.validate.field).required = true];
+
+  // Plane-normal Z component.
+  ParametricExpression normal_z = 6 [(buf.validate.field).required = true];
+}
+
+// Selects a stable location in a curve's parameter domain.
+message CurveLocationSpec {
+  // Locations that do not require an accompanying numeric value.
+  enum NamedLocation {
+    // Unspecified named location.
+    NAMED_LOCATION_UNSPECIFIED = 0;
+
+    // The start of the curve domain.
+    NAMED_LOCATION_START = 1;
+
+    // The end of the curve domain.
+    NAMED_LOCATION_END = 2;
+
+    // The midpoint of the curve domain.
+    NAMED_LOCATION_MIDPOINT = 3;
+  }
+
+  // Exactly one way of locating the point on the curve.
+  oneof location {
+    option (buf.validate.oneof).required = true;
+
+    // A platform-defined named location.
+    NamedLocation named_location = 1 [
+      (buf.validate.field).enum.defined_only = true,
+      (buf.validate.field).enum.not_in = 0
+    ];
+
+    // A normalized position across the curve's parameter domain, from 0 to 1.
+    double fractional_location = 2 [(buf.validate.field).double = {
+      gte: 0
+      lte: 1
+    }];
+  }
+}
+
+// Constructs a plane from a point and tangent evaluated on a `Curve2`.
+//
+// The curve is evaluated in its two-dimensional parameter space and lifted
+// into three dimensions by `coordinate_system`. The lifted point is the plane
+// origin. At the curve start, the plane normal opposes the lifted tangent; at
+// the curve end, it follows the lifted tangent. Midpoint and fractional
+// locations use the lifted tangent.
+message PlaneUsingCurveLocationSpec {
+  // The two-dimensional curve to evaluate.
+  Curve2Input curve = 1 [(buf.validate.field).required = true];
+
+  // The coordinate system that lifts the curve into three dimensions.
+  CoordinateSystem3Input coordinate_system = 2 [(buf.validate.field).required = true];
+
+  // Where to evaluate the curve.
+  CurveLocationSpec location = 3 [(buf.validate.field).required = true];
+}
+
+// Constructs a plane parallel to a line at a signed perpendicular offset.
+//
+// The line is evaluated in its two-dimensional parameter space. Its local
+// left perpendicular `(-dir.y, dir.x)` is used as the plane normal and offset
+// direction, then the resulting origin and normal are lifted into three
+// dimensions by `coordinate_system`.
+message PlaneUsingLineOffsetSpec {
+  // The two-dimensional line to offset. Other Curve2 variants are invalid.
+  Curve2Input curve = 1 [(buf.validate.field).required = true];
+
+  // The coordinate system that lifts the line into three dimensions.
+  CoordinateSystem3Input coordinate_system = 2 [(buf.validate.field).required = true];
+
+  // Signed perpendicular distance from the line.
+  ParametricExpression offset = 3 [(buf.validate.field).required = true];
+}
+
+// Constructs a plane centered at a location on a curve and offset along a
+// coordinate system's positive Z axis. The plane normal follows that Z axis.
+message PlaneUsingCurveLocationZOffsetSpec {
+  // Supported directions for the plane normal along the coordinate-system Z axis.
+  enum NormalDirection {
+    // Unspecified normal direction.
+    NORMAL_DIRECTION_UNSPECIFIED = 0;
+
+    // Normal follows the coordinate system's positive Z axis.
+    NORMAL_DIRECTION_POSITIVE_Z = 1;
+
+    // Normal follows the coordinate system's negative Z axis.
+    NORMAL_DIRECTION_NEGATIVE_Z = 2;
+  }
+
+  // The two-dimensional curve on which to choose the plane origin.
+  Curve2Input curve = 1 [(buf.validate.field).required = true];
+
+  // The coordinate system that lifts the curve into three dimensions.
+  CoordinateSystem3Input coordinate_system = 2 [(buf.validate.field).required = true];
+
+  // Where to evaluate the curve.
+  CurveLocationSpec location = 3 [(buf.validate.field).required = true];
+
+  // Signed distance from the lifted curve point along the positive Z axis.
+  ParametricExpression z_offset = 4 [(buf.validate.field).required = true];
+
+  // Direction of the plane normal along the coordinate-system Z axis.
+  NormalDirection normal_direction = 5 [
+    (buf.validate.field).enum.defined_only = true,
+    (buf.validate.field).enum.not_in = 0
+  ];
+}
+
+// Constructs a plane by offsetting an Isometry's origin in its local frame.
+message PlaneUsingIsometryLocalOffsetSpec {
+  // Supported signed local axes for the plane normal.
+  enum NormalDirection {
+    // Plane normal direction not specified. This is invalid.
+    NORMAL_DIRECTION_UNSPECIFIED = 0;
+
+    // Plane normal aligns with positive X in the local coordinate frame.
+    NORMAL_DIRECTION_POSITIVE_X = 1;
+
+    // Plane normal aligns with negative X in the local coordinate frame.
+    NORMAL_DIRECTION_NEGATIVE_X = 2;
+
+    // Plane normal aligns with positive Y in the local coordinate frame.
+    NORMAL_DIRECTION_POSITIVE_Y = 3;
+
+    // Plane normal aligns with negative Y in the local coordinate frame.
+    NORMAL_DIRECTION_NEGATIVE_Y = 4;
+
+    // Plane normal aligns with positive Z in the local coordinate frame.
+    NORMAL_DIRECTION_POSITIVE_Z = 5;
+
+    // Plane normal aligns with negative Z in the local coordinate frame.
+    NORMAL_DIRECTION_NEGATIVE_Z = 6;
+  }
+
+  // Placement whose translation and rotation define the local frame.
+  motif.extension.v1.DataReference isometry = 1 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.core.v1.Isometry"
+    }
+  ];
+
+  // Signed local X offset from the Isometry origin.
+  ParametricExpression local_offset_x = 2 [(buf.validate.field).required = true];
+
+  // Signed local Y offset from the Isometry origin.
+  ParametricExpression local_offset_y = 3 [(buf.validate.field).required = true];
+
+  // Signed local Z offset from the Isometry origin.
+  ParametricExpression local_offset_z = 4 [(buf.validate.field).required = true];
+
+  // Direction of the plane normal in the Isometry's local frame.
+  NormalDirection normal_direction = 5 [
+    (buf.validate.field).enum.defined_only = true,
+    (buf.validate.field).enum.not_in = 0
+  ];
+}
+
+// An authored method for constructing a cylindrical reference.
+// Every construction method produces a cylinder in the local frame of the entity
+// receiving the resolved `ReferenceGeometry`.
+message CylinderSpec {
+  // The supported cylinder construction methods.
+  oneof definition {
+    option (buf.validate.oneof).required = true;
+
+    // Construct a cylinder from a circular curve and radius offset.
+    CylinderUsingCurveRadiusSpec using_curve_radius = 1;
+  }
+}
+
+// Constructs a cylinder from a circular `Curve2`.
+//
+// The curve center is lifted into three dimensions by `coordinate_system`, the
+// coordinate system's Z axis becomes the cylinder axis, and `radius_offset` is
+// added to the curve's radius.
+message CylinderUsingCurveRadiusSpec {
+  // The circular two-dimensional curve.
+  Curve2Input curve = 1 [(buf.validate.field).required = true];
+
+  // The coordinate system that lifts the curve into three dimensions.
+  CoordinateSystem3Input coordinate_system = 2 [(buf.validate.field).required = true];
+
+  // Value added to the circular curve's radius.
+  ParametricExpression radius_offset = 3 [(buf.validate.field).required = true];
+}
+
+// A concrete unbounded planar reference.
+message UnboundedPlane {
+  // A point on the plane.
+  motif.data.geometry.v1.Point3 origin = 1 [(buf.validate.field).required = true];
+
+  // The plane's normal.
+  motif.data.geometry.v1.UnitVector3 normal = 2 [(buf.validate.field).required = true];
+}
+
+// A concrete unbounded cylindrical reference.
+message UnboundedCylinder {
+  // A point on the cylinder axis.
+  motif.data.geometry.v1.Point3 origin = 1 [(buf.validate.field).required = true];
+
+  // The cylinder axis.
+  motif.data.geometry.v1.UnitVector3 axis = 2 [(buf.validate.field).required = true];
+
+  // The cylinder radius.
+  double radius = 3 [(buf.validate.field).double.gt = 0];
+}
+
+// Authored recipe for an asset's derived 2D drawing geometry (`Geometry2d`).
+// Each entry names one group of curves and either references existing curve
+// data or constructs curves from the asset's resolved parameters.
+message Geometry2dBehavior {
+  option (motif.extension.v1.message).component = 175;
+
+  // The authored entries. Names must be unique within this component; they
+  // become the `Geometry2d.entries` map keys and must remain stable across
+  // compatible recipe revisions. Uniqueness is not validated: on a name collision
+  // the derived `map` keeps the last entry with that name and drops the earlier one
+  // (and, since priority ties break by name, the survivor's draw order stays defined).
+  repeated Geometry2dEntrySpec entries = 1 [(buf.validate.field).repeated.min_items = 1];
+}
+
+// One authored `Geometry2d` entry.
+message Geometry2dEntrySpec {
+  // Stable entry name; the `Geometry2d.entries` map key.
+  string name = 1 [(buf.validate.field).string.min_len = 1];
+
+  // Visibility-policy classification of the produced curves. A type-less entry is
+  // rejected: `defined_only` alone still admits `UNSPECIFIED` (0), so `not_in` excludes it.
+  Geometry2dEntryType type = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+
+  // Draw order within the 2D drawing layer. Larger values draw on top. Ties
+  // are broken by entry name so rendering never depends on map iteration
+  // order.
+  uint32 priority = 3;
+
+  // Where the entry's curves come from.
+  oneof source {
+    option (buf.validate.oneof).required = true;
+
+    // Existing curve data, such as a literal `Curve2List` parameter value.
+    motif.extension.v1.DataReference curves = 4 [(motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.geometry.v1.Curve2List"
+    }];
+
+    // Curves constructed from resolved parameters.
+    Geometry2dConstruction construction = 5;
+  }
+}
+
+// An authored construction producing one entry's curves and the local frame
+// they live in.
+message Geometry2dConstruction {
+  // The frame the constructed 2D curves are expressed in.
+  Geometry2dFrame frame = 1 [(buf.validate.field).required = true];
+
+  // The constructed curves, in construction order.
+  repeated Geometry2dCurveConstruction curves = 2 [(buf.validate.field).repeated.min_items = 1];
+}
+
+// How an entry's local 2D frame is derived.
+message Geometry2dFrame {
+  oneof source {
+    option (buf.validate.oneof).required = true;
+
+    // A frame in the owning asset's own coordinate system; each component is a
+    // `ParametricExpression`, so it follows the resolved parameters and never
+    // references a placement. A oneof (rather than a bare field) leaves room for
+    // additional frame sources — e.g. a placement-projected plan frame — when a
+    // consumer needs one.
+    Geometry2dLocalFrame local = 1;
+  }
+}
+
+// Three parametric expressions, used either as a point (a location) or as a
+// direction. A direction is normalized at construction, so it need not evaluate
+// to a unit vector.
+message Vec3Expr {
+  ParametricExpression x = 1 [(buf.validate.field).required = true];
+  ParametricExpression y = 2 [(buf.validate.field).required = true];
+  ParametricExpression z = 3 [(buf.validate.field).required = true];
+}
+
+// An owner-local frame built from parametric expressions (see `Geometry2dFrame`).
+// The 2D curves live in the plane through `origin` spanned by `x_axis` and
+// `z_axis × x_axis`; `z_axis` is the drawing plane's normal. The axes are
+// direction vectors normalized at construction — they need not evaluate to unit
+// vectors — so a frame may follow the resolved parameters; construction fails
+// only when an axis evaluates to a degenerate (near-zero) vector. (They are
+// expression `Vec3Expr`s rather than the literal `UnitVector3`s of
+// `BuiltinAssetConfiguration.FrameExpr`, which deliberately forbids
+// parameter-dependent axes.)
+message Geometry2dLocalFrame {
+  Vec3Expr origin = 1 [(buf.validate.field).required = true];
+  Vec3Expr x_axis = 2 [(buf.validate.field).required = true];
+  Vec3Expr z_axis = 3 [(buf.validate.field).required = true];
+}
+
+// One constructed 2D curve. Every scalar is a `ParametricExpression`, so the
+// curve follows the instance's resolved parameters.
+message Geometry2dCurveConstruction {
+  oneof kind {
+    option (buf.validate.oneof).required = true;
+
+    // A line segment.
+    Line2Construction line = 1;
+
+    // A circular arc.
+    Arc2Construction arc = 2;
+  }
+}
+
+// A line segment between two expression-valued endpoints, in the entry frame.
+message Line2Construction {
+  ParametricExpression start_x = 1 [(buf.validate.field).required = true];
+  ParametricExpression start_y = 2 [(buf.validate.field).required = true];
+  ParametricExpression end_x = 3 [(buf.validate.field).required = true];
+  ParametricExpression end_y = 4 [(buf.validate.field).required = true];
+}
+
+// A circular arc from expression-valued center, radius, and angles, in the
+// entry frame. Angles are radians from the frame's +X axis; the arc sweeps
+// from `start_angle` by `sweep_angle` (counterclockwise when positive), so a
+// parameter-selected sign flips the sweep direction.
+message Arc2Construction {
+  ParametricExpression center_x = 1 [(buf.validate.field).required = true];
+  ParametricExpression center_y = 2 [(buf.validate.field).required = true];
+  ParametricExpression radius = 3 [(buf.validate.field).required = true];
+  ParametricExpression start_angle = 4 [(buf.validate.field).required = true];
+  ParametricExpression sweep_angle = 5 [(buf.validate.field).required = true];
+}
+
+// Derived 2D drawing geometry produced from an asset's `Geometry2dBehavior`.
+// Curves are display linework, not solid model geometry. Entries are keyed by
+// the authored entry name; draw order is the entries' `priority`, not map
+// iteration or encoding order.
+message Geometry2d {
+  option (motif.extension.v1.message).component = 176;
+
+  // The derived entries, keyed by the authored entry name. Written only after the
+  // behavior derives, so the component's presence with an empty map means the recipe
+  // produced no entries — not "derivation pending"; per-entry `status` then
+  // distinguishes a failed entry from a succeeded one.
+  map<string, Geometry2dEntry> entries = 1;
+}
+
+// One derived `Geometry2d` entry.
+message Geometry2dEntry {
+  // Visibility-policy classification copied from the authored entry.
+  Geometry2dEntryType type = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+
+  // Draw order copied from the authored entry.
+  uint32 priority = 2;
+
+  // Whether this entry's curves were generated from the current inputs.
+  // `curves` is empty unless the status is SUCCEEDED, so consumers never use
+  // stale geometry produced from older input values.
+  Geometry2dEntryStatus status = 3 [(buf.validate.field).enum.defined_only = true];
+
+  // The local frame the 2D curves are expressed in, relative to the owning
+  // entity. World placement is the owner's transform composed with this frame.
+  // Present whenever `status` is SUCCEEDED (it always accompanies the curves) and
+  // absent otherwise; a consumer must not draw a non-SUCCEEDED entry, so it never
+  // composes an absent (degenerate, zero-axis) frame.
+  motif.data.geometry.v1.CoordinateSystem3 frame = 4;
+
+  // The drawable geometry.
+  oneof primitive {
+    // Curves (open or closed), drawn as linework.
+    motif.data.geometry.v1.Curve2List curves = 5;
+  }
+}
+
+// Visibility-policy classification for `Geometry2d` entries.
+enum Geometry2dEntryType {
+  // Unspecified; consumers must not draw the entry.
+  GEOMETRY2D_ENTRY_TYPE_UNSPECIFIED = 0;
+
+  // Drafting/symbolic linework.
+  GEOMETRY2D_ENTRY_TYPE_DETAIL = 1;
+
+  // Model linework present in the model space.
+  GEOMETRY2D_ENTRY_TYPE_MODEL = 2;
+}
+
+// Whether a derived `Geometry2d` entry matches its current inputs.
+enum Geometry2dEntryStatus {
+  // No generation result recorded; consumers must not use the entry.
+  GEOMETRY2D_ENTRY_STATUS_UNSPECIFIED = 0;
+
+  // The entry was generated from the current inputs.
+  GEOMETRY2D_ENTRY_STATUS_SUCCEEDED = 1;
+
+  // The entry could not be generated; `curves` is empty.
+  GEOMETRY2D_ENTRY_STATUS_FAILED = 2;
 }
