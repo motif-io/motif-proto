@@ -13,12 +13,6 @@ import "motif/extension/v1/options.proto";
 import "motif/extension/v1/reference.proto";
 import "motif/extension/v1/type.proto";
 
-// A marker component which, for the March demo, allows an entity to act like a
-// model.
-message MockModel {
-  option (motif.extension.v1.message).component = 39;
-}
-
 // A component which defines a set of exposed parameters.
 //
 // Generally added to parametric asset entities whose children wire the values
@@ -316,51 +310,6 @@ message SweepProfileAlongCurvesBehaviorV2 {
     (motif.extension.v1.field).data_reference_expected_type = {
       kind: TYPE_MESSAGE
       type_name: "motif.data.temporary.v1.Shape"
-    }
-  ];
-}
-
-// A behavior which generates one part of a built-in parametric asset assembly.
-//
-// Regeneration resolves the named `inputs` into a parameter map, evaluates the
-// asset's stored `configuration` against it to obtain the engine-agnostic asset
-// parts, looks up the part selected by `part_index`, sweeps or extrudes it (in
-// the part's own self-placing frame), and writes the result to the `output`
-// entity as a `Shape`.
-//
-// Distinct from `SweepWidthHeightAlongCurveBehaviorV2` (which only sweeps a
-// *centered rectangle* along a *single* curve): asset parts are arbitrary
-// non-rectangular profiles, anchored origin-on-spine, swept along multi-segment
-// / closed spines (or extruded, for e.g. a glazing pane).
-message BuiltinAssetPartBehaviorV2 {
-  option (motif.extension.v1.message).component = 105;
-
-  // Resolved parameter inputs keyed by parameter name (e.g. "width" /
-  // "height"). The configuration's decoder validates the value types it needs;
-  // types are not constrained per-entry here.
-  // buf:lint:ignore MOTIF_DATA_REFERENCE_MISSING_EXPECTED_TYPE
-  map<string, motif.extension.v1.DataReference> inputs = 2;
-
-  // Index into the evaluated configuration's parts selecting which part this
-  // behavior builds.
-  uint32 part_index = 3;
-
-  // The entity the generated `Shape` is written to.
-  motif.extension.v1.DataReference output = 4 [
-    (buf.validate.field).required = true,
-    (motif.extension.v1.field).data_reference_expected_type = {
-      kind: TYPE_MESSAGE
-      type_name: "motif.data.temporary.v1.Shape"
-    }
-  ];
-
-  // The asset entity's stored configuration the parts are evaluated from.
-  // Required.
-  motif.extension.v1.DataReference configuration = 5 [
-    (buf.validate.field).required = true,
-    (motif.extension.v1.field).data_reference_expected_type = {
-      kind: TYPE_MESSAGE
-      type_name: "motif.data.temporary.v1.BuiltinAssetConfiguration"
     }
   ];
 }

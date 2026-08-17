@@ -51,14 +51,6 @@ message Point3 {
   motif.data.geometry.v1.Point3 point = 1;
 }
 
-// An x/y/z offset from some other three-dimensional location.
-message XyzOffset {
-  option (motif.extension.v1.message).component = 12;
-
-  // The offset vector.
-  motif.data.geometry.v1.Vector3 offset = 1;
-}
-
 // A marker component identifying a level.
 message Level {
   option (motif.extension.v1.message).component = 13;
@@ -91,87 +83,9 @@ message LevelExtent {
   double center_y = 4;
 }
 
-// A marker component identifying a wall.
-message Wall {
-  option (motif.extension.v1.message).component = 15;
-}
-
-// Parameters defining how a wall's base footprint is determined.
-message BaseFootprintParams {
-  option (motif.extension.v1.message).component = 16;
-
-  // Defines how the base footprint of a wall should be determined.
-  BaseFootprintKind kind = 2;
-
-  // The strategy used to determine a wall's base footprint.
-  message BaseFootprintKind {
-    // The footprint strategy.
-    oneof kind {
-      // The base footprint is created by offsetting a curve from a sketch
-      // element by some amount.
-      OffsetSketchElementParams offset_curve = 1;
-    }
-
-    // The information necessary to determine how a 2D curve should be offset.
-    //
-    // For now, assumes the curve is offset symmetrically — half of `width` in
-    // either direction. Specific controls over this behavior may be added later.
-    message OffsetSketchElementParams {
-      // The total offset width.
-      double width = 1;
-    }
-  }
-}
-
-// Parameters defining how some 2D source geometry is converted into a 3D
-// representation.
-message ExtrudedWall {
-  option (motif.extension.v1.message).component = 17;
-
-  // Will be reset by change propagation if an `ExtrusionEndReference` exists,
-  // calculated as the distance to the referenced plane minus the offset.
-  // Otherwise set by the user.
-  double depth = 1;
-  // Extrusion direction.
-  motif.data.geometry.v1.UnitVector3 direction = 2;
-  // Offset of the extrusion start along the direction.
-  double start_offset = 3;
-}
-
 // A marker component identifying a default workplane.
 message DefaultWorkplane {
   option (motif.extension.v1.message).component = 18;
-}
-
-// Both top-offset values a wall remembers, independent of its active
-// top-attachment mode.
-//
-// The active extrusion components are derived from the slot matching the mode;
-// the other slot stays dormant so toggling modes round-trips without losing the
-// user's value.
-message WallTopOffsets {
-  option (motif.extension.v1.message).component = 88;
-
-  // Offset relative to the referenced level's elevation, used by the
-  // level-attached modes (the `ExtrusionEndReference` offset source).
-  double level_relative = 1;
-  // Absolute wall height in meters, used by the unattached modes (the
-  // `ExtrudedWall.depth` magnitude source) and by the regen fallback when a
-  // level-attached wall's level cannot be resolved.
-  double absolute = 2;
-}
-
-// Indicates that this entity derives a plane from the target entity.
-//
-// The target entity may be deleted while this relationship exists; application
-// logic must gracefully handle that scenario.
-message ExtrusionEndReference {
-  option (motif.extension.v1.message).component = 26;
-
-  // The entity supplying the plane. Required.
-  motif.extension.v1.EntityReference target = 1 [(buf.validate.field).required = true];
-  // Offset from the referenced plane.
-  double offset = 2;
 }
 
 // A join between two or more entities.
@@ -199,52 +113,6 @@ message Join {
         // A specific curve parameter.
         double param = 3;
       }
-    }
-  }
-}
-
-// The type of join that an entity represents.
-message JoinKind {
-  option (motif.extension.v1.message).component = 19;
-
-  // The join type.
-  JoinType kind = 1;
-
-  // The concrete kind of join.
-  message JoinType {
-    // The join variant.
-    oneof kind {
-      // A butt join.
-      google.protobuf.Empty butt = 1;
-    }
-  }
-}
-
-// The order in which elements in a join are processed.
-message JoinOrder {
-  option (motif.extension.v1.message).component = 20;
-
-  // The ordering strategy.
-  JoinOrderKind kind = 1;
-
-  // The concrete join-ordering strategy.
-  message JoinOrderKind {
-    // The ordering variant.
-    oneof kind {
-      // The default ordering.
-      google.protobuf.Empty default = 1;
-      // The index of the first element.
-      uint64 first = 2;
-      // Explicit first and second elements.
-      FirstAndSecond first_and_second = 3;
-    }
-
-    // An explicit first and second element ordering.
-    message FirstAndSecond {
-      // The index of the first element.
-      uint64 first = 1;
-      // The index of the second element.
-      uint64 second = 2;
     }
   }
 }
@@ -455,16 +323,4 @@ message ResolvedWallSweepInputs {
   //   `top_level_elev - base_level_elev - base_offset + top_offset`.
   // - In `unattachedUp` mode: `top_offset`.
   double height = 2;
-}
-
-// Per-instance marker identifying a parametric wall whose bindings use the
-// `DataReference` + decomposition shape (8 declared sub-parameters; the
-// wall-asset compose behavior emits `ResolvedWallSweepInputs`).
-//
-// Presence flips the parametric-wall sweep wiring branch and the properties
-// emitter's decode branch from the legacy literal-binding path to the v2 path.
-// Absence on a parametric-wall instance means a legacy wall awaiting
-// opportunistic migration on the first parametric-wall setter call.
-message ParametricWallShapeV2 {
-  option (motif.extension.v1.message).component = 117;
 }
