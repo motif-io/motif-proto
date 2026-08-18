@@ -105,11 +105,13 @@ message ResolvedParameters {
 // Change-propagation parameter bindings accept `binding` but reject `parameter`.
 // Built-in asset geometry configurations accept `parameter` but reject `binding`.
 // Reference geometry specifications accept both `parameter` and `binding`.
+// Geometry2d construction accepts both `parameter` and `binding`.
 //
 // `select` resolves a name in the evaluation scope (its `parameter` discriminant),
-// exactly like the `parameter` leaf, so a consumer accepts `select` if and only if it
-// accepts `parameter`: built-in asset configurations and reference geometry accept it;
-// change-propagation parameter bindings reject it at decode.
+// like the `parameter` leaf, but acceptance is decided per-leaf and is not inherited
+// from `parameter`: only Geometry2d construction accepts `select`. Built-in asset
+// configurations, reference geometry specifications, and change-propagation parameter
+// bindings all reject it at decode.
 message ParametricExpression {
   // The expression node.
   oneof node {
@@ -445,9 +447,10 @@ message BuiltinAssetConfiguration {
   repeated Part parts = 2;
 
   // Scalar expressions over named parameters use the shared
-  // `ParametricExpression` (its `parameter`/`literal`/`binary_op`/`neg`/
-  // `conditional`/`select` leaves — `select` resolves a scope name like
-  // `parameter`); the `binding` (`DataReference`) leaf is rejected here at decode.
+  // `ParametricExpression`. Built-in asset configurations accept its
+  // `literal`/`parameter`/`binary_op`/`neg` leaves; the `binding`
+  // (`DataReference`), `conditional`, and `select` leaves are rejected here at
+  // decode.
 
   // A 2D point whose coordinates are parametric expressions.
   message Point2Expr {
