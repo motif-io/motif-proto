@@ -72,8 +72,10 @@ message ParameterDeclaration {
 
 // One option in a TYPE_STRING parameter's closed choice set.
 message ParameterChoice {
-  // The canonical stored value.
-  string value = 1;
+  // The canonical stored value. Non-empty: an unset TYPE_STRING parameter resolves to
+  // the empty string, so an empty choice value would be indistinguishable from "nothing
+  // selected" and would match `ParametricSelect.cases[""]`.
+  string value = 1 [(buf.validate.field).string.min_len = 1];
   // The human-readable label for this value.
   string label = 2;
 }
@@ -103,6 +105,11 @@ message ResolvedParameters {
 // Change-propagation parameter bindings accept `binding` but reject `parameter`.
 // Built-in asset geometry configurations accept `parameter` but reject `binding`.
 // Reference geometry specifications accept both `parameter` and `binding`.
+//
+// `select` resolves a name in the evaluation scope (its `parameter` discriminant),
+// exactly like the `parameter` leaf, so a consumer accepts `select` if and only if it
+// accepts `parameter`: built-in asset configurations and reference geometry accept it;
+// change-propagation parameter bindings reject it at decode.
 message ParametricExpression {
   // The expression node.
   oneof node {
@@ -133,7 +140,11 @@ message ParametricExpression {
 // Evaluation picks the case matching the parameter's value, or `fallback`
 // when none matches (failing the evaluation when `fallback` is unset).
 message ParametricSelect {
-  // Name of the `TYPE_STRING` parameter supplying the discriminant.
+  // Name of the `TYPE_STRING` parameter supplying the discriminant. A name (not a
+  // `DataReference`) keeps the discriminant tied to the parameter's declaration, so a
+  // consumer can validate `cases` against the declared choices at decode. A pointer
+  // discriminant (for binding-time or cross-scope branching) could be added later as an
+  // additive alternative field without changing this one.
   string parameter = 1 [(buf.validate.field).string.min_len = 1];
 
   // The sub-expression evaluated for each value.
@@ -435,8 +446,8 @@ message BuiltinAssetConfiguration {
 
   // Scalar expressions over named parameters use the shared
   // `ParametricExpression` (its `parameter`/`literal`/`binary_op`/`neg`/
-  // `conditional` leaves); the `binding` (`DataReference`) leaf is rejected here
-  // at decode.
+  // `conditional`/`select` leaves — `select` resolves a scope name like
+  // `parameter`); the `binding` (`DataReference`) leaf is rejected here at decode.
 
   // A 2D point whose coordinates are parametric expressions.
   message Point2Expr {
@@ -1510,7 +1521,9 @@ message Geometry2dBehavior {
 
   // The authored entries. Names must be unique within this component; they
   // become the `Geometry2d.entries` map keys and must remain stable across
-  // compatible recipe revisions.
+  // compatible recipe revisions. Uniqueness is not validated: on a name collision
+  // the derived `map` keeps the last entry with that name and drops the earlier one
+  // (and, since priority ties break by name, the survivor's draw order stays defined).
   repeated Geometry2dEntrySpec entries = 1 [(buf.validate.field).repeated.min_items = 1];
 }
 
@@ -1519,8 +1532,12 @@ message Geometry2dEntrySpec {
   // Stable entry name; the `Geometry2d.entries` map key.
   string name = 1 [(buf.validate.field).string.min_len = 1];
 
-  // Visibility-policy classification of the produced curves.
-  Geometry2dEntryType type = 2 [(buf.validate.field).enum.defined_only = true];
+  // Visibility-policy classification of the produced curves. A type-less entry is
+  // rejected: `defined_only` alone still admits `UNSPECIFIED` (0), so `not_in` excludes it.
+  Geometry2dEntryType type = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
 
   // Draw order within the 2D drawing layer. Larger values draw on top. Ties
   // are broken by entry name so rendering never depends on map iteration
@@ -1575,6 +1592,11 @@ message Geometry2dFrame {
 // The 2D curves live in the plane through `origin` spanned by `x_axis` and
 // `z_axis × x_axis`; `z_axis` is the drawing plane's normal. Construction fails
 // when an axis evaluates to a degenerate (near-zero) vector.
+//
+// Coordinates are inlined as flat `_x/_y/_z` scalar expressions rather than reusing
+// the grouped `Point2Expr`/`Point3Expr` of `BuiltinAssetConfiguration`, so every
+// component carries its own `required` constraint at this scope; the two
+// expression-point families are intentionally kept separate for now.
 message Geometry2dLocalFrame {
   ParametricExpression origin_x = 1 [(buf.validate.field).required = true];
   ParametricExpression origin_y = 2 [(buf.validate.field).required = true];
@@ -1640,14 +1662,20 @@ message Arc2Construction {
 message Geometry2d {
   option (motif.extension.v1.message).component = 176;
 
-  // The derived entries, keyed by the authored entry name.
+  // The derived entries, keyed by the authored entry name. Written only after the
+  // behavior derives, so the component's presence with an empty map means the recipe
+  // produced no entries — not "derivation pending"; per-entry `status` then
+  // distinguishes a failed entry from a succeeded one.
   map<string, Geometry2dEntry> entries = 1;
 }
 
 // One derived `Geometry2d` entry.
 message Geometry2dEntry {
   // Visibility-policy classification copied from the authored entry.
-  Geometry2dEntryType type = 1 [(buf.validate.field).enum.defined_only = true];
+  Geometry2dEntryType type = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
 
   // Draw order copied from the authored entry.
   uint32 priority = 2;
@@ -1659,6 +1687,9 @@ message Geometry2dEntry {
 
   // The local frame the 2D curves are expressed in, relative to the owning
   // entity. World placement is the owner's transform composed with this frame.
+  // Present whenever `status` is SUCCEEDED (it always accompanies the curves) and
+  // absent otherwise; a consumer must not draw a non-SUCCEEDED entry, so it never
+  // composes an absent (degenerate, zero-axis) frame.
   motif.data.geometry.v1.CoordinateSystem3 frame = 4;
 
   // The drawable geometry.
