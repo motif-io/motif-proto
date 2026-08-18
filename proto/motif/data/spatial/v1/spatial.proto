@@ -4,17 +4,17 @@ syntax = "proto3";
 // bounding-element references, and portals linking openings to rooms.
 package motif.data.spatial.v1;
 
+import "motif/data/geometry/v1/geometry.proto";
 import "motif/extension/v1/options.proto";
 import "motif/extension/v1/reference.proto";
 
-// Maps a WKB polygon ring/edge index to the element that bounds that edge.
+// Maps a curve in a boundary loop to the element that bounds that curve.
 //
-// Ring 0 is the exterior; rings 1..N are holes. Segment i joins vertex i to
-// vertex i + 1 (wrapping to the first vertex for the final edge).
+// Loop 0 is the exterior; loops 1..N are holes.
 message BoundarySegmentReference {
-  // WKB polygon ring index: 0 is the exterior ring; 1..N are holes.
+  // Zero-based index into SpatialBoundary2D.loops.
   uint32 ring_index = 1;
-  // Zero-based edge index within the ring.
+  // Zero-based index into the loop's Curve2List.curves.
   uint32 segment_index = 2;
   // The wall, column, or other element that forms this edge.
   motif.extension.v1.EntityReference bounding_entity = 3;
@@ -22,18 +22,24 @@ message BoundarySegmentReference {
   motif.extension.v1.ModelReference bounding_model = 4;
 }
 
-// Authoritative 2D room bounds as an OGC WKB Polygon in level-local UV meters,
-// plus indexed references to the elements that form each edge.
+// Authoritative 2D room bounds as curve loops and an OGC WKB Polygon in
+// level-local UV meters, plus references to the elements that form each curve.
 //
-// Z/elevation is not stored in the WKB; it comes from the room's PlanarReference
-// level. Bounding-element type is read from the referenced entity's components.
+// The loops and WKB represent the same boundary. Z/elevation is not stored in
+// either representation; it comes from the room's PlanarReference level.
+// Bounding-element type is read from the referenced entity's components.
 message SpatialBoundary2D {
   option (motif.extension.v1.message).component = 160;
 
   // OGC WKB Polygon (2D), level-local UV meters. Exterior ring 0, then holes.
   bytes wkb = 1;
-  // Maps WKB ring/edge indexes to the elements that bound them.
+
+  // Maps loop/curve indexes to the elements that bound them.
   repeated BoundarySegmentReference segment_references = 2;
+
+  // Ordered closed boundary loops in level-local UV meters. Loop 0 is the
+  // exterior; loops 1..N are holes.
+  repeated motif.data.geometry.v1.Curve2List loops = 3;
 }
 
 // Room identity: source display name and schedule number.

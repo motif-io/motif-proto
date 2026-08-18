@@ -364,13 +364,25 @@ message ChangesetResponse {
     Error error = 4;
   }
 
+  // Details about a conflict that caused the write to be rejected.
+  // Populated when ERROR_CONCURRENT_ENTITY_UPDATE is returned.
+  ConflictDetails conflict_details = 5;
+
+  message ConflictDetails {
+    // Entity IDs that were modified by the client _and_ also written to the server after the client's max_known_version.
+    repeated bytes entity_ids = 1;
+
+    // Model version current on the server when the conflict was detected.
+    int32 server_version = 2;
+  }
+
   // Explains why a syntactically valid changeset was not committed.
   enum Error {
     // No rejection reason was specified.
     ERROR_UNSPECIFIED = 0;
 
     // The client's model is out of date because an entity in the changeset
-    // changed after max_known_version.
+    // changed after max_known_version. ConflictDetails provides more details.
     ERROR_CONCURRENT_ENTITY_UPDATE = 1;
   }
 }
