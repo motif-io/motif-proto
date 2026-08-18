@@ -365,6 +365,7 @@ message ChangesetResponse {
   }
 
   // Details about a conflict that caused the write to be rejected.
+  // Populated when ERROR_CONCURRENT_ENTITY_UPDATE is returned.
   ConflictDetails conflict_details = 5;
 
   message ConflictDetails {
@@ -381,7 +382,7 @@ message ChangesetResponse {
     ERROR_UNSPECIFIED = 0;
 
     // The client's model is out of date because an entity in the changeset
-    // changed after max_known_version.
+    // changed after max_known_version. ConflictDetails provides more details.
     ERROR_CONCURRENT_ENTITY_UPDATE = 1;
   }
 }
