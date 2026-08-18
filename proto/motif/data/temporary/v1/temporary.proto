@@ -1574,17 +1574,12 @@ message Geometry2dFrame {
   oneof source {
     option (buf.validate.oneof).required = true;
 
-    // Horizontal plan frame projected from a placement isometry: the origin is
-    // the isometry's origin, the plane is world-horizontal at that origin's
-    // elevation, and the frame's X axis is the isometry's local X projected to
-    // horizontal. Construction fails when that projection is degenerate (the
-    // isometry's X is vertical).
-    IsometryPlanProjection isometry_plan_projection = 1;
-
     // A frame in the owning asset's own coordinate system; each component is a
     // `ParametricExpression`, so it follows the resolved parameters and never
-    // references a placement.
-    Geometry2dLocalFrame local = 2;
+    // references a placement. A oneof (rather than a bare field) leaves room for
+    // additional frame sources — e.g. a placement-projected plan frame — when a
+    // consumer needs one.
+    Geometry2dLocalFrame local = 1;
   }
 }
 
@@ -1607,18 +1602,6 @@ message Geometry2dLocalFrame {
   ParametricExpression z_axis_x = 7 [(buf.validate.field).required = true];
   ParametricExpression z_axis_y = 8 [(buf.validate.field).required = true];
   ParametricExpression z_axis_z = 9 [(buf.validate.field).required = true];
-}
-
-// Plan-frame projection of a placement isometry (see `Geometry2dFrame`).
-message IsometryPlanProjection {
-  // The placement isometry, typically the placed instance's own `Isometry`.
-  motif.extension.v1.DataReference isometry = 1 [
-    (buf.validate.field).required = true,
-    (motif.extension.v1.field).data_reference_expected_type = {
-      kind: TYPE_MESSAGE
-      type_name: "motif.data.core.v1.Isometry"
-    }
-  ];
 }
 
 // One constructed 2D curve. Every scalar is a `ParametricExpression`, so the
