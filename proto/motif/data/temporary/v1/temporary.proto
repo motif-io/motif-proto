@@ -1583,25 +1583,28 @@ message Geometry2dFrame {
   }
 }
 
+// Three parametric expressions, used either as a point (a location) or as a
+// direction. A direction is normalized at construction, so it need not evaluate
+// to a unit vector.
+message Vec3Expr {
+  ParametricExpression x = 1 [(buf.validate.field).required = true];
+  ParametricExpression y = 2 [(buf.validate.field).required = true];
+  ParametricExpression z = 3 [(buf.validate.field).required = true];
+}
+
 // An owner-local frame built from parametric expressions (see `Geometry2dFrame`).
 // The 2D curves live in the plane through `origin` spanned by `x_axis` and
-// `z_axis × x_axis`; `z_axis` is the drawing plane's normal. Construction fails
-// when an axis evaluates to a degenerate (near-zero) vector.
-//
-// Coordinates are inlined as flat `_x/_y/_z` scalar expressions rather than reusing
-// the grouped `Point2Expr`/`Point3Expr` of `BuiltinAssetConfiguration`, so every
-// component carries its own `required` constraint at this scope; the two
-// expression-point families are intentionally kept separate for now.
+// `z_axis × x_axis`; `z_axis` is the drawing plane's normal. The axes are
+// direction vectors normalized at construction — they need not evaluate to unit
+// vectors — so a frame may follow the resolved parameters; construction fails
+// only when an axis evaluates to a degenerate (near-zero) vector. (They are
+// expression `Vec3Expr`s rather than the literal `UnitVector3`s of
+// `BuiltinAssetConfiguration.FrameExpr`, which deliberately forbids
+// parameter-dependent axes.)
 message Geometry2dLocalFrame {
-  ParametricExpression origin_x = 1 [(buf.validate.field).required = true];
-  ParametricExpression origin_y = 2 [(buf.validate.field).required = true];
-  ParametricExpression origin_z = 3 [(buf.validate.field).required = true];
-  ParametricExpression x_axis_x = 4 [(buf.validate.field).required = true];
-  ParametricExpression x_axis_y = 5 [(buf.validate.field).required = true];
-  ParametricExpression x_axis_z = 6 [(buf.validate.field).required = true];
-  ParametricExpression z_axis_x = 7 [(buf.validate.field).required = true];
-  ParametricExpression z_axis_y = 8 [(buf.validate.field).required = true];
-  ParametricExpression z_axis_z = 9 [(buf.validate.field).required = true];
+  Vec3Expr origin = 1 [(buf.validate.field).required = true];
+  Vec3Expr x_axis = 2 [(buf.validate.field).required = true];
+  Vec3Expr z_axis = 3 [(buf.validate.field).required = true];
 }
 
 // One constructed 2D curve. Every scalar is a `ParametricExpression`, so the
