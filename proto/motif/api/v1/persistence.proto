@@ -364,6 +364,17 @@ message ChangesetResponse {
     Error error = 4;
   }
 
+  // Details about a conflict that caused the write to be rejected.
+  ConflictDetails conflict_details = 5;
+
+  message ConflictDetails {
+    // Entity IDs that were modified by the client _and_ also written to the server after the client's max_known_version.
+    repeated bytes entity_ids = 1;
+
+    // Model version current on the server when the conflict was detected.
+    int32 server_version = 2;
+  }
+
   // Explains why a syntactically valid changeset was not committed.
   enum Error {
     // No rejection reason was specified.
