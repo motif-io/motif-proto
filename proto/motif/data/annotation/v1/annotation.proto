@@ -78,6 +78,29 @@ message Dimension {
     CURVE_STATION_NEAREST = 5;
   }
 
+  // Which direction a linear dimension measures in, and therefore the
+  // direction its dimension line runs. Stored intent, not derived: an ALIGNED
+  // dimension re-derives its direction from its own definition points every
+  // resolve (so it follows a host that rotates), while a PLANE_X / PLANE_Y
+  // dimension holds that axis and measures only the component of the span
+  // along it. Axes are named in the dimension plane captured by PlaneBasis,
+  // not in world space, so a projected dimension keeps its orientation
+  // relative to the drawing when the plane rotates.
+  //
+  // UNSPECIFIED means ALIGNED: every record written before this field existed
+  // is aligned, and an old writer that omits it must not change meaning.
+  enum MeasurementDirection {
+    // Unspecified direction; read as MEASUREMENT_DIRECTION_ALIGNED.
+    MEASUREMENT_DIRECTION_UNSPECIFIED = 0;
+    // Measure the true distance between the definition points; the dimension
+    // line runs parallel to the span.
+    MEASUREMENT_DIRECTION_ALIGNED = 1;
+    // Measure the span's component along the dimension plane's X axis.
+    MEASUREMENT_DIRECTION_PLANE_X = 2;
+    // Measure the span's component along the dimension plane's Y axis.
+    MEASUREMENT_DIRECTION_PLANE_Y = 3;
+  }
+
   // A structured feature reference on a synced entity. Stable across reload
   // and reimport because it references the component's own topology (curves,
   // baselines, footprint widths), never a mesh buffer.
@@ -92,6 +115,30 @@ message Dimension {
     double param = 4;
   }
 
+  // A reference to one of an entity's ReferenceGeometry datums — a named plane
+  // or cylinder published by a parametric asset definition. Resolves to a
+  // point only in the presence of an opposing anchor: the point is the
+  // perpendicular foot of the opposing anchor's resolved point on the datum,
+  // the same rule CURVE_STATION_NEAREST uses. Two datum anchors facing each
+  // other resolve against each other.
+  message EntityDatum {
+    // The referenced entity. This must be the *instance* carrying the resolved
+    // ReferenceGeometry, never the asset it was materialized from: datum
+    // primitives are stored in the owner-local frame and the instance's
+    // transform is what lifts them to world space. Commit asserts the target
+    // is persisted. Required.
+    motif.extension.v1.EntityReference entity = 1 [(buf.validate.field).required = true];
+    // The ReferenceGeometryEntry id within that entity's ReferenceGeometry.
+    // Owner-local — authored per asset definition, not globally unique — so it
+    // is only meaningful together with `entity`.
+    //
+    // Durable by contract: the id is chosen by the author of the
+    // ReferenceGeometrySpec precisely to carry long-lived references like this
+    // one, and an author is expected never to reassign the id of an existing
+    // entry.
+    uint32 reference_id = 2 [(buf.validate.field).uint32.gt = 0];
+  }
+
   // What a definition point is measured against.
   message Anchor {
     // The anchor target.
@@ -100,15 +147,41 @@ message Dimension {
       motif.data.geometry.v1.Point3 free = 1;
       // A feature on a synced entity.
       EntityFeature entity_feature = 2;
+      // A ReferenceGeometry datum on a synced entity.
+      EntityDatum entity_datum = 3;
     }
   }
 
-  // Linear-aligned definition geometry: the two measured points.
+  // Linear definition geometry: the witness references being dimensioned, plus
+  // the direction they are measured in.
+  //
+  // A plain dimension has two witnesses. A dimension *string* has more, and its
+  // segments are derived rather than stored: sort the witnesses by station along
+  // the dimension line and measure each consecutive pair, so every segment
+  // reports the distance to its nearest neighbour and no overall span is drawn.
+  // Adding a witness between two existing ones therefore splits that segment in
+  // two with no edit to anything else, and witnesses may be supplied in any
+  // order.
   message LinearGeometry {
-    // The first measured point.
+    // The first measured point. When `anchors` is set this is a copy of the
+    // witness at one end of the run (see `anchors`).
     Anchor a = 1;
-    // The second measured point.
+    // The second measured point. When `anchors` is set this is a copy of the
+    // witness at the other end of the run (see `anchors`).
     Anchor b = 2;
+    // The full witness list, in the order the user picked them. Two or more
+    // entries when set; empty means the dimension is defined by `a`/`b` alone.
+    //
+    // Insertion order is what is stored, deliberately: station order is derived
+    // at resolve, so `anchors[0]` stays put as witnesses are inserted and the
+    // placement offset keeps a fixed reference. `a` and `b` are maintained as
+    // the two *station extremes* of this list, recomputed on every write, so a
+    // reader that does not understand this field still draws a correct
+    // end-to-end dimension instead of failing to load. They are not
+    // `anchors[0]` and `anchors[n-1]`.
+    repeated Anchor anchors = 3;
+    // Which direction this dimension measures in. Unset reads as ALIGNED.
+    MeasurementDirection direction = 4;
   }
 
   // One ray of an angular dimension.
@@ -157,7 +230,20 @@ message Dimension {
     // client-side; all v1 records), nonzero = an explicit user-set radius.
     double offset = 2;
     // Reserved label slide along the dimension line, meters. 0 until used.
+    // Applies to the whole dimension; for a multi-segment run see
+    // `text_slides`.
     double text_slide = 3;
+    // Per-segment label slide along the dimension line, meters, index-aligned
+    // with the derived segments of a dimension string (segment i measures
+    // witness i to witness i+1 in station order). Empty means every label sits
+    // at its segment midpoint offset by `text_slide`; when non-empty it
+    // supersedes `text_slide` for the segments it covers, and any segment past
+    // its end falls back to `text_slide`.
+    //
+    // Reserved alongside `text_slide` and 0 until used. Crowded strings are the
+    // motivating case: a run of short segments cannot place every label at its
+    // own midpoint without collisions, and sliding is per-label by nature.
+    repeated double text_slides = 4;
   }
 
   // The definition geometry.
@@ -170,9 +256,16 @@ message Dimension {
 
   // How the dimension line is placed.
   oneof placement {
-    // Placement owned by this dimension alone.
+    // Placement owned by this dimension alone. This covers a multi-witness run
+    // too: the witnesses of one dimension share that dimension's single
+    // placement, which is what puts every derived segment on one line by
+    // construction rather than by keeping separate placements agreeing.
     OwnPlacement own = 3;
-    // 4 reserved: shared (DimensionChain reference) — Shift-run placement.
+    // 4 unallocated. Previously earmarked for a `shared` arm referencing a
+    // separate chain record, on the assumption a run would be many
+    // two-witness dimensions. `LinearGeometry.anchors` makes a run one
+    // dimension instead, so no chain record is needed; a run's members cannot
+    // drift apart because there is nothing to keep in sync.
   }
 
   // This dimension's own look. Sparse throughout: an unset field inherits the
@@ -187,9 +280,13 @@ message Dimension {
   DimensionStyle style = 5;
 
   // Field-number allocation (kind/placement oneofs and top-level fields share
-  // this message's number space): 1-2 kind arms; 3-4 placement arms (4 =
-  // shared/DimensionChain, Shift-run placement); 5 = style; future kind arms
-  // (linear_projected, radial) and other extensions take 6+.
+  // this message's number space): 1-2 kind arms; 3-4 placement arms (4
+  // unallocated, see the oneof); 5 = style; future kind arms (radial) and other
+  // extensions take 6+.
+  //
+  // A projected linear dimension does not take a kind arm of its own: aligned
+  // and axis-projected differ only in which direction is measured, which is
+  // `LinearGeometry.direction`. One kind, one resolver, one set of parts.
 }
 
 // A dimension's look: label text, the linework, the sizes that position the
