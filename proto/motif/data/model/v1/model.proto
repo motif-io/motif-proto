@@ -251,7 +251,7 @@ message ModelUnitSettings {
 // base/top elevations, base/top offsets, attachment mode) from the asset's
 // `ResolvedParameters` via `DataReference` + `FieldPath`; writes the composed
 // `(coordinate_system, height)` pair into the per-instance
-// `ResolvedWallSweepInputs` component for `SweepWidthHeightAlongCurveBehaviorV2`
+// `ResolvedWallSweepInputs` component for `SweepWidthHeightAlongCurveBehavior`
 // to consume.
 //
 // Decouples wall-specific composition from the general sweep primitive.
@@ -308,7 +308,7 @@ message ComposeParametricWallSweepInputsBehavior {
 }
 
 // Per-instance output of `ComposeParametricWallSweepInputsBehavior`: the composed
-// `(coordinate_system, height)` pair that `SweepWidthHeightAlongCurveBehaviorV2`
+// `(coordinate_system, height)` pair that `SweepWidthHeightAlongCurveBehavior`
 // reads in the `DataReference` + decomposition shape.
 //
 // Sites wall-specific composition outside the general sweep primitive. Sweep
@@ -531,7 +531,7 @@ message ParameterBindingsBehavior {
 //   is centered on `curve`.
 // * The generated profile is swept along the curve from start to end.
 // * The generated solid is written to the `output` entity as a `Shape`.
-message SweepWidthHeightAlongCurveBehaviorV2 {
+message SweepWidthHeightAlongCurveBehavior {
   option (motif.extension.v1.message).component = 92;
 
   // The profile width.
@@ -581,7 +581,7 @@ message SweepWidthHeightAlongCurveBehaviorV2 {
 // while multiple segments produce a pipe-shell with right-corner transitions at
 // the joints. The generated solid is written to the `output` entity as a
 // `Shape`.
-message SweepProfileAlongCurvesBehaviorV2 {
+message SweepProfileAlongCurvesBehavior {
   option (motif.extension.v1.message).component = 129;
 
   // Spine: ordered `Curve2` segments. One segment sweeps a smooth pipe; many
@@ -630,11 +630,11 @@ message SweepProfileAlongCurvesBehaviorV2 {
 // the part's own self-placing frame), and writes the result to the `output`
 // entity as a `Shape`.
 //
-// Distinct from `SweepWidthHeightAlongCurveBehaviorV2` (which only sweeps a
+// Distinct from `SweepWidthHeightAlongCurveBehavior` (which only sweeps a
 // *centered rectangle* along a *single* curve): asset parts are arbitrary
 // non-rectangular profiles, anchored origin-on-spine, swept along multi-segment
 // / closed spines (or extruded, for e.g. a glazing pane).
-message BuiltinAssetPartBehaviorV2 {
+message BuiltinAssetPartBehavior {
   option (motif.extension.v1.message).component = 105;
 
   // Resolved parameter inputs keyed by parameter name (e.g. "width" /
@@ -1251,17 +1251,17 @@ message SourceAsset {
 // entity that receives the resolved `ReferenceGeometry`. All entries in one
 // specification therefore share that single frame (even if they use different
 // construction methods).
-message ReferenceGeometrySpec {
+message ReferenceGeometryDefinition {
   option (motif.extension.v1.message).component = 168;
 
   // The asset's reference geometry declarations. IDs must be unique within
   // this component and remain stable across compatible recipe revisions.
-  repeated ReferenceGeometryEntrySpec entries = 1 [(buf.validate.field).repeated.min_items = 1];
+  repeated ReferenceGeometryEntryDefinition entries = 1 [(buf.validate.field).repeated.min_items = 1];
 }
 
 // One authored stable reference geometry declaration.
-message ReferenceGeometryEntrySpec {
-  // Stable identifier scoped to the containing `ReferenceGeometrySpec`.
+message ReferenceGeometryEntryDefinition {
+  // Stable identifier scoped to the containing `ReferenceGeometryDefinition`.
   uint32 id = 1 [(buf.validate.field).uint32.gt = 0];
 
   // Optional human-readable name.
@@ -1275,10 +1275,10 @@ message ReferenceGeometryEntrySpec {
     option (buf.validate.oneof).required = true;
 
     // A planar reference.
-    PlaneSpec plane = 4;
+    PlaneDefinition plane = 4;
 
     // A cylindrical reference.
-    CylinderSpec cylinder = 5;
+    CylinderDefinition cylinder = 5;
 
     // A reference whose concrete primitive or construction method is selected
     // at runtime from at least two supported construction cases. Use `plane`
@@ -1287,7 +1287,7 @@ message ReferenceGeometryEntrySpec {
     //
     // Useful for assets like a wall whose center-line reference geometry is a
     // plane for a straight curve and a cylinder for a circular curve.
-    CurveBasedGeometrySpec curve_based = 6;
+    CurveBasedGeometryDefinition curve_based = 6;
   }
 }
 
@@ -1297,25 +1297,25 @@ message ReferenceGeometryEntrySpec {
 // Use this only where runtime selection is needed between at least two
 // construction cases, such as a wall centerline that can be planar or
 // cylindrical depending on the wall curve type. If only one construction method is
-// needed, use the relevant direct spec such as PlaneSpec.
-message CurveBasedGeometrySpec {
+// needed, use the relevant direct spec such as PlaneDefinition.
+message CurveBasedGeometryDefinition {
   // Construction cases supported by this recipe.
   // Each construction method may appear at most once. (We do not choose between
-  // duplicates; ReferenceGeometrySpec with duplicates is treated as invalid).
+  // duplicates; ReferenceGeometryDefinition with duplicates is treated as invalid).
   repeated CurveBasedGeometryCase cases = 1 [(buf.validate.field).repeated.min_items = 2];
 }
 
-// One construction case in a CurveBasedGeometrySpec.
+// One construction case in a CurveBasedGeometryDefinition.
 message CurveBasedGeometryCase {
   // The selected arm identifies the construction method.
   oneof definition {
     option (buf.validate.oneof).required = true;
 
     // Applies only when the resolved Curve2 contains a Line2.
-    PlaneUsingLineOffsetSpec line_offset = 1;
+    PlaneUsingLineOffsetDefinition line_offset = 1;
 
     // Applies only when the resolved Curve2 contains a Circle2.
-    CylinderUsingCurveRadiusSpec circle_radius = 2;
+    CylinderUsingCurveRadiusDefinition circle_radius = 2;
   }
 }
 
@@ -1328,15 +1328,15 @@ message CurveBasedGeometryCase {
 // The spec preserves authored intent, whereas the published map includes entries
 // only after their parameter names and reference IDs validate, and its validity_status
 // reports whether they are usable with the current ReferenceGeometry.
-message ReferenceGeometryParameterMapSpec {
+message ReferenceGeometryParameterMapDefinition {
   option (motif.extension.v1.message).component = 169;
 
   // The asset's parameter-to-reference mappings.
-  repeated ReferenceGeometryParameterMapEntrySpec entries = 1 [(buf.validate.field).repeated.min_items = 1];
+  repeated ReferenceGeometryParameterMapEntryDefinition entries = 1 [(buf.validate.field).repeated.min_items = 1];
 }
 
 // One authored mapping from a scalar parameter to reference geometry.
-message ReferenceGeometryParameterMapEntrySpec {
+message ReferenceGeometryParameterMapEntryDefinition {
   // The name of the declared asset parameter controlled by this reference pair.
   string parameter_name = 1 [(buf.validate.field).string.min_len = 1];
 
@@ -1353,7 +1353,7 @@ message ReferenceGeometryParameterMapEntrySpec {
   ];
 }
 
-// Concrete reference geometry resolved from a `ReferenceGeometrySpec`.
+// Concrete reference geometry resolved from a `ReferenceGeometryDefinition`.
 //
 // Every primitive is expressed in the local frame of the entity carrying this
 // component. To use the geometry in model coordinates a client should apply
@@ -1386,7 +1386,7 @@ enum ReferenceGeometryGenerationStatus {
   REFERENCE_GEOMETRY_GENERATION_STATUS_FAILED = 2;
 }
 
-// One concrete reference resolved from a `ReferenceGeometryEntrySpec`.
+// One concrete reference resolved from a `ReferenceGeometryEntryDefinition`.
 message ReferenceGeometryEntry {
   // Stable identifier copied from the authored declaration.
   uint32 id = 1 [(buf.validate.field).uint32.gt = 0];
@@ -1411,7 +1411,7 @@ message ReferenceGeometryEntry {
 
 // Published mappings from logical asset parameters to concrete reference geometry pairs.
 // This derived component is separate from its authored spec, despite the two being virtually
-// identical. See the `ReferenceGeometryParameterMapSpec` comment for the rationale.
+// identical. See the `ReferenceGeometryParameterMapDefinition` comment for the rationale.
 message ReferenceGeometryParameterMap {
   option (motif.extension.v1.message).component = 171;
 
@@ -1444,7 +1444,7 @@ message ReferenceGeometryParameterMapEntry {
 
 // Whether the published parameter map is usable
 // It could be invalid for several reasons, such as if a mapping names an unsuitable
-// parameter, names an ID absent from ReferenceGeometrySpec, or its referenced
+// parameter, names an ID absent from ReferenceGeometryDefinition, or its referenced
 // concrete geometry was not successfully generated.
 enum ReferenceGeometryParameterMapValidityStatus {
   // No validation result has been recorded. Consumers should not use the entries.
@@ -1512,30 +1512,30 @@ message CoordinateSystem3Input {
 // An authored method for constructing a planar reference.
 // Every construction method produces a plane in the local frame of the entity
 // receiving the resolved `ReferenceGeometry`.
-message PlaneSpec {
+message PlaneDefinition {
   // The supported plane construction methods.
   oneof definition {
     option (buf.validate.oneof).required = true;
 
     // Construct a plane from an origin and normal.
-    PlaneUsingOriginNormalSpec origin_normal = 1;
+    PlaneUsingOriginNormalDefinition origin_normal = 1;
 
     // Construct a plane from a location and tangent on a curve.
-    PlaneUsingCurveLocationSpec using_curve_location = 2;
+    PlaneUsingCurveLocationDefinition using_curve_location = 2;
 
     // Construct a plane parallel to a line at a signed perpendicular offset.
-    PlaneUsingLineOffsetSpec using_line_offset = 3;
+    PlaneUsingLineOffsetDefinition using_line_offset = 3;
 
     // Construct a plane at a curve location, offset along a coordinate system's Z axis.
-    PlaneUsingCurveLocationZOffsetSpec using_curve_location_z_offset = 4;
+    PlaneUsingCurveLocationZOffsetDefinition using_curve_location_z_offset = 4;
 
     // Construct a plane from an Isometry-relative origin and signed local-axis normal.
-    PlaneUsingIsometryLocalOffsetSpec using_isometry_local_offset = 5;
+    PlaneUsingIsometryLocalOffsetDefinition using_isometry_local_offset = 5;
   }
 }
 
 // Constructs a plane by evaluating its origin and normal coordinates.
-message PlaneUsingOriginNormalSpec {
+message PlaneUsingOriginNormalDefinition {
   // Plane-origin X coordinate.
   ParametricExpression origin_x = 1 [(buf.validate.field).required = true];
 
@@ -1556,7 +1556,7 @@ message PlaneUsingOriginNormalSpec {
 }
 
 // Selects a stable location in a curve's parameter domain.
-message CurveLocationSpec {
+message CurveLocationDefinition {
   // Locations that do not require an accompanying numeric value.
   enum NamedLocation {
     // Unspecified named location.
@@ -1597,7 +1597,7 @@ message CurveLocationSpec {
 // origin. At the curve start, the plane normal opposes the lifted tangent; at
 // the curve end, it follows the lifted tangent. Midpoint and fractional
 // locations use the lifted tangent.
-message PlaneUsingCurveLocationSpec {
+message PlaneUsingCurveLocationDefinition {
   // The two-dimensional curve to evaluate.
   Curve2Input curve = 1 [(buf.validate.field).required = true];
 
@@ -1605,7 +1605,7 @@ message PlaneUsingCurveLocationSpec {
   CoordinateSystem3Input coordinate_system = 2 [(buf.validate.field).required = true];
 
   // Where to evaluate the curve.
-  CurveLocationSpec location = 3 [(buf.validate.field).required = true];
+  CurveLocationDefinition location = 3 [(buf.validate.field).required = true];
 }
 
 // Constructs a plane parallel to a line at a signed perpendicular offset.
@@ -1614,7 +1614,7 @@ message PlaneUsingCurveLocationSpec {
 // left perpendicular `(-dir.y, dir.x)` is used as the plane normal and offset
 // direction, then the resulting origin and normal are lifted into three
 // dimensions by `coordinate_system`.
-message PlaneUsingLineOffsetSpec {
+message PlaneUsingLineOffsetDefinition {
   // The two-dimensional line to offset. Other Curve2 variants are invalid.
   Curve2Input curve = 1 [(buf.validate.field).required = true];
 
@@ -1627,7 +1627,7 @@ message PlaneUsingLineOffsetSpec {
 
 // Constructs a plane centered at a location on a curve and offset along a
 // coordinate system's positive Z axis. The plane normal follows that Z axis.
-message PlaneUsingCurveLocationZOffsetSpec {
+message PlaneUsingCurveLocationZOffsetDefinition {
   // Supported directions for the plane normal along the coordinate-system Z axis.
   enum NormalDirection {
     // Unspecified normal direction.
@@ -1647,7 +1647,7 @@ message PlaneUsingCurveLocationZOffsetSpec {
   CoordinateSystem3Input coordinate_system = 2 [(buf.validate.field).required = true];
 
   // Where to evaluate the curve.
-  CurveLocationSpec location = 3 [(buf.validate.field).required = true];
+  CurveLocationDefinition location = 3 [(buf.validate.field).required = true];
 
   // Signed distance from the lifted curve point along the positive Z axis.
   ParametricExpression z_offset = 4 [(buf.validate.field).required = true];
@@ -1660,7 +1660,7 @@ message PlaneUsingCurveLocationZOffsetSpec {
 }
 
 // Constructs a plane by offsetting an Isometry's origin in its local frame.
-message PlaneUsingIsometryLocalOffsetSpec {
+message PlaneUsingIsometryLocalOffsetDefinition {
   // Supported signed local axes for the plane normal.
   enum NormalDirection {
     // Plane normal direction not specified. This is invalid.
@@ -1713,13 +1713,13 @@ message PlaneUsingIsometryLocalOffsetSpec {
 // An authored method for constructing a cylindrical reference.
 // Every construction method produces a cylinder in the local frame of the entity
 // receiving the resolved `ReferenceGeometry`.
-message CylinderSpec {
+message CylinderDefinition {
   // The supported cylinder construction methods.
   oneof definition {
     option (buf.validate.oneof).required = true;
 
     // Construct a cylinder from a circular curve and radius offset.
-    CylinderUsingCurveRadiusSpec using_curve_radius = 1;
+    CylinderUsingCurveRadiusDefinition using_curve_radius = 1;
   }
 }
 
@@ -1728,7 +1728,7 @@ message CylinderSpec {
 // The curve center is lifted into three dimensions by `coordinate_system`, the
 // coordinate system's Z axis becomes the cylinder axis, and `radius_offset` is
 // added to the curve's radius.
-message CylinderUsingCurveRadiusSpec {
+message CylinderUsingCurveRadiusDefinition {
   // The circular two-dimensional curve.
   Curve2Input curve = 1 [(buf.validate.field).required = true];
 
