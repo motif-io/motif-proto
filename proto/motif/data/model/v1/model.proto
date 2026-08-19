@@ -818,11 +818,8 @@ message BuiltinAssetConfiguration {
   }
 }
 
-// Identifies a behavior whose regeneration function is as follows:
-// * Read the `Shape` component from the `shape` reference.
-// * Convert the `Shape` into a triangular mesh.
-// * Write the mesh to the `mesh` reference.
-message ConvertShapeToMeshBehavior {
+// Tessellates a shape into a triangular mesh.
+message TessellateShapeBehavior {
   option (motif.extension.v1.message).component = 93;
 
   // The source shape to convert.
@@ -835,7 +832,7 @@ message ConvertShapeToMeshBehavior {
   ];
 
   // The entity the generated `Mesh` is written to.
-  motif.extension.v1.DataReference mesh = 2 [
+  motif.extension.v1.DataReference output = 2 [
     (buf.validate.field).required = true,
     (motif.extension.v1.field).data_reference_expected_type = {
       kind: TYPE_MESSAGE
