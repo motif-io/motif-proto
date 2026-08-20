@@ -963,17 +963,20 @@ message ExtrudeBoundaryProfileBehavior {
     (motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}
   ];
 
-  // Deprecated: use `extrusion_direction`, which states the direction absolutely
-  // rather than as an asset family default. When true, extrude along the
-  // +workplane normal (ceiling); when false, along the -normal (floor). Still
-  // honored, but only as the fallback when `extrusion_direction` is unset.
+  // Deprecated: use `extrude_along_normal`, which carries the same meaning as a
+  // resolved parameter rather than a value baked into the asset family. When
+  // true, extrude along the +workplane normal (ceiling); when false, along the
+  // -normal (floor). Still honored, but only as the fallback when
+  // `extrude_along_normal` is unset.
   bool extrude_along_workplane_normal = 4 [deprecated = true];
 
-  // Resolved parameter: the extrusion direction, stated absolutely. When set
-  // this wins outright — true extrudes along the +workplane normal, false along
-  // the -normal. When unset, the deprecated `extrude_along_workplane_normal`
-  // applies as a fallback.
-  motif.extension.v1.DataReference extrusion_direction = 6 [(motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_BOOL}];
+  // Resolved parameter: when true, extrude along the +workplane normal; when
+  // false, along the -normal. This is the workplane normal, not world up — on a
+  // sloped workplane (a roof, say) thickness runs perpendicular to the plane
+  // rather than vertically. When set this wins outright over the deprecated
+  // `extrude_along_workplane_normal`, which applies only as the fallback when
+  // this is unset.
+  motif.extension.v1.DataReference extrude_along_normal = 6 [(motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_BOOL}];
 
   // The entity the generated `Shape` is written to.
   motif.extension.v1.DataReference output = 5 [
