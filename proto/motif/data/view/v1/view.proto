@@ -123,11 +123,10 @@ message Lighting {
 // derived from the view's shaded model geometry. Lives on the view entity.
 //
 // Absent from a view means model edges render with their default appearance,
-// which is enabled. Cut linework in plan/section/elevation views is produced by
-// the view's projection pipeline (see `ProjectedGeometry`) and is not governed
-// by this component: that pipeline draws only the boundary of geometry the
-// view's cut plane slices, so this component covers every non-cut edge and the
-// two are styled independently.
+// which is enabled. This component covers every non-cut edge. Cut-plane
+// linework is `CutGeometry` and is not governed here; it is styled by
+// `ViewStyle`. Plan hidden-line fill is `ProjectedGeometry` and is a separate
+// derived payload.
 message ModelEdges {
   option (motif.extension.v1.message).component = 157;
 
@@ -330,7 +329,8 @@ message VisibilityRules {
 // created by change propagation.
 //
 // Coordinates inside the payload are model-space XY with the source entity's
-// transform baked in by the projection pipeline.
+// transform baked in by the projection pipeline. Distinct from `CutGeometry`,
+// which is MultiLineString cut-plane linework in view-space.
 message ProjectedGeometry {
   option (motif.extension.v1.message).component = 64;
 
@@ -338,13 +338,56 @@ message ProjectedGeometry {
   // (rather than sniffed from a magic byte) and so additional encodings can
   // be added later without breaking existing readers.
   oneof payload {
-    // OGC Well-Known Binary, MultiPolygon (geometry type 6), 2D, no SRID.
-    // See https://libgeos.org/specifications/wkb/.
+    // OGC Well-Known Binary, little-endian (byte order 0x01), MultiPolygon
+    // (geometry type 6), 2D, no Z/M, no SRID. See
+    // https://libgeos.org/specifications/wkb/.
     bytes wkb = 1;
   }
 
   // TODO: add styling fields here as the floor-plan UX evolves (stroke
   // colors / weights, line patterns, hatching, etc.).
+}
+
+// Persisted cut-plane linework for a source entity in a view. Lives on a
+// derived entity that carries `motif.data.core.v1.DerivedFrom` (the source)
+// and is a `motif.data.core.v1.Member` of the view — the same spine as
+// `ProjectedGeometry`.
+//
+// Do not persist this component on the source, a content-library asset, or a
+// cross-model `Instance`.
+//
+// This is stroked polylines, not a fill. It is not `ProjectedGeometry`
+// (MultiPolygon plan fill in model-space XY), not
+// `motif.data.temporary.v1.Geometry2d` (parametric asset drawing geometry),
+// and not `motif.data.temporary.v1.CutGeometryBehavior` (BRep prism cut for
+// hosted openings). Cap fills are a separate derived mesh, styled by
+// `ViewStyle` / `CapFillStyle`; this message has no style fields.
+//
+// Coordinates are view-space 2D in meters. `p` is a point in the view-owning
+// model's world, with the source's instance transform already applied
+// (cross-model sources are converted into that model first). Then
+// `u = p·right` and `v = p·up`, where `right` and `up` are the view's
+// orthonormal axes (camera local +X and +Y; the camera looks along local -Z).
+// The 2D origin is that world's origin projected into the frame. Holes are not
+// a first-class shape. A closed cut must repeat its start vertex as the last;
+// an open cut must not.
+message CutGeometry {
+  option (motif.extension.v1.message).component = 178;
+
+  // The encoded 2D linework. A `oneof` so the encoding is part of the schema
+  // (rather than sniffed from a magic byte) and so additional encodings can
+  // be added later without breaking existing readers.
+  //
+  // An unset `payload` is not valid geometry — readers must treat it as
+  // missing. An empty MultiLineString (geometry type 5, count 0) means
+  // generation ran and produced no linework. A zero-length `wkb` is neither
+  // of those and must not be written.
+  oneof payload {
+    // OGC Well-Known Binary, little-endian (byte order 0x01), MultiLineString
+    // (geometry type 5), 2D, no Z/M, no SRID. Nested LineStrings. See
+    // https://libgeos.org/specifications/wkb/.
+    bytes wkb = 1;
+  }
 }
 
 // Per-view "default" styling applied to the view's derived outline and
