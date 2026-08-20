@@ -357,11 +357,11 @@ message ProjectedGeometry {
 // cross-model `Instance`.
 //
 // This is stroked polylines, not a fill. It is not `ProjectedGeometry`
-// (MultiPolygon plan fill in model-space XY), not
-// `motif.data.temporary.v1.Geometry2d` (parametric asset drawing geometry),
-// and not `motif.data.temporary.v1.CutGeometryBehavior` (BRep prism cut for
-// hosted openings). Cap fills are a separate derived mesh, styled by
-// `ViewStyle` / `CapFillStyle`; this message has no style fields.
+// (MultiPolygon plan fill in model-space XY). Not
+// `motif.data.temporary.v1.Geometry2d` or
+// `motif.data.temporary.v1.CutGeometryBehavior`. Cap fills are a separate
+// derived mesh, styled by `ViewStyle` / `CapFillStyle`; this message has no
+// style fields.
 //
 // Coordinates are view-space 2D in meters. `p` is a point in the view-owning
 // model's world, with the source's instance transform already applied
