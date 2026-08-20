@@ -1,6 +1,5 @@
 syntax = "proto3";
 
-// Persistent diagnostics associated with Motif model entities.
 package motif.data.core.v1;
 
 import "buf/validate/validate.proto";
@@ -8,8 +7,8 @@ import "motif/data/core/v1/core.proto";
 import "motif/extension/v1/options.proto";
 import "motif/extension/v1/reference.proto";
 
-// A single diagnostic persisted in the model because some model state could
-message ChangePropagationError {
+// Persistent diagnostics and their error types for Motif model entities.
+message RegenerationError {
   option (motif.extension.v1.message).component = 180;
 
   // The machine-readable kind of error.
@@ -19,12 +18,12 @@ message ChangePropagationError {
   // If these don't match the string, a generic error message will be shown instead.
   map<string, ScalarValue> parameters = 2;
 
-  // An fallback brief summary supplied by the component that produced the diagnostic.
-  // (Will be displayed as is, not subject to translation)
+  // Fallback text used only when no localized summary is available.
+  // Displayed as-is; not translated.
   optional string fallback_summary = 3 [(buf.validate.field).string.max_len = 128];
 
-  // An English fallback message supplied by the component that produced the diagnostic.
-  // (Will be displayed as is, not subject to translation)
+  // Fallback text used only when no localized message is available.
+  // Displayed as-is; not translated.
   optional string fallback_message = 4;
 
   // The entity in this model affected by the error. Required.
