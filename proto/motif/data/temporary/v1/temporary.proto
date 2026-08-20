@@ -963,14 +963,17 @@ message ExtrudeBoundaryProfileBehavior {
     (motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}
   ];
 
-  // When true, extrude along +workplane normal (ceiling); when false, along
-  // -normal (floor).
-  bool extrude_along_workplane_normal = 4;
+  // Deprecated: use `extrusion_direction`, which states the direction absolutely
+  // rather than as an asset family default. When true, extrude along the
+  // +workplane normal (ceiling); when false, along the -normal (floor). Still
+  // honored, but only as the fallback when `extrusion_direction` is unset.
+  bool extrude_along_workplane_normal = 4 [deprecated = true];
 
-  // Resolved parameter: when true, flip the asset family's default extrusion
-  // direction (e.g. floor up, ceiling/roof down). Unset or false keeps the
-  // family default encoded in `extrude_along_workplane_normal`.
-  motif.extension.v1.DataReference extrude_direction_flip = 6 [(motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_BOOL}];
+  // Resolved parameter: the extrusion direction, stated absolutely. When set
+  // this wins outright — true extrudes along the +workplane normal, false along
+  // the -normal. When unset, the deprecated `extrude_along_workplane_normal`
+  // applies as a fallback.
+  motif.extension.v1.DataReference extrusion_direction = 6 [(motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_BOOL}];
 
   // The entity the generated `Shape` is written to.
   motif.extension.v1.DataReference output = 5 [
