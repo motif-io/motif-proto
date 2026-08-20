@@ -306,6 +306,31 @@ message Placement2d {
   motif.data.geometry.v1.Box2d placement = 1;
 }
 
+// Whether a resizable placement preserves its aspect ratio when resized.
+// Generic across placement kinds — images today, other resizable placed
+// objects later. Pairs with `Placement2d` on the placing entity, not the
+// shared asset.
+//
+// Stamped as `STATE_LOCKED` when an object is placed: proportion locking is on
+// by default. Locking preserves the placement's aspect ratio as it stands when
+// a resize begins.
+message AspectLock {
+  option (motif.extension.v1.message).component = 177;
+
+  State state = 1;
+
+  // Whether resizing preserves the placement's current aspect ratio.
+  enum State {
+    // Unspecified. Read as `STATE_LOCKED` so the default holds for placements
+    // that predate this component.
+    STATE_UNSPECIFIED = 0;
+    // Resizing preserves the current aspect ratio.
+    STATE_LOCKED = 1;
+    // Width and height resize independently.
+    STATE_UNLOCKED = 2;
+  }
+}
+
 // A marker component indicating an entity should be hidden from default UI
 // views.
 //
