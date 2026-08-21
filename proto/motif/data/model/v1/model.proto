@@ -91,35 +91,6 @@ message DefaultWorkplane {
   option (motif.extension.v1.message).component = 18;
 }
 
-// A join between two or more entities.
-message Join {
-  option (motif.extension.v1.message).component = 27;
-
-  // The participating entities. Must contain at least one.
-  repeated JoinEntity entities = 1 [(buf.validate.field).repeated.min_items = 1];
-
-  // One participant in a join, and where along its curve it is anchored.
-  message JoinEntity {
-    // The participating entity. Required.
-    motif.extension.v1.EntityReference entity = 1 [(buf.validate.field).required = true];
-    // Where on the entity's curve the join is located.
-    JoinLocationKind kind = 2;
-
-    // The location along a participant's curve at which it joins.
-    message JoinLocationKind {
-      // The anchor location.
-      oneof kind {
-        // The start of the curve.
-        google.protobuf.Empty start = 1;
-        // The end of the curve.
-        google.protobuf.Empty end = 2;
-        // A specific curve parameter.
-        double param = 3;
-      }
-    }
-  }
-}
-
 // Reference to a plane source entity.
 message PlanarReference {
   option (motif.extension.v1.message).component = 28;
