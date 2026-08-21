@@ -149,6 +149,12 @@ message ModelEdges {
   // Stroke color of model edges. Unset means the renderer's default color.
   // Independent of the cut linework's color, which comes from `ViewStyle`.
   motif.data.style.v1.Color color = 5;
+
+  // Optional integer pen index (Revit-style). When set, the renderer resolves
+  // the on-paper width in mm from the project's pen-width table for the
+  // active view's scale and ignores `width`. Unset (or 0) keeps the
+  // screen-space `width`. Same meaning as `LineStyle.pen_size`.
+  optional uint32 pen_size = 6;
 }
 
 // Defines a view's clipping bounds: the level-anchored planes that bound a
