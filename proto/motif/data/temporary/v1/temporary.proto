@@ -978,6 +978,31 @@ message ExtrudeBoundaryProfileBehavior {
   // this is unset.
   motif.extension.v1.DataReference extrude_along_normal = 6 [(motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_BOOL}];
 
+  // Elevation of the level this boundary is placed on, in meters, referenced
+  // rather than copied. Bound to the level's `RelativeElevation.elevation`, so
+  // the boundary tracks the level through change propagation instead of holding
+  // a snapshot that goes stale when the level moves. Mirrors the wall's
+  // `base_level_elev` on
+  // `motif.data.model.v1.ComposeParametricWallSweepInputsBehavior`.
+  //
+  // When set, the profile is extruded from `workplane` with `origin.z`
+  // overridden to `base_level_elev + base_offset`, exactly as the wall composes
+  // its sweep frame; the workplane's axes are untouched, so orientation and the
+  // in-plane position still come from the workplane itself.
+  //
+  // Optional: boundaries authored before this field reference no level, and the
+  // workplane's own `origin.z` stands unmodified.
+  motif.extension.v1.DataReference base_level_elev = 7 [(motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}];
+
+  // Resolved parameter: the boundary's signed offset from `base_level_elev`, in
+  // meters. Negative values sit below the level. Held separately from the level
+  // elevation so that moving the level preserves the offset the boundary was
+  // authored with, rather than rewriting it.
+  //
+  // Ignored when `base_level_elev` is unset. Unset or zero places the boundary
+  // on the level itself.
+  motif.extension.v1.DataReference base_offset = 8 [(motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}];
+
   // The entity the generated `Shape` is written to.
   motif.extension.v1.DataReference output = 5 [
     (buf.validate.field).required = true,
