@@ -992,75 +992,47 @@ message JoinBehavior {
   repeated JoinParticipant participants = 2;
 }
 
-// A planar hosting surface trimmed to the valid placement region on a host
-// entity.
+// <remove>Component 97 `TrimmedHostingSurface` and component 98 `HostBehavior`
+// were removed here; hosting is now a single face-mate path and `HostedBehavior`
+// binds straight to the host's `ReferenceGeometry` face entry. Their removed
+// doc prose read:
 //
-// The hosting plane is computed from the same inputs as the host's swept
-// geometry so the two stay consistent: `curve` + `coordinate_system` give the
-// plane's origin (curve start), its u-axis (curve start tangent) and normal (the
-// host's thickness direction), and the u-extent (the curve length); `height` is
-// the v-extent (the host height, measured from the base up).
-message TrimmedHostingSurface {
-  option (motif.extension.v1.message).component = 97;
-
-  // The trimmed hosting plane.
-  motif.data.geometry.v1.Plane surface = 1;
-
-  // The host's spine curve, in `coordinate_system` space. Supplies the plane
-  // origin, u-axis and u-extent (the curve length).
-  motif.extension.v1.DataReference curve = 2 [
-    (buf.validate.field).required = true,
-    (motif.extension.v1.field).data_reference_expected_type = {
-      kind: TYPE_MESSAGE
-      type_name: "motif.data.geometry.v1.Curve2"
-    }
-  ];
-
-  // Plane height extent (v) in the plane's parametric coordinates.
-  motif.extension.v1.DataReference height = 3 [
-    (buf.validate.field).required = true,
-    (motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}
-  ];
-
-  // The coordinate system that lifts `curve` into world space (the host spine
-  // frame).
-  motif.extension.v1.DataReference coordinate_system = 4 [
-    (buf.validate.field).required = true,
-    (motif.extension.v1.field).data_reference_expected_type = {
-      kind: TYPE_MESSAGE
-      type_name: "motif.data.geometry.v1.CoordinateSystem3"
-    }
-  ];
-}
-
-// A behavior which identifies an entity as a host for other hosted entities.
-message HostBehavior {
-  option (motif.extension.v1.message).component = 98;
-
-  // The host's trimmed hosting surface.
-  motif.extension.v1.DataReference hosting_surface = 1 [
-    (buf.validate.field).required = true,
-    (motif.extension.v1.field).data_reference_expected_type = {
-      kind: TYPE_MESSAGE
-      type_name: "motif.data.model.v1.TrimmedHostingSurface"
-    }
-  ];
-}
+//   TrimmedHostingSurface: "A planar hosting surface trimmed to the valid
+//   placement region on a host entity. The hosting plane is computed from the
+//   same inputs as the host's swept geometry so the two stay consistent:
+//   `curve` + `coordinate_system` give the plane's origin (curve start), its
+//   u-axis (curve start tangent) and normal (the host's thickness direction),
+//   and the u-extent (the curve length); `height` is the v-extent (the host
+//   height, measured from the base up)." Its field comments — `surface`,
+//   `curve`, `height`, `coordinate_system` — were removed with it.
+//
+//   HostBehavior: "A behavior which identifies an entity as a host for other
+//   hosted entities." Its field comment — `hosting_surface` — was removed with
+//   it.
+//
+// Component ids 97 and 98 are retired and must never be reused.</remove>
 
 // A behavior which identifies an entity as hosted on another entity's hosting
 // surface.
 //
-// Regeneration reads the host's trimmed hosting surface and the stored
-// parametric coordinate, then writes the hosted entity's absolute transform.
+// <remove>Regeneration reads the host's trimmed hosting surface and the stored
+// parametric coordinate, then writes the hosted entity's absolute transform.</remove>
+// <add>Regeneration reads the host's `ReferenceGeometry` face and this element's
+// own mating face, mates the two at the stored parametric coordinate, then
+// writes the hosted entity's absolute transform.</add>
 message HostedBehavior {
   option (motif.extension.v1.message).component = 99;
 
-  // The host's trimmed hosting surface.
+  // <remove>The host's trimmed hosting surface.</remove>
+  // <add>The host face this element mates to: the host's own `ReferenceGeometry`
+  // (target = the host entity) with, in the path, the entry that is the face — a
+  // plane for a straight host, a cylinder for a curved one. Each entry is its own
+  // resolvable slot, so this binds directly to the face.</add>
   motif.extension.v1.DataReference host_surface = 1 [
     (buf.validate.field).required = true,
     (motif.extension.v1.field).data_reference_expected_type = {
       kind: TYPE_MESSAGE
-      type_name: "motif.data.model.v1.TrimmedHostingSurface"
+      type_name: "motif.data.model.v1.ReferenceGeometry"
     }
   ];
 
@@ -1073,8 +1045,24 @@ message HostedBehavior {
     }
   ];
 
+  // <add>Which of THIS element's own `ReferenceGeometry` entries is the face it
+  // mates to the host.
+  //
+  // The persisted counterpart of `host_surface`, on the element's side: it names
+  // the element's own `ReferenceGeometry` (target = this entity) and, in the
+  // path, the entry that is its mating face. Each entry is its own resolvable
+  // slot, so this binds directly to the face. The mating face fixes which side
+  // the element faces, so no facing flip is needed.</add>
+  motif.extension.v1.DataReference mating_reference = 3 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.model.v1.ReferenceGeometry"
+    }
+  ];
+
   // The entity the computed absolute transform is written to.
-  motif.extension.v1.DataReference absolute_transform = 3 [
+  motif.extension.v1.DataReference absolute_transform = 4 [
     (buf.validate.field).required = true,
     (motif.extension.v1.field).data_reference_expected_type = {
       kind: TYPE_MESSAGE
@@ -1082,8 +1070,13 @@ message HostedBehavior {
     }
   ];
 
-  // Turns the hosted element to face the host's other side.
-  motif.extension.v1.DataReference facing_flip = 4 [(motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_BOOL}];
+  // <remove>4 was `facing_flip`: "Turns the hosted element to face the host's
+  // other side."</remove>
+  // <add>The mating face now fixes which side the element faces, so the
+  // per-element flip is gone. Field 4 carries `absolute_transform` rather than
+  // being reserved: the `host_surface` retarget above already breaks every
+  // pre-existing `HostedBehavior`, so there is no older payload to protect.</add>
+  reserved "facing_flip";
 }
 
 // A behavior which subtracts one profile solid from a target geometry.
