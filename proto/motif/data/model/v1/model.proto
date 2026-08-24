@@ -1508,6 +1508,18 @@ message PlaneUsingOriginNormalDefinition {
 
   // Plane-normal Z component.
   ParametricExpression normal_z = 6 [(buf.validate.field).required = true];
+
+  // <add>Optional in-plane u-axis X component. When all three axis_u components are set, the generated
+  // plane carries an explicit axis_u (see UnboundedPlane.axis_u), pinning its in-plane orientation
+  // for faces whose hosted elements must align (e.g. a wall opening's front mate face). When unset,
+  // the frame derives the u-axis heuristically.</add>
+  ParametricExpression axis_u_x = 7;
+
+  // <add>Optional in-plane u-axis Y component. See axis_u_x.</add>
+  ParametricExpression axis_u_y = 8;
+
+  // <add>Optional in-plane u-axis Z component. See axis_u_x.</add>
+  ParametricExpression axis_u_z = 9;
 }
 
 // Selects a stable location in a curve's parameter domain.
@@ -1701,6 +1713,12 @@ message UnboundedPlane {
 
   // The plane's normal.
   motif.data.geometry.v1.UnitVector3 normal = 2 [(buf.validate.field).required = true];
+
+  // <add>Optional explicit in-plane u-axis. Set for faces whose hosted elements must align — a wall
+  // opening's front mate face and the wall thickness face it seats on both carry it so the opening
+  // stands upright with its width along the wall, independent of the wall's heading. When unset, the
+  // frame derives the u-axis heuristically (fine where in-plane orientation does not matter).</add>
+  motif.data.geometry.v1.UnitVector3 axis_u = 3;
 }
 
 // A concrete unbounded cylindrical reference.
