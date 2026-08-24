@@ -1342,21 +1342,6 @@ message ReferenceGeometry {
   map<uint32, ReferenceGeometryEntry> entries = 1 [(buf.validate.field).map.keys = {
     uint32: {gt: 0}
   }];
-
-  // Whether generation of the reference geometries was successful.
-  ReferenceGeometryGenerationStatus generation_status = 2 [(buf.validate.field).enum.defined_only = true];
-}
-
-// Whether resolved ReferenceGeometry matches its current inputs.
-enum ReferenceGeometryGenerationStatus {
-  // No generation result has been recorded. Consumers should not use the entries.
-  REFERENCE_GEOMETRY_GENERATION_STATUS_UNSPECIFIED = 0;
-
-  // All declared reference geometries were successfully generated from the current inputs.
-  REFERENCE_GEOMETRY_GENERATION_STATUS_SUCCEEDED = 1;
-
-  // At least one declared reference geometry could not be generated.
-  REFERENCE_GEOMETRY_GENERATION_STATUS_FAILED = 2;
 }
 
 // One concrete reference resolved from a `ReferenceGeometryEntryDefinition`.
