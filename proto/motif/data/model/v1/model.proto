@@ -1222,31 +1222,34 @@ message SourceAsset {
 message ReferenceGeometryDefinition {
   option (motif.extension.v1.message).component = 168;
 
-  // The asset's reference geometry declarations. IDs must be unique within
-  // this component and remain stable across compatible recipe revisions.
-  repeated ReferenceGeometryEntryDefinition entries = 1 [(buf.validate.field).repeated.min_items = 1];
+  // The asset's reference geometry declarations, keyed by stable reference ID.
+  // Keys are scoped to this component. Keys must remain stable across compatible
+  // recipe revisions.
+  map<uint32, ReferenceGeometryEntryDefinition> entries = 1 [(buf.validate.field).map = {
+    min_pairs: 1
+    keys: {
+      uint32: {gt: 0}
+    }
+  }];
 }
 
 // One authored stable reference geometry declaration.
 message ReferenceGeometryEntryDefinition {
-  // Stable identifier scoped to the containing `ReferenceGeometryDefinition`.
-  uint32 id = 1 [(buf.validate.field).uint32.gt = 0];
-
   // Optional human-readable name.
-  optional string name = 2;
+  optional string name = 1;
 
   // Selection priority. Larger values have higher priority.
-  int32 priority = 3;
+  int32 priority = 2;
 
   // How to construct the reference geometry.
   oneof primitive {
     option (buf.validate.oneof).required = true;
 
     // A planar reference.
-    PlaneDefinition plane = 4;
+    PlaneDefinition plane = 3;
 
     // A cylindrical reference.
-    CylinderDefinition cylinder = 5;
+    CylinderDefinition cylinder = 4;
 
     // A reference whose concrete primitive or construction method is selected
     // at runtime from at least two supported construction cases. Use `plane`
@@ -1255,7 +1258,7 @@ message ReferenceGeometryEntryDefinition {
     //
     // Useful for assets like a wall whose center-line reference geometry is a
     // plane for a straight curve and a cylinder for a circular curve.
-    CurveBasedGeometryDefinition curve_based = 6;
+    CurveBasedGeometryDefinition curve_based = 5;
   }
 }
 
@@ -1336,7 +1339,9 @@ message ReferenceGeometry {
   // The resolved references.
   // Empty if generation failed, so consumers do not accidentally use
   // stale geometry produced from older input values.
-  repeated ReferenceGeometryEntry entries = 1;
+  map<uint32, ReferenceGeometryEntry> entries = 1 [(buf.validate.field).map.keys = {
+    uint32: {gt: 0}
+  }];
 
   // Whether generation of the reference geometries was successful.
   ReferenceGeometryGenerationStatus generation_status = 2 [(buf.validate.field).enum.defined_only = true];
@@ -1356,24 +1361,21 @@ enum ReferenceGeometryGenerationStatus {
 
 // One concrete reference resolved from a `ReferenceGeometryEntryDefinition`.
 message ReferenceGeometryEntry {
-  // Stable identifier copied from the authored declaration.
-  uint32 id = 1 [(buf.validate.field).uint32.gt = 0];
-
   // Optional human-readable name copied from the authored declaration.
-  optional string name = 2;
+  optional string name = 1;
 
   // Selection priority copied from the authored declaration.
-  int32 priority = 3;
+  int32 priority = 2;
 
   // The resolved reference geometry.
   oneof primitive {
     option (buf.validate.oneof).required = true;
 
     // A planar reference.
-    UnboundedPlane plane = 4;
+    UnboundedPlane plane = 3;
 
     // A cylindrical reference.
-    UnboundedCylinder cylinder = 5;
+    UnboundedCylinder cylinder = 4;
   }
 }
 
