@@ -1747,15 +1747,21 @@ enum Geometry2dEntryStatus {
 //
 // Lives on the asset definition entity. Presentation places, orders, labels,
 // and styles rows. It never grants writability and never changes what an
-// edit means: consumers derive writability from whether a row is backed by a
-// declared parameter, so a wrong or stale entry degrades to a default
-// rendering, never to a wrong edit.
+// edit means: a reader decides writability from its own model of the row
+// (the row's editor and whether its value is computed), never from this
+// component, so a wrong or stale entry degrades to a default rendering,
+// never to a wrong edit.
 //
 // A row key names a row. An unqualified key is an emitter-owned reported key
-// (for example "height" or "area"). A declared parameter is addressed as
-// "parameter:<name>" (split on the first ":"), the same catalog-qualified
-// form as `LineStyle.pattern_ref`, so the two namespaces cannot collide.
-// Further catalogs are reserved.
+// (for example "height" or "area") and never contains ":". A declared
+// parameter is addressed as "parameter:<name>", where <name> is the
+// parameter's key in the map
+// `motif.data.temporary.v1.ParameterDeclarations.declarations`. This is the
+// same catalog-qualified form as `LineStyle.pattern_ref` (split on the
+// first ":"), so the two namespaces cannot collide. The pattern on
+// `row_key` rejects a ":" in an unqualified key and every catalog other
+// than "parameter". That reserves further catalogs and removes the need
+// for an escaping rule.
 //
 // The component absent, or present with both lists empty, means every row
 // gets the panel's default presentation. A row without an entry keeps the
@@ -1764,18 +1770,36 @@ enum Geometry2dEntryStatus {
 message PropertyPresentations {
   option (motif.extension.v1.message).component = 179;
 
-  // The row entries, in display order within each group. Each `row_key`
-  // appears at most once: publish rejects duplicates, and a reader that
-  // sees one uses the first entry.
+  // The row entries. The list may interleave groups: a reader filters the
+  // list per group and keeps relative order, so a group's rows need not be
+  // contiguous. A reader may render a group's editable rows before its
+  // read-only rows (writability is reader-derived, see above), so list
+  // order is guaranteed only inside each half. List a group's editable
+  // rows before its read-only ones and the written order holds in every
+  // reader. Each `row_key` appears at most once: publish rejects
+  // duplicates, and a reader that sees one uses the first entry.
   repeated RowPresentation rows = 1;
 
-  // The composite entries. Each `composite_id` appears at most once, and a
-  // row key is a member of at most one composite: publish rejects both
-  // violations, and a reader that sees one uses the first entry.
+  // The composite entries. Each `composite_id` appears at most once, a row
+  // key is a member of at most one composite, and a row key appears at
+  // most once across a composite's pages: publish rejects all three, and a
+  // reader that sees a duplicate uses the first occurrence.
   //
-  // A member row renders only inside its composite. The composite occupies
-  // the panel slot of its first member row, and order inside the composite
-  // comes from the composite's own member order, not from `rows`.
+  // A member row renders inside its composite, not separately in its
+  // group. A reader that does not recognize a `composite_id` renders the
+  // members as ordinary rows in their own slots instead. Every member row
+  // must belong to one group: publish rejects a composite whose member
+  // rows disagree on group, and a reader that sees one claims the
+  // composite per group, each group's members as their own unit.
+  //
+  // The composite occupies the panel slot of its first member row (for a
+  // paged composite, the first key of the first page) and pulls the other
+  // members to it, across the editable and read-only halves. If that
+  // first member row has no entry in `rows`, the composite keeps the
+  // panel's default placement. A member key that names no row on the
+  // entity is ignored, and a composite whose member keys all name no row
+  // renders nothing. Order inside the composite comes from the composite's
+  // own member order, not from `rows`.
   repeated CompositePresentation composites = 2;
 }
 
@@ -1803,8 +1827,10 @@ message RowPresentation {
     GROUP_CLASSIFICATION = 4;
   }
 
-  // The row this entry presents.
-  string row_key = 1 [(buf.validate.field).string.min_len = 1];
+  // The row this entry presents: an unqualified reported key with no ":",
+  // or "parameter:<name>". The pattern rejects every other catalog, which
+  // reserves them.
+  string row_key = 1 [(buf.validate.field).string.pattern = "^(parameter:.+|[^:]+)$"];
 
   // The group the row renders in.
   Group group = 2 [(buf.validate.field).enum.defined_only = true];
@@ -1845,10 +1871,11 @@ message CompositePresentation {
   // The composite's display title.
   optional string title = 2;
 
-  // The composite's members. A composite is flat or paged, never both, so
-  // the two shapes are a `oneof`. A composite with no members set is
-  // ignored.
+  // The composite's members. A composite is flat or paged, never both and
+  // always one of the two, so the shapes are a required `oneof`.
   oneof members {
+    option (buf.validate.oneof).required = true;
+
     // Member row keys, for the composite kinds without pages.
     RowKeyList flat = 3;
 
@@ -1864,8 +1891,11 @@ message CompositePresentation {
 
   // An ordered list of pages.
   message PageList {
-    // The pages, in display order.
-    repeated Page pages = 1 [(buf.validate.field).repeated.min_items = 1];
+    // The pages, in display order. A paged composite has at least two
+    // pages: with one page there is nothing to page, so publish collapses
+    // a single page to the flat shape and `min_items` makes it
+    // unrepresentable here.
+    repeated Page pages = 1 [(buf.validate.field).repeated.min_items = 2];
   }
 
   // One page of a paged composite.
