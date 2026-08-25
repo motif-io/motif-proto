@@ -72,81 +72,6 @@ message Instance {
   motif.extension.v1.ModelReference model = 2;
 }
 
-// Parameter bindings for a parametric instance.
-//
-// Keys are parameter names; values define how each parameter is bound.
-message ParameterBindings {
-  option (motif.extension.v1.message).component = 65;
-
-  // The bound parameters, keyed by parameter name.
-  map<string, ParameterBinding> bindings = 1;
-}
-
-// Schema declaring what parameters a definition expects from its instances.
-//
-// Placed on definition entities to declare the parameters that instances must
-// provide values for.
-message ParameterDeclarations {
-  option (motif.extension.v1.message).component = 61;
-
-  // The declared parameters.
-  repeated ParameterDeclaration declarations = 1;
-}
-
-// The definition of a single parameter.
-message ParameterDeclaration {
-  // The parameter name.
-  string name = 1;
-  // An optional human-readable description.
-  optional string description = 2;
-  // The expected type of the parameter's value.
-  ParameterType parameter_type = 3;
-}
-
-// The type of a parameter value.
-enum ParameterType {
-  // Unspecified parameter type.
-  PARAMETER_TYPE_UNSPECIFIED = 0;
-  // A length value.
-  PARAMETER_TYPE_LENGTH = 1;
-  // A 2D curve.
-  PARAMETER_TYPE_CURVE2 = 2;
-  // A 3D coordinate system.
-  PARAMETER_TYPE_COORDINATE_SYSTEM_3 = 3;
-  // A 2D point.
-  PARAMETER_TYPE_POINT2 = 4;
-  // A 3D point.
-  PARAMETER_TYPE_POINT3 = 5;
-  // A 3D vector.
-  PARAMETER_TYPE_VECTOR3 = 6;
-  // A UTF-8 string value.
-  PARAMETER_TYPE_TEXT = 7;
-}
-
-// A parameter binding provided by an instance.
-message ParameterBinding {
-  // How the parameter's value is supplied.
-  oneof binding {
-    // Literal value provided directly.
-    ParameterValue value = 1;
-    // Inherited from the traversal context by name.
-    string from_context = 2;
-  }
-}
-
-// A concrete parameter value.
-message ParameterValue {
-  // The value, whose variant matches the declared parameter type.
-  oneof value {
-    // A length value.
-    double length_value = 1;
-    // A 2D curve value.
-    motif.data.geometry.v1.Curve2 curve_value = 2;
-    // A 3D coordinate system value.
-    motif.data.geometry.v1.CoordinateSystem3 coordinate_system_3_value = 3;
-  }
-}
-
 // Links a derived entity back to the source entity it was projected from.
 //
 // Used by the floor-plan HLR pipeline: each per-(source, view) derived entity
@@ -304,6 +229,31 @@ message Placement2d {
   option (motif.extension.v1.message).component = 156;
 
   motif.data.geometry.v1.Box2d placement = 1;
+}
+
+// Whether a resizable placement preserves its aspect ratio when resized.
+// Generic across placement kinds — images today, other resizable placed
+// objects later. Pairs with `Placement2d` on the placing entity, not the
+// shared asset.
+//
+// Stamped as `STATE_LOCKED` when an object is placed: proportion locking is on
+// by default. Locking preserves the placement's aspect ratio as it stands when
+// a resize begins.
+message AspectLock {
+  option (motif.extension.v1.message).component = 177;
+
+  State state = 1;
+
+  // Whether resizing preserves the placement's current aspect ratio.
+  enum State {
+    // Unspecified. Read as `STATE_LOCKED` so the default holds for placements
+    // that predate this component.
+    STATE_UNSPECIFIED = 0;
+    // Resizing preserves the current aspect ratio.
+    STATE_LOCKED = 1;
+    // Width and height resize independently.
+    STATE_UNLOCKED = 2;
+  }
 }
 
 // A marker component indicating an entity should be hidden from default UI
