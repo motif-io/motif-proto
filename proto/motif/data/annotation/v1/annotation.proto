@@ -28,15 +28,16 @@ message TextAnnotation {
   // Background fill behind the text, out to the border. Unset means no fill
   // (the box background stays transparent).
   motif.data.style.v1.Color fill = 5;
-  // Lay the text out at a half-turn whenever `placement.rotation` would make it
-  // read right-to-left, so the note stays readable from the bottom or the right
-  // of the sheet. The box, its fill, and its border are unaffected — a
-  // rectangle half-turned about its own centre is the same rectangle.
+  // Keep the text upright: lay it out at a half-turn whenever
+  // `placement.rotation` would make it read right-to-left, so the note stays
+  // readable from the bottom or the right of the sheet. The box, its fill, and
+  // its border are unaffected — a rectangle half-turned about its own centre is
+  // the same rectangle.
   //
   // false (the proto3 scalar default) is the legacy behaviour, where the text
   // turns with the box and reads upside-down past vertical. An old reader
   // ignores this field and keeps drawing that way.
-  bool keep_readable = 6;
+  bool keep_text_upright = 6;
 }
 
 // A persisted dimension annotation.
