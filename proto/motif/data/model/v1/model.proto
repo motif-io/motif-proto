@@ -1177,6 +1177,31 @@ message ExtrudeBoundaryProfileBehavior {
   // `extrude_along_workplane_normal`.
   motif.extension.v1.DataReference extrude_along_normal = 6 [(motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_BOOL}];
 
+  // Elevation of the level this boundary is placed on, in meters, referenced
+  // rather than copied. Bound to the level's `RelativeElevation.elevation`, so
+  // the boundary tracks the level through change propagation instead of holding
+  // a snapshot that goes stale when the level moves. Mirrors the wall's
+  // `base_level_elev` on
+  // `motif.data.model.v1.ComposeParametricWallSweepInputsBehavior`.
+  //
+  // When set, the profile is extruded from `workplane` with `origin.z`
+  // overridden to `base_level_elev + base_offset`, exactly as the wall composes
+  // its sweep frame; the workplane's axes are untouched, so orientation and the
+  // in-plane position still come from the workplane itself.
+  //
+  // Optional: boundaries authored before this field reference no level, and the
+  // workplane's own `origin.z` stands unmodified.
+  motif.extension.v1.DataReference base_level_elev = 7 [(motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}];
+
+  // Resolved parameter: the boundary's signed offset from `base_level_elev`, in
+  // meters. Negative values sit below the level. Held separately from the level
+  // elevation so that moving the level preserves the offset the boundary was
+  // authored with, rather than rewriting it.
+  //
+  // Ignored when `base_level_elev` is unset. Unset or zero places the boundary
+  // on the level itself.
+  motif.extension.v1.DataReference base_offset = 8 [(motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}];
+
   // The entity the generated `Shape` is written to.
   motif.extension.v1.DataReference output = 5 [
     (buf.validate.field).required = true,
@@ -1920,4 +1945,169 @@ enum Geometry2dEntryStatus {
 
   // The entry could not be generated; `curves` is empty.
   GEOMETRY2D_ENTRY_STATUS_FAILED = 2;
+}
+
+// Property-panel presentation for an asset's rows.
+//
+// Lives on the asset definition entity. Presentation places, orders, labels,
+// and styles rows. It never grants writability and never changes what an
+// edit means: a reader decides writability from its own model of the row
+// (the row's editor and whether its value is computed), never from this
+// component, so a wrong or stale entry degrades to a default rendering,
+// never to a wrong edit.
+//
+// A row key names a row. An unqualified key is an emitter-owned reported key
+// (for example "height" or "area") and never contains ":". A declared
+// parameter is addressed as "parameter:<name>", where <name> is the
+// parameter's key in the map
+// `motif.data.model.v1.ParameterDeclarations.declarations`. This is the
+// same catalog-qualified form as `LineStyle.pattern_ref` (split on the
+// first ":"), so the two namespaces cannot collide. The pattern on
+// `row_key` rejects a ":" in an unqualified key and every catalog other
+// than "parameter". That reserves further catalogs and removes the need
+// for an escaping rule.
+//
+// The component absent, or present with both lists empty, means every row
+// gets the panel's default presentation. A row without an entry keeps the
+// panel's default placement, after the listed rows of its group. A row key
+// that names no row on the entity is ignored.
+message PropertyPresentations {
+  option (motif.extension.v1.message).component = 179;
+
+  // The row entries. The list may interleave groups: a reader filters the
+  // list per group and keeps relative order, so a group's rows need not be
+  // contiguous. A reader may render a group's editable rows before its
+  // read-only rows (writability is reader-derived, see above), so list
+  // order is guaranteed only inside each half. List a group's editable
+  // rows before its read-only ones and the written order holds in every
+  // reader. Each `row_key` appears at most once: publish rejects
+  // duplicates, and a reader that sees one uses the first entry.
+  repeated RowPresentation rows = 1;
+
+  // The composite entries. Each `composite_id` appears at most once, a row
+  // key is a member of at most one composite, and a row key appears at
+  // most once across a composite's pages: publish rejects all three, and a
+  // reader that sees a duplicate uses the first occurrence.
+  //
+  // A member row renders inside its composite, not separately in its
+  // group. A reader that does not recognize a `composite_id` renders the
+  // members as ordinary rows in their own slots instead. Every member row
+  // must belong to one group: publish rejects a composite whose member
+  // rows disagree on group, and a reader that sees one claims the
+  // composite per group, each group's members as their own unit.
+  //
+  // The composite occupies the panel slot of its first member row (for a
+  // paged composite, the first key of the first page) and pulls the other
+  // members to it, across the editable and read-only halves. If that
+  // first member row has no entry in `rows`, the composite keeps the
+  // panel's default placement. A member key that names no row on the
+  // entity is ignored, and a composite whose member keys all name no row
+  // renders nothing. Order inside the composite comes from the composite's
+  // own member order, not from `rows`.
+  repeated CompositePresentation composites = 2;
+}
+
+// Presentation of one property-panel row.
+message RowPresentation {
+  // The property-panel group a row renders in.
+  //
+  // The panel derives further groups of its own (for example for imported
+  // foreign properties). Those never appear on the wire, which is why the
+  // set is a closed enum rather than an open string.
+  enum Group {
+    // No group specified: the panel uses its default placement.
+    GROUP_UNSPECIFIED = 0;
+
+    // The `location` group.
+    GROUP_LOCATION = 1;
+
+    // The `size` group.
+    GROUP_SIZE = 2;
+
+    // The `options` group.
+    GROUP_OPTIONS = 3;
+
+    // The `classification` group.
+    GROUP_CLASSIFICATION = 4;
+  }
+
+  // The row this entry presents: an unqualified reported key with no ":",
+  // or "parameter:<name>". The pattern rejects every other catalog, which
+  // reserves them.
+  string row_key = 1 [(buf.validate.field).string.pattern = "^(parameter:.+|[^:]+)$"];
+
+  // The group the row renders in.
+  Group group = 2 [(buf.validate.field).enum.defined_only = true];
+
+  // How the row's control is rendered.
+  optional RowControl control = 3;
+
+  // Replaces the display label the row would otherwise derive (a declared
+  // parameter's description, or the reported key's built-in label).
+  optional string label = 4;
+}
+
+// How a property-panel row's control is rendered.
+message RowControl {
+  // Where the row's label is placed relative to the control.
+  enum LabelPlacement {
+    // No placement specified: the panel uses its default.
+    LABEL_PLACEMENT_UNSPECIFIED = 0;
+
+    // The label is placed above the control.
+    LABEL_PLACEMENT_ABOVE = 1;
+  }
+
+  // The widget used to render the row. The vocabulary is emitter-defined
+  // and opaque to the platform: a reader that does not recognize the name
+  // renders the default control for the row's value type.
+  optional string widget = 1;
+
+  // Where the row's label is placed.
+  LabelPlacement label_placement = 2;
+}
+
+// Presentation of a composite the property panel dispatches on.
+message CompositePresentation {
+  // The composite id the property panel dispatches on.
+  string composite_id = 1 [(buf.validate.field).string.min_len = 1];
+
+  // The composite's display title.
+  optional string title = 2;
+
+  // The composite's members. A composite is flat or paged, never both and
+  // always one of the two, so the shapes are a required `oneof`.
+  oneof members {
+    option (buf.validate.oneof).required = true;
+
+    // Member row keys, for the composite kinds without pages.
+    RowKeyList flat = 3;
+
+    // Pages, for the paged composite kind.
+    PageList paged = 4;
+  }
+
+  // An ordered list of member row keys.
+  message RowKeyList {
+    // The row keys, in display order.
+    repeated string row_keys = 1 [(buf.validate.field).repeated.min_items = 1];
+  }
+
+  // An ordered list of pages.
+  message PageList {
+    // The pages, in display order. A paged composite has at least two
+    // pages: with one page there is nothing to page, so publish collapses
+    // a single page to the flat shape and `min_items` makes it
+    // unrepresentable here.
+    repeated Page pages = 1 [(buf.validate.field).repeated.min_items = 2];
+  }
+
+  // One page of a paged composite.
+  message Page {
+    // The page name shown on the pager.
+    string name = 1 [(buf.validate.field).string.min_len = 1];
+
+    // The row keys shown on this page, in display order.
+    repeated string row_keys = 2 [(buf.validate.field).repeated.min_items = 1];
+  }
 }
