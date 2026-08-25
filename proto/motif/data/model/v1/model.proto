@@ -6,7 +6,6 @@ package motif.data.model.v1;
 
 import "buf/validate/validate.proto";
 import "google/protobuf/any.proto";
-import "google/protobuf/empty.proto";
 import "motif/data/geometry/v1/geometry.proto";
 import "motif/data/style/v1/style.proto";
 import "motif/extension/v1/options.proto";
