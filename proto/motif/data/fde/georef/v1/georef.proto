@@ -55,7 +55,6 @@ message ModelPlacement {
 message ModelOrientation {
   option (motif.extension.v1.message).component = 81;
 
-  // <remove>Rotation from the model's north to true north, in degrees.</remove>
-  // <add>Rotation from the model's north to true north, in radians.</add>
+  // Rotation from the model's north to true north, in radians.
   double angle_to_true_north = 1;
 }
