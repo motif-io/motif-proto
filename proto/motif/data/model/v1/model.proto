@@ -1095,6 +1095,24 @@ message HostedBehavior {
   // being reserved: the `host_surface` retarget above already breaks every
   // pre-existing `HostedBehavior`, so there is no older payload to protect.</add>
   reserved "facing_flip";
+
+  // Turns the element on its host face: radians about the face normal.
+  //
+  // A mate fixes the element's orientation completely, so this is the one
+  // rotational freedom it leaves open. The placement composes as
+  // `host_frame ∘ offset(u, v) ∘ rotation(angle) ∘ mating_frame⁻¹`, so the
+  // rotation turns the element in place at its seat point rather than sweeping
+  // it across the face.
+  //
+  // Measured counter-clockwise from the host face's `axis_u`. A face that
+  // authors an `axis_u` fixes what a stored angle means; a face that leaves it
+  // unset falls back to a derived axis, so changing that derivation later would
+  // re-interpret every angle already stored against it. Author `axis_u` on any
+  // host face meant to carry rotation.
+  //
+  // Unset means no rotation, and is how every placement authored before this
+  // field reads.
+  motif.extension.v1.DataReference angle_about_face_normal = 5 [(motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}];
 }
 
 // A behavior which subtracts one profile solid from a target geometry.
