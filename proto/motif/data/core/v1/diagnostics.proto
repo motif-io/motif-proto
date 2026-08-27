@@ -32,7 +32,7 @@ message ModelDiagnostic {
   optional int32 source_component_id = 6 [(buf.validate.field).int32.gt = 0];
 }
 
-// Kinds of persistent diagnostgics. Everything but DIAGNOSTIC_TYPE_UNSPECIFIED will be mapped to a concrete
+// Kinds of persistent diagnostics. Everything but DIAGNOSTIC_TYPE_UNSPECIFIED will be mapped to a concrete
 // localizable formatted resource string.
 enum DiagnosticType {
   // No type was specified. external_fallback_message will be used to inform the user.
