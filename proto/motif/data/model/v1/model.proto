@@ -315,6 +315,19 @@ message ParameterDeclarations {
 // `ResolvedParameters` entry must carry. Behaviors that consume the resolved
 // value declare a `data_reference_expected_type` matching the same `TypeSpec`.
 message ParameterDeclaration {
+  // Defaults selected according to the consuming model's configured length
+  // unit. Values are stored in canonical units.
+  message PerLengthUnitDefaults {
+    google.protobuf.Any millimeter = 1;
+    google.protobuf.Any centimeter = 2;
+    google.protobuf.Any meter = 3;
+    google.protobuf.Any kilometer = 4;
+    google.protobuf.Any inch = 5;
+    google.protobuf.Any foot = 6;
+    google.protobuf.Any yard = 7;
+    google.protobuf.Any mile = 8;
+  }
+
   // The parameter name.
   string name = 1;
   // A human-readable description of the parameter.
@@ -322,10 +335,16 @@ message ParameterDeclaration {
   // The declared payload type for this parameter.
   motif.extension.v1.TypeSpec expected_type = 3;
 
-  // Optional default literal for hive/UI/placement authoring (meters for
-  // TYPE_DOUBLE). Not read by change propagation; instance bindings supply CP
-  // values at placement.
-  optional google.protobuf.Any default_value = 4;
+  // Optional defaults for hive/UI/placement authoring. TYPE_DOUBLE values are
+  // stored in meters. Not read by change propagation; instance bindings supply
+  // CP values at placement.
+  oneof default_type {
+    // One default applied regardless of the model's configured length unit.
+    google.protobuf.Any default_value = 4;
+
+    // Defaults selected according to the model's configured length unit.
+    PerLengthUnitDefaults per_length_unit_defaults = 6;
+  }
 
   // The closed, ordered set of permitted values for a TYPE_STRING parameter.
   // Empty when the parameter has no fixed choice set.
