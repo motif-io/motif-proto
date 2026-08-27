@@ -7,15 +7,14 @@ import "motif/data/core/v1/core.proto";
 import "motif/extension/v1/options.proto";
 import "motif/extension/v1/reference.proto";
 
-// Persistent diagnostics and their error types for Motif model entities.
-message RegenerationError {
+// Persistent diagnostics and their types for Motif model entities.
+message ModelDiagnostic {
   option (motif.extension.v1.message).component = 180;
 
-  // The machine-readable kind of error.
-  ErrorType type = 1;
+  DiagnosticType type = 1;
 
-  // Values substituted into Motif-localized string template mapped from the ErrorType
-  // If these don't match the string, a generic error message will be shown instead.
+  // Values substituted into Motif-localized string template mapped from the DiagnosticType
+  // If these don't match the string, a generic message will be shown instead.
   map<string, ScalarValue> parameters = 2;
 
   // External fallback text used only when no localized summary is available.
@@ -26,19 +25,19 @@ message RegenerationError {
   // Displayed as-is; not translated.
   optional string external_fallback_message = 4;
 
-  // The entity in this model affected by the error. Required.
+  // The entity in this model affected by the diagnostic. Required.
   motif.extension.v1.EntityReference affected_entity = 5 [(buf.validate.field).required = true];
 
   // The component that produced the diagnostic, when applicable.
   optional int32 source_component_id = 6 [(buf.validate.field).int32.gt = 0];
 }
 
-// Kinds of persistent errors. Everything but ERROR_TYPE_UNSPECIFIED will be mapped to a concrete
+// Kinds of persistent diagnostgics. Everything but DIAGNOSTIC_TYPE_UNSPECIFIED will be mapped to a concrete
 // localizable formatted resource string.
-enum ErrorType {
-  // No error type was specified. external_fallback_message will be used to inform the user.
-  ERROR_TYPE_UNSPECIFIED = 0;
+enum DiagnosticType {
+  // No type was specified. external_fallback_message will be used to inform the user.
+  DIAGNOSTIC_TYPE_UNSPECIFIED = 0;
 
   // Instance is outside of its Host.
-  ERROR_TYPE_INSTANCE_OUTSIDE_HOST = 1;
+  DIAGNOSTIC_TYPE_INSTANCE_DID_NOT_CUT_HOST = 1;
 }
