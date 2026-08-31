@@ -273,15 +273,10 @@ message Hidden {
   option (motif.extension.v1.message).component = 140;
 }
 
-// <add>A marker component indicating that a model is a demo.
+// A marker component indicating that a model is a demo.
 //
-// Presence on the reserved model sentinel entity
-// (00000000-0000-4000-8000-000000000000) means the model is a demo; absence
+// Presence on the reserved model sentinel entity means the model is a demo; absence
 // means it is not.
-//
-// This meaning applies equally to maintained source or template models and to
-// copies that inherit the source model's sentinel components.
 message DemoModel {
   option (motif.extension.v1.message).component = 181;
 }
-// </add>
