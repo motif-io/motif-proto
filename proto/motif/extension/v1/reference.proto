@@ -69,6 +69,16 @@ message DataReference {
   // Path to a specific field within the component. When unset, the reference is
   // to the whole component.
   FieldPath path = 4;
+
+  // The model the target entity lives in. When unset, the target resolves per
+  // the component-level rule above: the component's ModelReference if present,
+  // otherwise the model containing this reference.
+  //
+  // Set this only when the reference means an entity in another model
+  // independently of any relationship on the same component — e.g. a
+  // parameter-bindings declarations reference into an external asset
+  // definition. An explicit model here outranks the component-level rule.
+  ModelReference model = 5;
 }
 
 // A path through a component's structure, identifying a specific field or
