@@ -364,6 +364,11 @@ enum RevitCategory {
   REVIT_CATEGORY_HVAC_ZONES_INTERIOR_FILL = 166;
   // HVAC Zones - Reference Lines
   REVIT_CATEGORY_HVAC_ZONES_REFERENCE_LINES = 167;
+  // <add>Import Symbols. The container Revit places imported geometry (blocks,
+  // external references) into. Distinct from `REVIT_CATEGORY_IMPORTS_IN_FAMILIES`,
+  // which is the family-authoring object style. Numbered out of alphabetical order
+  // because enum numbers are wire format and 168 is already taken.</add>
+  REVIT_CATEGORY_IMPORT_SYMBOLS = 443;
   // Imports in Families
   REVIT_CATEGORY_IMPORTS_IN_FAMILIES = 168;
   // Internal Area Load Tags
