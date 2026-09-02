@@ -1113,6 +1113,26 @@ message HostedBehavior {
   // Unset means no rotation, and is how every placement authored before this
   // field reads.
   motif.extension.v1.DataReference angle_about_face_normal = 5 [(motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}];
+
+  // The `host_frame` term of the composition above: the placement of the entity
+  // that publishes the face `host_surface` names.
+  //
+  // A `ReferenceGeometry` entry is authored in the frame of the entity that
+  // publishes it, so that entity's own placement is what carries the face into
+  // the model's frame. Seating an element on such a face without this term
+  // places it at the model origin.
+  //
+  // Regeneration requires `target` to equal `host_surface.target` exactly — the
+  // same oneof case with the same value, not merely a target denoting the same
+  // entity — and this field to be that entity's `Isometry`. It rejects a
+  // `this_entity` target, which would name the element's own `Isometry` rather
+  // than its host's, and rejects any `path`. Unset means the face is already in
+  // the model's frame and no placement is composed, which is how every payload
+  // written before this field reads.
+  motif.extension.v1.DataReference host_frame_transform = 6 [(motif.extension.v1.field).data_reference_expected_type = {
+    kind: TYPE_MESSAGE
+    type_name: "motif.data.core.v1.Isometry"
+  }];
 }
 
 // A behavior which subtracts one profile solid from a target geometry.
