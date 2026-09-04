@@ -35,6 +35,7 @@
 
 # Data packages owned by the Motif Data Management team.
 /proto/motif/data/document/ @motif-io/motif-data-management
+/proto/motif/data/project/  @motif-io/motif-data-management
 
 # The FDE package is owned by the Motif FDE team.
 /proto/motif/data/fde/ @motif-io/motif-fde

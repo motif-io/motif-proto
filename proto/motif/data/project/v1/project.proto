@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+// Component types for storing Project information.
+package motif.data.project.v1;
+
+import "buf/validate/validate.proto";
+import "motif/extension/v1/options.proto";
+
+// A marker component indicating a model contains project metadata.
+//
+// When present on a model's sentinel entity
+// (00000000-0000-4000-8000-000000000000), clients treat the model as a store of
+// Motif Project metadata.
+//
+// The marker is about presentation, not contents. It does not claim the model
+// holds *only* documents, and nothing enforces that; other entities alongside
+// them are allowed, if unlikely in practice, since a marked model is not
+// obviously openable through the normal model-browsing UI.
+// There expected to be one and only one metadata model per project.
+//
+// Independent of `motif.data.core.v1.Hidden`, which answers a separate question:
+// whether a model appears in default model lists. A store normally carries both,
+// but a client should not infer either marker from the other — a model can be
+// hidden without being a document store.
+message ProjectMetadataStore {
+  option (motif.extension.v1.message).component = 182;
+}
+
+// Contains fields with specific project's information recognized by Motif applications.
+// Custom data can be attached to the same entity using `motif.data.core.v1.ForeignProperties`
+message ProjectFields {
+  option (motif.extension.v1.message).component = 183;
+
+  // The project name.
+  string project_name = 1 [(buf.validate.field).string.max_len = 255];
+
+  // The project number or other external identifier.
+  string project_number = 2 [(buf.validate.field).string.max_len = 255];
+
+  // The company that is the project's client.
+  string client_company = 3 [(buf.validate.field).string.max_len = 255];
+
+  // The client's primary contact.
+  string client_contact = 4 [(buf.validate.field).string.max_len = 255];
+
+  // The project's street address or other address text.
+  string project_address = 5 [(buf.validate.field).string.max_len = 1024];
+}
