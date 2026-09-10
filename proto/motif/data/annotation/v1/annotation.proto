@@ -388,7 +388,9 @@ message TextBlock {
   // pre-list writer) means no paragraph is a list item; a vector shorter
   // than the paragraph count leaves trailing paragraphs unlisted; extra
   // entries are ignored. Numbered ordinals are never persisted — they
-  // derive from paragraph position at render time.
+  // derive from paragraph position at render time, where a SPACER entry is a
+  // blank line inside the list (numbering continues across it) and a NONE
+  // entry between two list paragraphs starts a new list.
   repeated ListKind paragraph_lists = 4;
 }
 
@@ -447,4 +449,10 @@ enum ListKind {
   LIST_KIND_UPPERCASE_LETTER = 4;
   // Ordered items labeled a., b., ... z., aa., ...
   LIST_KIND_LOWERCASE_LETTER = 5;
+  // The blank line an author leaves between two items of the surrounding
+  // list (Shift+Enter in the editor): renders as an empty row with no marker
+  // and does not count, so numbering continues across it. Any other kind
+  // between two items ends the list — a NONE paragraph between two NUMBERED
+  // paragraphs starts a second list at 1.
+  LIST_KIND_SPACER = 6;
 }
