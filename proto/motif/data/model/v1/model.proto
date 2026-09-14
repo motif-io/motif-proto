@@ -335,15 +335,24 @@ message ParameterDeclaration {
   // The declared payload type for this parameter.
   motif.extension.v1.TypeSpec expected_type = 3;
 
-  // Optional defaults for hive/UI/placement authoring. TYPE_DOUBLE values are
-  // stored in meters. Not read by change propagation; instance bindings supply
-  // CP values at placement.
+  // The parameter's default. For unit-bearing values, TYPE_DOUBLE uses the base
+  // unit of the quantity (e.g. meters for length or radians for angles).
+  // Evaluation uses the literal or live-source default when no explicit binding
+  // exists. Removing an explicit binding resumes use of the current default.
   oneof default_type {
     // One default applied regardless of the model's configured length unit.
     google.protobuf.Any default_value = 4;
 
-    // Defaults selected according to the model's configured length unit.
+    // Defaults selected at placement using the consuming model's length unit.
+    // These defaults do not support inheritance.
     PerLengthUnitDefaults per_length_unit_defaults = 6;
+
+    // A live source in the declaration's evaluation context. References are
+    // remapped for instances. An unresolved source is an incomplete evaluation.
+    motif.extension.v1.DataReference default_source = 7 [(motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "google.protobuf.Any"
+    }];
   }
 
   // The closed, ordered set of permitted values for a TYPE_STRING parameter.
@@ -510,6 +519,50 @@ message ParameterBindingsBehavior {
 
   // The bindings used to resolve each declared parameter, keyed by name.
   map<string, ParameterBinding> bindings = 3;
+}
+
+// A behavior which copies component data from configured sources to output entities.
+// Each map key is the destination component type ID; the value describes how to
+// obtain the payload and where to place it. Inputs and outputs resolve through
+// the evaluation context, which remaps definition references in an instance context.
+//
+// Currently only motif.data.style.v1.Color payloads are supported. Other component
+// types are rejected; additional types require explicit consumer support.
+message AssignComponentsBehavior {
+  option (motif.extension.v1.message).component = 184;
+
+  // Destination component type IDs must be positive.
+  map<int32, ComponentAssignment> assignments = 1 [(buf.validate.field).map.keys.int32.gt = 0];
+}
+
+// Describes where component data is found and where it is placed. An omitted
+// source uses default_value. Inputs carry a packed message of the destination
+// component type. Mismatched or malformed values are errors.
+// Input references must not name the output, which would feed generated data
+// back into the assignment as an explicit value.
+message ComponentAssignment {
+  // Required fallback. Its type_url must name the destination component.
+  google.protobuf.Any default_value = 1 [(buf.validate.field).required = true];
+
+  // Optional input. If omitted, use default_value. If configured, the referenced
+  // value must resolve; an unresolved reference is an incomplete evaluation.
+  // In an instance context, this reference is remapped through that context.
+  motif.extension.v1.DataReference source = 2 [(motif.extension.v1.field).data_reference_expected_type = {
+    kind: TYPE_MESSAGE
+    type_name: "google.protobuf.Any"
+  }];
+
+  // Where the payload is placed, remapped through the evaluation context.
+  // Without a path, component_id must match the destination map key and the
+  // payload replaces the whole component. A non-empty path must address a
+  // google.protobuf.Any field, which receives the packed component payload.
+  //
+  // If omitted, the output is the whole destination component on this entity.
+  // In an instance context, this entity is remapped to the instance automatically.
+  motif.extension.v1.DataReference output = 3 [(motif.extension.v1.field).data_reference_expected_type = {
+    kind: TYPE_MESSAGE
+    type_name: "google.protobuf.Any"
+  }];
 }
 
 // A behavior which generates a three-dimensional solid.
