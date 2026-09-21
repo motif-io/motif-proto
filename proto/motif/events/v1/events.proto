@@ -486,7 +486,8 @@ message UserProjects {
 // Owner, Editor, or Viewer role on the project, and the channel is closed once
 // the recipient loses that access.
 //
-// Every action carries only the affected `model_id`, never the changed value.
+// An action names what changed, never what it became: `ModelComponentChanged`
+// carries the ids of the components that changed, not their new values.
 // Delivery order is not guaranteed, so the value in the most recently received
 // event is not necessarily the current one; recipients re-read the model
 // through the `motif.api.v1.Persistence` service instead, using the RPC named
@@ -506,9 +507,8 @@ message UserModels {
 
   oneof action {
     ModelAdded model_added = 10;
-    ModelRenamed model_renamed = 11;
-    ModelThumbnailChanged model_thumbnail_changed = 12;
-    ModelRemoved model_removed = 13;
+    ModelRemoved model_removed = 11;
+    ModelComponentChanged model_component_changed = 12;
   }
 }
 
@@ -558,28 +558,36 @@ message ModelAdded {
   bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
 }
 
-// A model's name changed. Recipients `Query` the model's sentinel entity ID,
-// selecting the `AssignedName` and `DefaultName` components, for the current
-// name.
-message ModelRenamed {
-  // The model that was renamed, a 16-byte UUID. Required.
-  bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
-}
-
-// A model's thumbnail changed. Recipients `Query` the model's sentinel entity
-// ID, selecting the `ThumbnailRepresentation` component, for the current
-// thumbnail.
-message ModelThumbnailChanged {
-  // The model whose thumbnail changed, a 16-byte UUID. Required.
-  bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
-}
-
 // A model stopped being visible to the recipient: archived, or the recipient's
 // access to it was revoked. Recipients call `ListModels` for the project's
 // current list.
 message ModelRemoved {
   // The model no longer visible to the recipient, a 16-byte UUID. Required.
   bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
+}
+
+// Components describing the model itself changed: its name, its thumbnail, or
+// anything else carried on the model's sentinel entity. `component_ids` says
+// which, so a recipient can ignore a change it does not display and re-read
+// only what it needs.
+//
+// Recipients pass the ids they care about to `ListModels` as
+// `select_components`, or `Query` the model's sentinel entity ID directly when
+// only this one model is of interest. One event covers every component a single
+// changeset touched, so a rename and a new thumbnail applied together arrive as
+// one event naming both.
+message ModelComponentChanged {
+  // The model whose components changed, a 16-byte UUID. Required.
+  bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
+
+  // The ids of the components that changed on the model's sentinel entity, for
+  // example `motif.data.core.v1.AssignedName` or `ThumbnailRepresentation`.
+  // At least one, each listed once. Ids the recipient does not recognize are
+  // ignored, so new component types need no new action here.
+  repeated int32 component_ids = 2 [(buf.validate.field).repeated = {
+    min_items: 1
+    unique: true
+  }];
 }
 
 // =============================================================================
