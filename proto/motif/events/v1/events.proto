@@ -486,7 +486,7 @@ message UserProjects {
 // Owner, Editor, or Viewer role on the project, and the channel is closed once
 // the recipient loses that access.
 //
-// An action names what changed, never what it became: `ModelComponentChanged`
+// An action names what changed, never what it became: `ModelComponentsChanged`
 // carries the ids of the components that changed, not their new values.
 // Delivery order is not guaranteed, so the value in the most recently received
 // event is not necessarily the current one; recipients re-read the model
@@ -508,7 +508,7 @@ message UserModels {
   oneof action {
     ModelAdded model_added = 10;
     ModelRemoved model_removed = 11;
-    ModelComponentChanged model_component_changed = 12;
+    ModelComponentsChanged model_components_changed = 12;
   }
 }
 
@@ -576,14 +576,13 @@ message ModelRemoved {
 // only this one model is of interest. One event covers every component a single
 // changeset touched, so a rename and a new thumbnail applied together arrive as
 // one event naming both.
-message ModelComponentChanged {
+message ModelComponentsChanged {
   // The model whose components changed, a 16-byte UUID. Required.
   bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
 
-  // The ids of the components that changed on the model's sentinel entity, for
+  // The IDs of the components that changed on the model's sentinel entity, for
   // example `motif.data.core.v1.AssignedName` or `ThumbnailRepresentation`.
-  // At least one, each listed once. Ids the recipient does not recognize are
-  // ignored, so new component types need no new action here.
+  // At least one, each listed once.
   repeated int32 component_ids = 2 [(buf.validate.field).repeated = {
     min_items: 1
     unique: true
