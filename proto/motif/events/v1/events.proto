@@ -427,9 +427,9 @@ message GlobalRoleChanged {
 // Content
 // =============================================================================
 
-// A project lifecycle change, delivered either on a project's own channel or on
-// a single recipient's project list channel. An unset `action` signals an
-// unspecified change within the scope.
+// A project or model lifecycle change, delivered either on a project's own
+// channel or on a single recipient's project or model list channel. An unset
+// `action` signals an unspecified change within the scope.
 message ContentNotification {
   reserved 1; // Was `organization` (orgMembers lifecycle broadcast).
 
@@ -439,6 +439,7 @@ message ContentNotification {
 
     ProjectContent project = 2;
     UserProjects user_projects = 3;
+    UserModels user_models = 4;
   }
 }
 
@@ -480,6 +481,37 @@ message UserProjects {
   }
 }
 
+// A change to the set of models visible to one user within one project,
+// delivered on `user/{user_id}/models/{project_id}`. Subscribing requires an
+// Owner, Editor, or Viewer role on the project, and the channel is closed once
+// the recipient loses that access.
+//
+// Every action carries only the affected `model_id`, never the changed value.
+// Delivery order is not guaranteed, so the value in the most recently received
+// event is not necessarily the current one; recipients re-read the model
+// through the `motif.api.v1.Persistence` service instead, using the RPC named
+// on each action below. To avoid missing events while initializing, subscribe
+// and buffer first, then call `ListModels` for the initial list.
+//
+// `ModelAdded` and `ModelRemoved` are list-visibility events from the
+// recipient's point of view, not model create/delete events: a model appears or
+// disappears either because the model itself was created or archived or because
+// the recipient's access to it changed.
+message UserModels {
+  // The recipient of this envelope, a 16-byte UUID. Required.
+  bytes user_id = 1 [(buf.validate.field).bytes.len = 16];
+
+  // The project whose model list changed, a 16-byte UUID. Required.
+  bytes project_id = 2 [(buf.validate.field).bytes.len = 16];
+
+  oneof action {
+    ModelAdded model_added = 10;
+    ModelRenamed model_renamed = 11;
+    ModelThumbnailChanged model_thumbnail_changed = 12;
+    ModelRemoved model_removed = 13;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Shared project lifecycle payloads
 // ---------------------------------------------------------------------------
@@ -512,6 +544,42 @@ message ProjectRemoved {
 
   // The user who triggered the event, when known.
   optional bytes actor_user_id = 2 [(buf.validate.field).bytes.len = 16];
+}
+
+// ---------------------------------------------------------------------------
+// Model lifecycle payloads
+// ---------------------------------------------------------------------------
+
+// A model became visible to the recipient: created, copied, unarchived, or
+// newly granted access. Recipients call `ListModels` for the project's current
+// list, selecting the sentinel-entity components they need to display it.
+message ModelAdded {
+  // The model newly visible to the recipient, a 16-byte UUID. Required.
+  bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
+}
+
+// A model's name changed. Recipients `Query` the model's sentinel entity ID,
+// selecting the `AssignedName` and `DefaultName` components, for the current
+// name.
+message ModelRenamed {
+  // The model that was renamed, a 16-byte UUID. Required.
+  bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
+}
+
+// A model's thumbnail changed. Recipients `Query` the model's sentinel entity
+// ID, selecting the `ThumbnailRepresentation` component, for the current
+// thumbnail.
+message ModelThumbnailChanged {
+  // The model whose thumbnail changed, a 16-byte UUID. Required.
+  bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
+}
+
+// A model stopped being visible to the recipient: archived, or the recipient's
+// access to it was revoked. Recipients call `ListModels` for the project's
+// current list.
+message ModelRemoved {
+  // The model no longer visible to the recipient, a 16-byte UUID. Required.
+  bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
 }
 
 // =============================================================================
