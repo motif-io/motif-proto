@@ -358,6 +358,11 @@ message ParameterDeclaration {
   // The closed, ordered set of permitted values for a TYPE_STRING parameter.
   // Empty when the parameter has no fixed choice set.
   repeated ParameterChoice choices = 5;
+
+  // Whether this parameter feeds regeneration. Unset means driving, so a
+  // declaration written before this field carries the same meaning it had
+  // previously.
+  ParameterMode mode = 8;
 }
 
 // One option in a TYPE_STRING parameter's closed choice set.
@@ -368,6 +373,24 @@ message ParameterChoice {
   string value = 1 [(buf.validate.field).string.min_len = 1];
   // The human-readable label for this value.
   string label = 2;
+}
+
+// Whether a declared parameter feeds the regeneration of the asset that declares
+// it.
+//
+// Driving parameters materially affect the output of the regenerated asset - when
+// the value changes the output must be regenerated. Passthrough parameters do not.
+enum ParameterMode {
+  // No mode recorded. Treated as PARAMETER_MODE_DRIVING, which is how every
+  // declaration behaved before this field existed.
+  PARAMETER_MODE_UNSPECIFIED = 0;
+
+  // The parameter feeds regeneration and its value materially affects the
+  // regenerated output
+  PARAMETER_MODE_DRIVING = 1;
+
+  // The parameter does not feed regeneration.
+  PARAMETER_MODE_PASSTHROUGH = 2;
 }
 
 // The map of resolved parameters.
