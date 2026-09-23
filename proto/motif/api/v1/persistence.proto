@@ -22,7 +22,8 @@ service Persistence {
   // Deletes a model and its entities. Returns the deleted model id.
   rpc DeleteModel(DeleteModelRequest) returns (DeleteModelResponse);
 
-  // Lists models in a project. Each model includes its current changeset version.
+  // Lists models in a project. Each model includes its current changeset
+  // version, and any sentinel-entity components the request selected.
   rpc ListModels(ListModelsRequest) returns (ListModelsResponse);
 
   // Streams entities in a model.
@@ -125,6 +126,10 @@ message DeleteModelResponse {
 // page size. A page token encodes only a position, so the same filters must be sent
 // on the request for each page. Changing them mid-listing applies the position to a
 // different result set, silently skipping or repeating models.
+//
+// `select_components` is a projection rather than a filter: it is applied after
+// pagination and changes only what each returned model carries, never which models
+// match or where a page boundary falls.
 message ListModelsRequest {
   // Target project id.
   bytes project_id = 1;
@@ -138,6 +143,12 @@ message ListModelsRequest {
   repeated int32 where_any_components = 5;
   // The model sentinel entity ID must have none of the provided components.
   repeated int32 where_none_components = 6;
+  // Returned component projection, read from each model's sentinel entity.
+  // Empty returns no components, unlike `QueryRequest.select_components`.
+  // Components selected but absent on a model are omitted from that model's
+  // `components`; absence is the signal. Unrecognized component IDs select
+  // nothing rather than failing the request.
+  repeated int32 select_components = 7;
 }
 
 // A page of models in a project.
@@ -150,11 +161,16 @@ message ListModelsResponse {
   optional string next_page_token = 3;
 }
 
+// One model in a project, including any components the request selected.
 message Model {
   // Model id. Globally unique across projects.
   bytes model_id = 1;
   // The model's current committed version.
   int32 changeset_version = 2;
+  // Components read from this model's sentinel entity, if selected in the
+  // request. Empty when none were requested or none of those requested are
+  // present. The `deleted` field of `Component` is not set on this read path.
+  repeated Component components = 3;
 }
 
 // Streams entities in a model at latest state or as of a version.
