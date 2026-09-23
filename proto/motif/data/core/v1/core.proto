@@ -280,3 +280,12 @@ message Hidden {
 message DemoModel {
   option (motif.extension.v1.message).component = 181;
 }
+
+// Recorded at the time of model deletion or undeletion for audit/history purposes.
+// Only expected to ever be present on model sentinel entities.
+message ModelDeletionRecord {
+  option (motif.extension.v1.message).component = 185;
+
+  // Whether this was a deletion action or undeletion action.
+  bool is_deletion = 1;
+}
