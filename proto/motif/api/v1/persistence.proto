@@ -126,13 +126,13 @@ message UndeleteModelRequest {
 
 // Confirms which model was undeleted.
 message UndeleteModelResponse {
-  // Deleted model id. Globally unique across projects.
+  // Undeleted model id. Globally unique across projects.
   bytes model_id = 1;
 }
 
 // Requests a page of models in a project.
-// 
-// By default, deleted models are excluded. 
+//
+// By default, deleted models are excluded.
 // If desired, they can be obtained by passing `deleted_only`.
 //
 // `where_` fields are combined with a logical AND. An empty list disables that filter
@@ -168,7 +168,7 @@ message ListModelsRequest {
   // nothing rather than failing the request.
   repeated int32 select_components = 7;
   // Return only deleted models
-  optional bool deleted_only = 8;
+  bool deleted_only = 8;
 }
 
 // A page of models in a project.
