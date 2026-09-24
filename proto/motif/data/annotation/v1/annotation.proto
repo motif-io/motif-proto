@@ -38,6 +38,40 @@ message TextAnnotation {
   // turns with the box and reads upside-down past vertical. An old reader
   // ignores this field and keeps drawing that way.
   bool keep_text_upright = 6;
+  // Leaders use absolute workplane coordinates (meters), independent of box
+  // translation/rotation. Empty on annotations authored before leader support.
+  // IDs must be unique across every leader and endpoint in this annotation.
+  repeated AnnotationLeader leaders = 7;
+}
+
+// One shoulder from the annotation to an elbow, branching to one or more heads.
+message AnnotationLeader {
+  enum Anchor {
+    ANCHOR_UNSPECIFIED = 0;
+    ANCHOR_TOP = 1;
+    ANCHOR_MIDDLE = 2;
+    ANCHOR_BOTTOM = 3;
+  }
+  enum Side {
+    SIDE_UNSPECIFIED = 0;
+    SIDE_LEFT = 1;
+    SIDE_RIGHT = 2;
+  }
+  // Stable identity for selection and targeted edits. Regenerate on copy.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // Unspecified is read as middle.
+  Anchor anchor = 2;
+  // Previous attachment side, retained while elbow is on the box center line.
+  // Unspecified is read as right.
+  Side side = 3;
+  motif.data.geometry.v1.Point2 elbow = 4 [(buf.validate.field).required = true];
+  // Removing the last endpoint removes the leader in the same operation.
+  repeated AnnotationLeaderEndpoint endpoints = 5 [(buf.validate.field).repeated.min_items = 1];
+}
+
+message AnnotationLeaderEndpoint {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  motif.data.geometry.v1.Point2 position = 2 [(buf.validate.field).required = true];
 }
 
 // A persisted dimension annotation.
