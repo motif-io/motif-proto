@@ -427,10 +427,8 @@ message GlobalRoleChanged {
 // Content
 // =============================================================================
 
-// <remove>A project or model lifecycle change, delivered either on a project's own
-// channel or on a single recipient's project or model list channel.</remove>
-// <add>A project-scoped content or lifecycle event, delivered on the project's
-// own channel or a recipient's project or model list channel.</add> An unset
+// A project or model lifecycle change, delivered either on a project's own
+// channel or on a single recipient's project or model list channel. An unset
 // `action` signals an unspecified change within the scope.
 message ContentNotification {
   reserved 1; // Was `organization` (orgMembers lifecycle broadcast).
@@ -445,8 +443,7 @@ message ContentNotification {
   }
 }
 
-// <remove>A change to the project itself, delivered on `projectMembers/{project_id}`.</remove>
-// <add>A change within a project, delivered on `projectMembers/{project_id}`.</add>
+// A change to the project itself, delivered on `projectMembers/{project_id}`.
 // View access is checked at subscribe time.
 message ProjectContent {
   // The project this event is about, a 16-byte UUID. Required.
@@ -454,9 +451,7 @@ message ProjectContent {
 
   oneof action {
     ProjectRenamed renamed = 10;
-    // <add>
     HistoryEnrichmentFinished history_enrichment_finished = 11;
-    // </add>
   }
 }
 
@@ -542,16 +537,12 @@ message ProjectRenamed {
   optional bytes actor_user_id = 2 [(buf.validate.field).bytes.len = 16];
 }
 
-// <add>Semantic history enrichment for one committed model version reached a
+// Semantic history enrichment for one committed model version reached a
 // terminal state. This notification signals clients to refetch authorized
 // history; it does not carry the result body.
 message HistoryEnrichmentFinished {
   bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
   int32 version = 2 [(buf.validate.field).int32.gt = 0];
-  string policy_revision = 3 [(buf.validate.field).string = {
-    min_len: 1
-    max_len: 64
-  }];
 
   enum Status {
     STATUS_UNSPECIFIED = 0;
@@ -566,7 +557,6 @@ message HistoryEnrichmentFinished {
     not_in: [0]
   }];
 }
-// </add>
 
 // A project stopped being visible to the recipient: deleted, or the recipient's
 // last role on it was revoked.
