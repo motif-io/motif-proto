@@ -22,6 +22,9 @@ service Persistence {
   // Deletes a model and its entities. Returns the deleted model id.
   rpc DeleteModel(DeleteModelRequest) returns (DeleteModelResponse);
 
+  // Undeletes a previously deleted model. Returns the restored model id.
+  rpc UndeleteModel(UndeleteModelRequest) returns (UndeleteModelResponse);
+
   // Lists models in a project. Each model includes its current changeset
   // version, and any sentinel-entity components the request selected.
   rpc ListModels(ListModelsRequest) returns (ListModelsResponse);
@@ -115,7 +118,22 @@ message DeleteModelResponse {
   bytes model_id = 1;
 }
 
+// Identifies the model to undelete.
+message UndeleteModelRequest {
+  // Target model id. Globally unique across projects.
+  bytes model_id = 1;
+}
+
+// Confirms which model was undeleted.
+message UndeleteModelResponse {
+  // Undeleted model id. Globally unique across projects.
+  bytes model_id = 1;
+}
+
 // Requests a page of models in a project.
+//
+// By default, deleted models are excluded.
+// If desired, they can be obtained by passing `deleted_only`.
 //
 // `where_` fields are combined with a logical AND. An empty list disables that filter
 // rather than excluding every model. Note that it is possible to create filters that
@@ -149,6 +167,8 @@ message ListModelsRequest {
   // `components`; absence is the signal. Unrecognized component IDs select
   // nothing rather than failing the request.
   repeated int32 select_components = 7;
+  // Return only deleted models
+  bool deleted_only = 8;
 }
 
 // A page of models in a project.

@@ -280,3 +280,10 @@ message Hidden {
 message DemoModel {
   option (motif.extension.v1.message).component = 181;
 }
+
+// A marker component for audit/history purposes.
+// Created on model sentinel entities at the time of model deletion,
+// deleted at the time of undeletion.
+message Deleted {
+  option (motif.extension.v1.message).component = 185;
+}
