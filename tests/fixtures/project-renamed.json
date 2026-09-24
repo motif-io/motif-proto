@@ -1,0 +1,12 @@
+{
+  "eventId": "project-renamed-golden",
+  "occurredAt": "2026-01-01T00:00:00Z",
+  "content": {
+    "project": {
+      "projectId": "AAAAAAAAAAAAAAAAAAAAAA==",
+      "renamed": {
+        "projectId": "AAAAAAAAAAAAAAAAAAAAAA=="
+      }
+    }
+  }
+}
