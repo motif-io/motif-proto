@@ -539,7 +539,7 @@ message ProjectRenamed {
 }
 
 // Semantic history enrichment for one committed model version reached a
-// terminal state. 
+// terminal state.
 message HistoryEnrichmentFinished {
   // Semantic history for one persisted stage of a model version.
   message StageSummary {
@@ -551,6 +551,8 @@ message HistoryEnrichmentFinished {
       STAGE_DERIVED = 69;
     }
 
+    Stage stage = 1;
+
     // FAILED have no count rows. COMPLETE may have no rows for a no-op
     // stage. Unknown future states must never be interpreted as COMPLETE.
     enum State {
@@ -558,6 +560,8 @@ message HistoryEnrichmentFinished {
       STATE_COMPLETE = 2;
       STATE_FAILED = 3;
     }
+
+    State state = 2;
 
     option (buf.validate.message).cel = {
       id: "stage_summary.state_requires_empty_counts"
@@ -593,6 +597,7 @@ message HistoryEnrichmentFinished {
       CATEGORY_FALLBACK_UNAVAILABLE = 2;
     }
 
+    Verb verb = 1;
     uint32 count = 2 [(buf.validate.field).uint32.gt = 0];
     oneof category {
       option (buf.validate.oneof).required = true;
@@ -612,6 +617,8 @@ message HistoryEnrichmentFinished {
     STATUS_COMPLETE = 2;
     STATUS_FAILED = 3;
   }
+
+  Status status = 4;
 
   // Present only for COMPLETE: one CLIENT summary, followed by DERIVED
   // exactly when the version has derived changes. Every included stage is
