@@ -37,6 +37,18 @@ service Persistence {
 
   // Applies an atomic changeset.
   //
+  // Errors: FAILED_PRECONDITION, with ErrorInfo reason UNKNOWN_COMPONENT_TYPE
+  // (domain persistence.motif.io), when a component value or marker has a
+  // component ID the server's component schema does not define; ErrorInfo
+  // metadata `component_ids` lists them as comma-separated decimals. Deleting a
+  // component is always accepted. A newly published component type is accepted
+  // once every server has loaded the schema that defines it. INVALID_ARGUMENT
+  // when a value of a component type that holds references does not decode, or
+  // holds a reference that cannot be resolved (an ID that is not 16 bytes, a
+  // DataReference with no target, or a ModelReference with a malformed ID or a
+  // non-positive version). UNAVAILABLE when the component schema cannot be
+  // loaded; retry.
+  //
   // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
   // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
   // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
@@ -55,6 +67,8 @@ service Persistence {
 
   // Applies a streamed changeset atomically.
   //
+  // Errors: as ApplyChangeset.
+  //
   // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
   // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
   // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
@@ -72,6 +86,11 @@ service Persistence {
 
   // Streams last-changed metadata for a collection of entities in one model.
   rpc EntityDetail(EntityDetailRequest) returns (stream EntityDetailResponse);
+
+  // Streams the entities reachable from a set of root entities by following
+  // references: EntityReference, DataReference, and ModelReference fields
+  // (motif/extension/v1/reference.proto). See TraverseReferencesRequest.
+  rpc TraverseReferences(TraverseReferencesRequest) returns (stream TraverseReferencesResponse);
 }
 
 // A single component value attached to an entity.
@@ -602,4 +621,254 @@ message EntityDetailResponse {
 
   // Timestamp recorded for last_changed_version.
   google.protobuf.Timestamp last_changed_at = 4 [(buf.validate.field).required = true];
+}
+
+// A model at a specific committed version.
+message ReferencedModelVersion {
+  // Model ID. Globally unique across projects.
+  bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
+
+  // Model version.
+  int32 model_version = 2 [(buf.validate.field).int32.gt = 0];
+}
+
+// Requests the part of the reference graph around a set of root entities.
+//
+// The graph's nodes are entities at a model version. Its edges are the
+// references persistence extracts from component values when they are written:
+// an edge points from the source entity, whose component holds the reference,
+// to the target entity it references.
+//
+// ENTITY edges come from EntityReference fields. DATA edges come from
+// DataReference fields; a `this_entity` target is the source entity itself.
+// MODEL edges come from a set ModelReference that no entity or data reference
+// resolves against (see motif.extension.v1.ModelReference); their target is the
+// referenced model's sentinel entity (00000000-0000-4000-8000-000000000000).
+//
+// An edge's target resolves in: the DataReference's own `model`, if set;
+// otherwise the ModelReference that scopes the reference, if one is set;
+// otherwise the source's model.
+//
+// Steps run in order, and each step starts from every entity reached so far:
+// the roots plus the entities reached by earlier steps. An INBOUND step finds
+// referrers among the host model's edges only; it never reads edges stored in
+// other models. An OUTBOUND step follows each entity's edges in that entity's
+// own model and crosses into other models, each of which must be viewable by
+// the caller, unless the step sets `host_model_only`.
+//
+// Errors: NOT_FOUND when the host model does not exist or is deleted.
+// FAILED_PRECONDITION, with ErrorInfo reason MODEL_NOT_INDEXED (domain
+// persistence.motif.io), when the host model has no reference index at the
+// requested version: the model predates reference indexing, or a version at or
+// before the requested one was written without maintaining the index. This does
+// not change on its own; read the model with Query instead. RESOURCE_EXHAUSTED
+// when the traversal would reach more than `max_nodes` entities or touch too
+// many models; results are never truncated.
+// INVALID_ARGUMENT when the request is malformed.
+message TraverseReferencesRequest {
+  // An entity the traversal starts from.
+  message Root {
+    // Entity ID, scoped to `model`.
+    bytes entity_id = 1 [(buf.validate.field).bytes.len = 16];
+
+    // The model and version the entity lives in. When unset, the host model at
+    // the version being traversed.
+    ReferencedModelVersion model = 2;
+  }
+
+  // One traversal step.
+  message Step {
+    // Which way a traversal step follows edges.
+    enum Direction {
+      // Invalid.
+      DIRECTION_UNSPECIFIED = 0;
+      // From an entity to the entities that reference it.
+      DIRECTION_INBOUND = 1;
+      // From an entity to the entities it references.
+      DIRECTION_OUTBOUND = 2;
+    }
+
+    // Matches edges by kind and by the component that holds the reference.
+    message EdgeMatch {
+      // The kind of reference an edge was extracted from.
+      enum Kind {
+        // Invalid.
+        KIND_UNSPECIFIED = 0;
+        // An EntityReference field.
+        KIND_ENTITY = 1;
+        // A DataReference field.
+        KIND_DATA = 2;
+        // A ModelReference that no reference resolves against.
+        KIND_MODEL = 3;
+      }
+
+      // Kind of reference.
+      Kind kind = 1 [(buf.validate.field).enum = {
+        defined_only: true
+        not_in: [0]
+      }];
+
+      // Component IDs (type tags) of the source components to match. When
+      // empty, edges from any source component match.
+      repeated int32 source_component_ids = 2;
+    }
+
+    // Direction to follow edges in.
+    Direction direction = 1 [(buf.validate.field).enum = {
+      defined_only: true
+      not_in: [0]
+    }];
+
+    // Edges to follow. An edge is followed when it matches any entry. When
+    // empty, every ENTITY and DATA edge is followed. MODEL edges, which link to
+    // a whole model, are followed only when explicitly specified.
+    repeated EdgeMatch edges = 2;
+
+    // Maximum number of hops. Zero follows edges until no new entities are
+    // reached (the transitive closure).
+    uint32 max_depth = 3;
+
+    // Components returned for every entity this step reaches, including
+    // entities an earlier step also reached. Projections that apply to the
+    // same entity are combined.
+    ComponentProjection projection = 4;
+
+    // Only follow edges whose target resolves in the host model at the version
+    // being traversed. Edges into other models or versions are treated as not
+    // matching, so their targets are not returned and those models are not
+    // listed in `omitted_models`. Roots and entities reached by earlier steps
+    // in other models are still expanded: their own models' edges are read,
+    // and the edges from them back into the host are followed. INBOUND steps
+    // only ever return host entities, so this has no effect on them.
+    bool host_model_only = 5;
+  }
+
+  // Host model ID. Requires View access.
+  bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
+
+  // When set, traverse the graph as of that version; otherwise, latest. A
+  // version past the current one is clamped to the current one, as in Query.
+  optional int32 as_of_changeset_version = 2 [(buf.validate.field).int32.gt = 0];
+
+  // Entities the traversal starts from.
+  repeated Root roots = 3 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 10000
+  }];
+
+  // Components returned for the roots. Roots in a model the caller cannot view
+  // are not returned. `edge_targets` is ignored, since no edge reaches a root.
+  ComponentProjection root_projection = 4;
+
+  // Traversal steps, run in order. With no steps, only the roots are returned.
+  repeated Step steps = 5 [(buf.validate.field).repeated.max_items = 4];
+
+  // Maximum number of entities the traversal may reach, roots included. Zero
+  // selects the server default. Values above the server's cap are lowered to
+  // the cap.
+  uint32 max_nodes = 6;
+}
+
+// Which components to return for traversed entities.
+message ComponentProjection {
+  // A set of component IDs (type tags).
+  message ComponentIds {
+    // Component IDs (type tags).
+    repeated int32 ids = 1 [(buf.validate.field).repeated.min_items = 1];
+  }
+
+  // Components to return. When unset, no components are returned, only entity
+  // IDs.
+  oneof selection {
+    // Return every component.
+    google.protobuf.Empty all = 1;
+
+    // Return these components.
+    ComponentIds component_ids = 2;
+  }
+
+  // For OUTBOUND steps, also return the target component of every DATA edge
+  // the step follows to the entity. Ignored for INBOUND steps and for
+  // `root_projection`.
+  //
+  // A target component is returned like any other selected component: it
+  // appears in the entity's `entity` and `selected_components`, and nothing
+  // marks it as an edge target or identifies the reference that led to it. The
+  // whole component is returned, even when the DataReference's `path` narrows
+  // to a field within it.
+  bool edge_targets = 3;
+}
+
+// One message of a TraverseReferences stream: the version header first, then
+// the traversed entities in any order, then the summary last.
+message TraverseReferencesResponse {
+  // An entity reached by a traversal.
+  message TraversedEntity {
+    // The model and version the entity lives in. Always unset for the host
+    // model at the version in the stream header, even when a root names that
+    // model and version explicitly; set for every other model or version.
+    ReferencedModelVersion model = 1;
+
+    // The entity. `entity_id` is always set. `components` holds the entity's
+    // live components selected by the projections that apply to it, and is
+    // empty when the entity has none of them, including when a reference
+    // points at an entity that does not exist.
+    Entity entity = 2 [(buf.validate.field).required = true];
+
+    // Component IDs the server looked up for this entity. Any ID listed here
+    // but missing from `entity` is absent at this version.
+    repeated int32 selected_components = 3;
+
+    // The step that first reached the entity: 0 for roots, i for steps[i - 1].
+    uint32 first_step = 4;
+
+    // Steps (1-based, as in `first_step`) that enumerated all of this entity's
+    // neighbours matching the step's edges. An entity reached at a step's
+    // `max_depth` is returned without being expanded by that step.
+    repeated uint32 expanded_steps = 5;
+  }
+
+  // Summary sent after the last traversed entity.
+  message Summary {
+    // A model a traversal reached but could not fully traverse.
+    message OmittedModel {
+      // Why the model was omitted.
+      enum Reason {
+        // Invalid.
+        REASON_UNSPECIFIED = 0;
+        // The model does not exist, is deleted, or the caller cannot view it.
+        // These cases are deliberately not distinguished.
+        REASON_UNAVAILABLE = 1;
+        // The model has no reference index at the pinned version. Entities in
+        // the model are still returned, but their references are not followed.
+        REASON_NOT_INDEXED = 2;
+        // The reference pins a version the model has never reached. Writes do
+        // not check pinned versions, so this indicates a reference written
+        // with a wrong version.
+        REASON_VERSION_AHEAD = 3;
+      }
+
+      // The model and pinned version.
+      ReferencedModelVersion model = 1;
+
+      // Why the model was omitted.
+      Reason reason = 2;
+    }
+
+    // Models a root or an OUTBOUND step reached but that could not be fully
+    // traversed.
+    repeated OmittedModel omitted_models = 1;
+  }
+
+  // The message payload.
+  oneof payload {
+    // Host model version the traversal read.
+    int32 changeset_version = 1;
+
+    // One traversed entity. Each entity appears once.
+    TraversedEntity entity = 2;
+
+    // Traversal summary.
+    Summary summary = 3;
+  }
 }
