@@ -5,6 +5,7 @@ package motif.api.v1;
 import "buf/validate/validate.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
+import "motif/data/history/v1/history.proto";
 
 // The persistence service stores model state and changeset history.
 //
@@ -301,6 +302,18 @@ message ChangesetListItem {
   // Classifies whether the created changeset's and concurrent changes touched
   // the same entities. Certain race conditions will be rejected by the server.
   ChangesetRace race = 6;
+
+  option (buf.validate.message).cel = {
+    id: "changeset_list_item.stage_summaries_match_applicable_stages"
+    message: "stage_summaries must contain every applicable stage"
+    expression: "this.stage_summaries.size() == 0 || (this.stage_summaries.filter(summary, summary.stage == 10).size() == 1 && (this.has_derived ? this.stage_summaries.filter(summary, summary.stage == 69).size() == 1 : this.stage_summaries.filter(summary, summary.stage == 69).size() == 0) && (this.stage_summaries.size() < 2 || this.stage_summaries[0].stage < this.stage_summaries[1].stage))"
+  };
+
+  // Absent when no semantic history is stored; absence does not mean PENDING.
+  // Otherwise, one client summary and, when has_derived is true, one derived
+  // summary in stage number order. Reads and completion events share these
+  // absolute-count snapshots. Changeset and page ordering are unchanged.
+  repeated motif.data.history.v1.StageSummary stage_summaries = 7 [(buf.validate.field).repeated.max_items = 2];
 }
 
 // Changeset history page for a model.

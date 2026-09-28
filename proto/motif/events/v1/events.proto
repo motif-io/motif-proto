@@ -6,6 +6,7 @@ package motif.events.v1;
 
 import "buf/validate/validate.proto";
 import "google/protobuf/timestamp.proto";
+import "motif/data/history/v1/history.proto";
 
 // =============================================================================
 // Envelope
@@ -538,8 +539,13 @@ message ProjectRenamed {
 }
 
 // Semantic history enrichment for one committed model version reached a
-// terminal state. This notification signals clients to refetch authorized
-// history; it does not carry the result body.
+// terminal state. COMPLETE normally includes the committed summaries, using the
+// same types as ListChangesets. Apply them as a snapshot keyed by project, model
+// and version, not as increments. Duplicate delivery is safe; a delayed FAILED
+// must not replace an already COMPLETE result. An absent payload is a refetch
+// hint, retained for legacy producers and exceptional transport-size fallback.
+// Initial load, reconnect and missed notifications still require authorized
+// history reads; normal inline completion does not.
 message HistoryEnrichmentFinished {
   bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
   int32 version = 2 [(buf.validate.field).int32.gt = 0];
@@ -556,6 +562,18 @@ message HistoryEnrichmentFinished {
   Status status = 4 [(buf.validate.field).enum = {
     not_in: [0]
   }];
+
+  // Present only for COMPLETE: one CLIENT summary, followed by DERIVED
+  // exactly when the version has derived changes. Every included stage is
+  // COMPLETE, even an empty/no-op stage. Producers copy the committed result;
+  // they must not reclassify or truncate counts to fit transport limits.
+  repeated motif.data.history.v1.StageSummary stage_summaries = 5 [(buf.validate.field).repeated.max_items = 2];
+
+  option (buf.validate.message).cel = {
+    id: "history_enrichment_finished.complete_payload"
+    message: "inline summaries require COMPLETE and ordered complete stages beginning with CLIENT"
+    expression: "this.stage_summaries.size() == 0 || (this.status == 2 && this.stage_summaries[0].stage == 10 && this.stage_summaries.all(summary, summary.state == 2) && (this.stage_summaries.size() == 1 || this.stage_summaries[1].stage == 69))"
+  };
 }
 
 // A project stopped being visible to the recipient: deleted, or the recipient's
