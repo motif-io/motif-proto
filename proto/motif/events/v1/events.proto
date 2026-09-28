@@ -428,9 +428,8 @@ message GlobalRoleChanged {
 // Content
 // =============================================================================
 
-// A project or model lifecycle change, delivered either on a project's own
-// channel or on a single recipient's project or model list channel. An unset
-// `action` signals an unspecified change within the scope.
+// A change to project or model content, or to a single recipient's project or
+// model list. An unset `action` signals an unspecified change within the scope.
 message ContentNotification {
   reserved 1; // Was `organization` (orgMembers lifecycle broadcast).
 
@@ -441,6 +440,7 @@ message ContentNotification {
     ProjectContent project = 2;
     UserProjects user_projects = 3;
     UserModels user_models = 4;
+    ModelContent model = 5;
   }
 }
 
@@ -452,7 +452,18 @@ message ProjectContent {
 
   oneof action {
     ProjectRenamed renamed = 10;
-    HistoryEnrichmentFinished history_enrichment_finished = 11;
+  }
+}
+
+// A change to one model, delivered on `modelContent/{model_id}`. Subscribing
+// requires the same View access as reading that model's history; access is
+// rechecked while the subscription is open.
+message ModelContent {
+  // The model this event is about, a 16-byte UUID. Required.
+  bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
+
+  oneof action {
+    HistoryEnrichmentFinished history_enrichment_finished = 10;
   }
 }
 
@@ -609,6 +620,7 @@ message HistoryEnrichmentFinished {
     }
   }
 
+  // Must equal the enclosing ModelContent.model_id.
   bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
   int32 version = 2 [(buf.validate.field).int32.gt = 0];
 
