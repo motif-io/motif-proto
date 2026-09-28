@@ -539,13 +539,7 @@ message ProjectRenamed {
 }
 
 // Semantic history enrichment for one committed model version reached a
-// terminal state. COMPLETE normally includes the committed summaries. Apply
-// them as a snapshot keyed by project, model and version, not as increments.
-// Duplicate delivery is safe; a delayed FAILED must not replace an already
-// COMPLETE result. An absent payload is a refetch
-// hint, retained for legacy producers and exceptional transport-size fallback.
-// Initial load, reconnect and missed notifications still require authorized
-// history reads; normal inline completion does not.
+// terminal state. 
 message HistoryEnrichmentFinished {
   // Semantic history for one persisted stage of a model version.
   message StageSummary {
@@ -557,24 +551,13 @@ message HistoryEnrichmentFinished {
       STAGE_DERIVED = 69;
     }
 
-    Stage stage = 1 [(buf.validate.field).enum = {
-      defined_only: true
-      not_in: [0]
-    }];
-
-    // PENDING and FAILED have no count rows. COMPLETE may have no rows for a no-op
+    // FAILED have no count rows. COMPLETE may have no rows for a no-op
     // stage. Unknown future states must never be interpreted as COMPLETE.
     enum State {
       STATE_UNSPECIFIED = 0;
-      STATE_PENDING = 1;
       STATE_COMPLETE = 2;
       STATE_FAILED = 3;
     }
-
-    State state = 2 [(buf.validate.field).enum = {
-      defined_only: true
-      not_in: [0]
-    }];
 
     option (buf.validate.message).cel = {
       id: "stage_summary.state_requires_empty_counts"
@@ -610,21 +593,14 @@ message HistoryEnrichmentFinished {
       CATEGORY_FALLBACK_UNAVAILABLE = 2;
     }
 
-    Verb verb = 1 [(buf.validate.field).enum = {
-      defined_only: true
-      not_in: [0]
-    }];
     uint32 count = 2 [(buf.validate.field).uint32.gt = 0];
     oneof category {
       option (buf.validate.oneof).required = true;
 
       // Use the maintained category enum directly. Unknown nonzero values from
       // newer producers must survive forwarding, not become OTHER or UNAVAILABLE.
-      motif.data.external.v1.RevitCategory revit_category = 3 [(buf.validate.field).enum.not_in = 0];
-      CategoryFallback category_fallback = 4 [(buf.validate.field).enum = {
-        defined_only: true
-        not_in: [0]
-      }];
+      motif.data.external.v1.RevitCategory revit_category = 3;
+      CategoryFallback category_fallback = 4;
     }
   }
 
@@ -633,16 +609,9 @@ message HistoryEnrichmentFinished {
 
   enum Status {
     STATUS_UNSPECIFIED = 0;
-    STATUS_PENDING = 1;
     STATUS_COMPLETE = 2;
     STATUS_FAILED = 3;
   }
-
-  // PENDING is retained for wire compatibility. Producers publish only
-  // terminal COMPLETE or FAILED events.
-  Status status = 4 [(buf.validate.field).enum = {
-    not_in: [0]
-  }];
 
   // Present only for COMPLETE: one CLIENT summary, followed by DERIVED
   // exactly when the version has derived changes. Every included stage is
