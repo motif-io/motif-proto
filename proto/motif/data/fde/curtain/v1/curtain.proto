@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+// Curtain systems hosted on a multi-rail surface: grid lines, panel sets,
+// and mullion sets.
+package motif.data.fde.curtain.v1;
+
+import "buf/validate/validate.proto";
+import "motif/data/fde/geometry/v1/geometry.proto";
+import "motif/extension/v1/options.proto";
+import "motif/extension/v1/reference.proto";
+
+// A curtain subdivision hosted on an entity that carries `MultiRailSurface`.
+//
+// Grid lines are explicit U/V parameters. Cell topology is derived from those
+// lines and is not stored on this component.
+message CurtainSystem {
+  option (motif.extension.v1.message).component = 194;
+
+  // The host surface entity.
+  motif.extension.v1.EntityReference surface = 1 [(buf.validate.field).required = true];
+}
+
+// One grid line of a curtain system: an iso U or V at a fixed parameter.
+message CurtainGridLine {
+  option (motif.extension.v1.message).component = 195;
+
+  // The owning curtain system entity.
+  motif.extension.v1.EntityReference system = 1 [(buf.validate.field).required = true];
+
+  // Which surface parameter is held fixed.
+  motif.data.fde.geometry.v1.SurfaceIsoDirection direction = 2;
+
+  // The fixed parameter value, normalized to [0, 1].
+  double param = 3 [(buf.validate.field).double = {
+    gte: 0
+    lte: 1
+  }];
+}
+
+// Panel fill recipe for a curtain system. Panel solids are derived from the
+// system's cells; this stores the owning system and the panel depth.
+message CurtainPanelSet {
+  option (motif.extension.v1.message).component = 196;
+
+  // The owning curtain system entity.
+  motif.extension.v1.EntityReference system = 1;
+
+  // Panel thickness, in meters.
+  double depth = 2;
+}
+
+// Mullion fill recipe for a curtain system. Mullion solids are derived along
+// grid lines; this stores the section and which directions to fill.
+message CurtainMullionSet {
+  option (motif.extension.v1.message).component = 197;
+
+  // The owning curtain system entity.
+  motif.extension.v1.EntityReference system = 1;
+
+  // Mullion section width, in meters.
+  double width = 2;
+
+  // Mullion section height, in meters.
+  double height = 3;
+
+  // Which grid lines to fill: "u", "v", or "both".
+  string dir = 4;
+}
