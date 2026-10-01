@@ -1,0 +1,192 @@
+syntax = "proto3";
+
+// Computational geometry hosts: curve-hosted points, point-driven curves,
+// multi-rail surfaces, and two-point bars.
+package motif.data.fde.geometry.v1;
+
+import "buf/validate/validate.proto";
+import "motif/data/geometry/v1/geometry.proto";
+import "motif/extension/v1/options.proto";
+import "motif/extension/v1/reference.proto";
+
+// How a sequence of points becomes a curve.
+enum CurveThroughPointsKind {
+  // Unspecified curve kind.
+  CURVE_THROUGH_POINTS_KIND_UNSPECIFIED = 0;
+  // Piecewise linear segments through the points (2 points = a line).
+  CURVE_THROUGH_POINTS_KIND_LINE = 1;
+  // A circular arc through exactly three points.
+  CURVE_THROUGH_POINTS_KIND_ARC = 2;
+  // An interpolating NURBS spline through the points.
+  CURVE_THROUGH_POINTS_KIND_SPLINE = 3;
+}
+
+// Which surface parameter an iso curve or curtain grid line holds fixed.
+enum SurfaceIsoDirection {
+  // Unspecified iso direction.
+  SURFACE_ISO_DIRECTION_UNSPECIFIED = 0;
+  // `u` fixed: the curve runs across the rails (along `v`).
+  SURFACE_ISO_DIRECTION_U = 1;
+  // `v` fixed: the curve runs along the rails (along `u`).
+  SURFACE_ISO_DIRECTION_V = 2;
+}
+
+// Normalized parameter of a point hosted on a curve.
+message CurveHostParam {
+  option (motif.extension.v1.message).component = 186;
+
+  // Normalized curve parameter in [0, 1].
+  double t = 1 [(buf.validate.field).double = {
+    gte: 0
+    lte: 1
+  }];
+}
+
+// Places a point on a host curve at a normalized parameter.
+message CurveHostedPointBehavior {
+  option (motif.extension.v1.message).component = 187;
+
+  // The host curve geometry.
+  motif.extension.v1.DataReference host_curve = 1 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.model.v1.Curve2"
+    }
+  ];
+
+  // The normalized host parameter on the hosted point entity.
+  motif.extension.v1.DataReference host_param = 2 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.fde.geometry.v1.CurveHostParam"
+    }
+  ];
+
+  // The entity the computed point is written to.
+  motif.extension.v1.DataReference output = 3 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.model.v1.Point3"
+    }
+  ];
+}
+
+// A curve driven by an ordered sequence of Point3 entities.
+message CurveThroughPoints {
+  option (motif.extension.v1.message).component = 188;
+
+  // The driver Point3 entities, in order.
+  repeated motif.extension.v1.EntityReference points = 1 [(buf.validate.field).repeated = {
+    min_items: 2
+    max_items: 64
+  }];
+
+  // How the points become geometry.
+  CurveThroughPointsKind kind = 2;
+
+  // Interpolating spline order (degree + 1); read only for KIND_SPLINE.
+  // Zero selects the default (3).
+  uint32 order = 3;
+}
+
+// A surface lofted through one or more rail curves.
+//
+// One rail is extruded along `direction`, two rails are ruled, and three or
+// more are a piecewise ruled loft.
+message MultiRailSurface {
+  option (motif.extension.v1.message).component = 189;
+
+  // The rail curve entities, in order.
+  repeated motif.extension.v1.EntityReference rails = 1 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 8
+  }];
+
+  // World-space extrusion vector in meters; read only when one rail is given.
+  motif.data.geometry.v1.Vector3 direction = 2;
+}
+
+// An iso curve on a host that carries `MultiRailSurface`.
+message SurfaceIsoCurve {
+  option (motif.extension.v1.message).component = 190;
+
+  // The host surface entity.
+  motif.extension.v1.EntityReference surface = 1 [(buf.validate.field).required = true];
+
+  // Which parameter is held fixed.
+  SurfaceIsoDirection direction = 2;
+
+  // The fixed parameter value, normalized to [0, 1].
+  double param = 3 [(buf.validate.field).double = {
+    gte: 0
+    lte: 1
+  }];
+}
+
+// Normalized `(u, v)` of a point hosted on a `MultiRailSurface`.
+message SurfaceHostParam {
+  option (motif.extension.v1.message).component = 191;
+
+  // The host surface entity.
+  motif.extension.v1.EntityReference surface = 1 [(buf.validate.field).required = true];
+
+  // Normalized `u` along the rails, in [0, 1].
+  double u = 2 [(buf.validate.field).double = {
+    gte: 0
+    lte: 1
+  }];
+
+  // Normalized `v` across the rails, in [0, 1].
+  double v = 3 [(buf.validate.field).double = {
+    gte: 0
+    lte: 1
+  }];
+}
+
+// Resolved spine and placement frame for a bar between two points.
+message ResolvedBarSweepInputs {
+  option (motif.extension.v1.message).component = 192;
+
+  // The bar's spine in its placement frame: a line from local (0,0) with
+  // length equal to the node-to-node distance.
+  motif.data.geometry.v1.Curve2 curve = 1;
+
+  // The bar's placement frame: origin at the start node, local X toward the
+  // end node, local Z the perpendicularized global up.
+  motif.data.geometry.v1.CoordinateSystem3 coordinate_system = 2;
+}
+
+// Builds a bar between two point entities.
+message TwoPointBarBehavior {
+  option (motif.extension.v1.message).component = 193;
+
+  // The start point.
+  motif.extension.v1.DataReference start_point = 1 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.model.v1.Point3"
+    }
+  ];
+
+  // The end point.
+  motif.extension.v1.DataReference end_point = 2 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.model.v1.Point3"
+    }
+  ];
+
+  // The entity the resolved bar sweep inputs are written to.
+  motif.extension.v1.DataReference output = 3 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.fde.geometry.v1.ResolvedBarSweepInputs"
+    }
+  ];
+}
