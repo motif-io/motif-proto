@@ -577,8 +577,10 @@ message HistoryEnrichmentFinished {
     repeated EntityChange entity_changes = 4;
   }
 
-  // A count of distinct affected entities in one verb/category bucket.
-  message StageChangeCount {
+  // One affected entity's lifecycle and category in the enclosing stage.
+  // DELETE retains the affected ID even when that entity no longer exists.
+  // Reference lookup does not include unchanged referenced entities.
+  message EntityChange {
     enum Verb {
       VERB_UNSPECIFIED = 0;
       VERB_CREATE = 1;
@@ -599,24 +601,8 @@ message HistoryEnrichmentFinished {
       CATEGORY_FALLBACK_MISSING = 3;
     }
 
-    Verb verb = 1;
-    uint32 count = 2 [(buf.validate.field).uint32.gt = 0];
-    oneof category {
-      option (buf.validate.oneof).required = true;
-
-      // Use the maintained category enum directly. Unknown nonzero values from
-      // newer producers must survive forwarding, not become OTHER or UNAVAILABLE.
-      motif.data.external.v1.RevitCategory revit_category = 3;
-      CategoryFallback category_fallback = 4;
-    }
-  }
-
-  // One affected entity's lifecycle and category in the enclosing stage.
-  // DELETE retains the affected ID even when that entity no longer exists.
-  // Reference lookup does not include unchanged referenced entities.
-  message EntityChange {
     bytes entity_id = 1 [(buf.validate.field).bytes.len = 16];
-    StageChangeCount.Verb verb = 2 [(buf.validate.field).enum = {
+    Verb verb = 2 [(buf.validate.field).enum = {
       defined_only: true
       not_in: [0]
     }];
@@ -626,7 +612,7 @@ message HistoryEnrichmentFinished {
 
       // Unknown nonzero values from newer producers remain concrete categories.
       motif.data.external.v1.RevitCategory revit_category = 3 [(buf.validate.field).enum.not_in = 0];
-      StageChangeCount.CategoryFallback category_fallback = 4 [(buf.validate.field).enum = {
+      CategoryFallback category_fallback = 4 [(buf.validate.field).enum = {
         defined_only: true
         not_in: [0]
       }];
