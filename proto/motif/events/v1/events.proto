@@ -549,8 +549,8 @@ message ProjectRenamed {
   optional bytes actor_user_id = 2 [(buf.validate.field).bytes.len = 16];
 }
 
-// Semantic history enrichment for one committed model version reached a
-// terminal state.
+// Semantic history enrichment completed successfully for one committed model
+// version. Processing failures do not publish this event.
 message HistoryEnrichmentFinished {
   // Semantic history for one persisted stage of a model version.
   message StageSummary {
@@ -577,7 +577,7 @@ message HistoryEnrichmentFinished {
     // Absolute entity records, unique and ordered by the unsigned entity UUID
     // bytes. Counts may be derived from these records. Duplicate delivery
     // replaces the snapshot rather than adding contributions. An explicit
-    // empty COMPLETE stage represents a no-op; absent stages are not no-ops.
+    // empty stage represents a no-op; absent stages are not no-ops.
     repeated EntityChange entity_changes = 4;
   }
 
@@ -597,7 +597,8 @@ message HistoryEnrichmentFinished {
     }
 
     // Explains why no concrete category is associated with the entity change.
-    // These are category outcomes within COMPLETE, not processing failures.
+    // These are category outcomes within successful enrichment, not processing
+    // failures.
     enum CategoryFallback {
       // No fallback outcome specified. Invalid for an entity change.
       CATEGORY_FALLBACK_UNSPECIFIED = 0;
@@ -636,25 +637,11 @@ message HistoryEnrichmentFinished {
   bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
   int32 version = 2 [(buf.validate.field).int32.gt = 0];
 
-  // Terminal outcome of semantic history enrichment for the model version.
-  enum Status {
-    // No terminal outcome specified.
-    STATUS_UNSPECIFIED = 0;
-    // Enrichment completed successfully. Inline stage summaries may be
-    // omitted for a compatibility or oversize hint.
-    STATUS_COMPLETE = 2;
-    // Enrichment failed. No stage summaries are included.
-    STATUS_FAILED = 3;
-  }
-
-  // The terminal enrichment outcome for this model version.
-  Status status = 4;
-
-  // Present only for COMPLETE: one CLIENT summary, followed by DERIVED
-  // exactly when the version has derived changes. Every included stage is
-  // COMPLETE, even an empty/no-op stage. Producers copy the committed result;
+  // One CLIENT summary, followed by DERIVED exactly when the version has
+  // derived changes. Every included stage is complete, even an empty/no-op
+  // stage. Producers copy the committed result;
   // they must not reclassify, truncate entity sets or split the snapshot
-  // to fit transport limits. A payload-free COMPLETE event is a compatibility
+  // to fit transport limits. A payload-free event is a compatibility
   // or oversize hint, not an empty completed stage. It signals missing inline
   // detail; authorized semantic-history reads are needed when available.
   repeated StageSummary stage_summaries = 5 [(buf.validate.field).repeated.max_items = 2];
