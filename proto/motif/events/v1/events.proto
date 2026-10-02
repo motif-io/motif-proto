@@ -576,16 +576,8 @@ message HistoryEnrichmentFinished {
 
     State state = 2;
 
-    option (buf.validate.message).cel = {
-      id: "stage_summary.state_requires_empty_counts"
-      message: "change_counts must be empty unless state is STATE_COMPLETE"
-      expression: "this.state == 2 || this.change_counts.size() == 0"
-    };
-    option (buf.validate.message).cel = {
-      id: "stage_summary.unique_change_counts"
-      message: "change_counts must be unique by verb and category"
-      expression: "this.change_counts.map(row, string(row.verb) + ':' + (has(row.revit_category) ? 'r:' + string(row.revit_category) : 'f:' + string(row.category_fallback))).unique()"
-    };
+    // <remove>Count-only validation: state_requires_empty_counts and
+    // unique_change_counts.</remove>
 
     // <add>
     option (buf.validate.message).cel = {
@@ -598,22 +590,12 @@ message HistoryEnrichmentFinished {
       message: "each entity may contribute only once per stage"
       expression: "this.entity_changes.map(row, row.entity_id).unique()"
     };
-    option (buf.validate.message).cel = {
-      id: "stage_summary.single_payload_representation"
-      message: "deprecated change_counts and entity_changes must not be mixed"
-      expression: "this.change_counts.size() == 0 || this.entity_changes.size() == 0"
-    };
+    // <remove>Mixed count/entity validation: single_payload_representation.</remove>
     // </add>
 
-    // Rows are unique by (verb, category arm and value). Producers emit them by
-    // verb number, then category field number, then category value. Consumers
-    // treat this as a set of absolute counts, never additive increments.
-    // <remove>repeated StageChangeCount change_counts = 3;</remove>
-    // <add>Deprecated: count-only compatibility data does not identify entities.
-    // New producers must leave this field empty and write entity_changes.</add>
+    // <remove>Count-only stage payload and its absolute-count ordering rules.
+    // repeated StageChangeCount change_counts = 3 [deprecated = true];</remove>
     // <add>
-    repeated StageChangeCount change_counts = 3 [deprecated = true];
-
     // Absolute entity records, unique and ordered by the unsigned entity UUID
     // bytes. Counts may be derived from these records. Duplicate delivery
     // replaces the snapshot rather than adding contributions. An explicit
