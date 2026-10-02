@@ -573,7 +573,7 @@ message HistoryEnrichmentFinished {
       expression: "this.entity_changes.map(row, row.entity_id).unique()"
     };
 
-    // Semantic entity change records, unique by the unsigned entity UUID 
+    // Semantic entity change records, unique by the unsigned entity UUID
     // bytes. An explicit empty stage represents a no-op; absent stages are
     // not no-ops.
     repeated EntityChange entity_changes = 4;
@@ -634,7 +634,7 @@ message HistoryEnrichmentFinished {
   int32 version = 2 [(buf.validate.field).int32.gt = 0];
 
   // One CLIENT summary, followed by DERIVED exactly when the version has
-  // derived changes. 
+  // derived changes.
   repeated StageSummary stage_summaries = 5 [(buf.validate.field).repeated.max_items = 2];
 }
 
