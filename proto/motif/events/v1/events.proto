@@ -455,8 +455,7 @@ message ProjectContent {
   }
 }
 
-// A change to one model, delivered on `modelContent/{model_id}`. Subscribing
-// requires the same View access as reading that model's history; access is
+// A change to one model, delivered on `modelContent/{model_id}`. Access is
 // rechecked while the subscription is open.
 message ModelContent {
   // The model this event is about, a 16-byte UUID. Required.
@@ -574,15 +573,13 @@ message HistoryEnrichmentFinished {
       expression: "this.entity_changes.map(row, row.entity_id).unique()"
     };
 
-    // Absolute entity records, unique and ordered by the unsigned entity UUID
-    // bytes. Counts may be derived from these records. Duplicate delivery
-    // replaces the snapshot rather than adding contributions. An explicit
-    // empty stage represents a no-op; absent stages are not no-ops.
+    // Semantic entity change records, unique by the unsigned entity UUID 
+    // bytes. An explicit empty stage represents a no-op; absent stages are
+    // not no-ops.
     repeated EntityChange entity_changes = 4;
   }
 
   // One affected entity's lifecycle and category in the enclosing stage.
-  // Reference lookup does not include unchanged referenced entities.
   message EntityChange {
     // The entity's lifecycle change in the enclosing stage.
     enum Verb {
@@ -623,7 +620,6 @@ message HistoryEnrichmentFinished {
       option (buf.validate.oneof).required = true;
 
       // The concrete category associated with this entity change.
-      // Unknown nonzero values from newer producers remain concrete categories.
       motif.data.external.v1.RevitCategory revit_category = 3 [(buf.validate.field).enum.not_in = 0];
       // The fallback classification outcome for this entity change.
       CategoryFallback category_fallback = 4 [(buf.validate.field).enum = {
@@ -638,12 +634,7 @@ message HistoryEnrichmentFinished {
   int32 version = 2 [(buf.validate.field).int32.gt = 0];
 
   // One CLIENT summary, followed by DERIVED exactly when the version has
-  // derived changes. Every included stage is complete, even an empty/no-op
-  // stage. Producers copy the committed result;
-  // they must not reclassify, truncate entity sets or split the snapshot
-  // to fit transport limits. A payload-free event is a compatibility
-  // or oversize hint, not an empty completed stage. It signals missing inline
-  // detail; authorized semantic-history reads are needed when available.
+  // derived changes. 
   repeated StageSummary stage_summaries = 5 [(buf.validate.field).repeated.max_items = 2];
 }
 
