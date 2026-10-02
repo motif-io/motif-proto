@@ -557,11 +557,15 @@ message HistoryEnrichmentFinished {
     // Only persisted stages are summaries; version cursor boundaries are not.
     // Numbers match the corresponding persistence cursor stages.
     enum Stage {
+      // No persisted stage specified.
       STAGE_UNSPECIFIED = 0;
+      // Changes submitted by a client.
       STAGE_CLIENT = 10;
+      // System-derived changes in the version.
       STAGE_DERIVED = 69;
     }
 
+    // The persisted stage represented by this summary.
     Stage stage = 1;
 
     option (buf.validate.message).cel = {
@@ -578,30 +582,37 @@ message HistoryEnrichmentFinished {
   }
 
   // One affected entity's lifecycle and category in the enclosing stage.
-  // DELETE retains the affected ID even when that entity no longer exists.
   // Reference lookup does not include unchanged referenced entities.
   message EntityChange {
+    // The entity's lifecycle change in the enclosing stage.
     enum Verb {
+      // No lifecycle change specified. Invalid for an entity change.
       VERB_UNSPECIFIED = 0;
+      // The entity was created in this stage.
       VERB_CREATE = 1;
+      // The entity was updated in this stage.
       VERB_UPDATE = 2;
+      // The entity was deleted in this stage; its affected ID is retained.
       VERB_DELETE = 3;
     }
 
-    // MISSING means required facts were available but expected optional
-    // classification was absent and inference supplied no category. OTHER is
-    // an available unmapped value or a deliberately uncategorized policy case.
-    // UNAVAILABLE means required historical facts could not be obtained,
-    // including reference cycles and per-resolution depth limits. These are
-    // category outcomes within COMPLETE, not processing failures.
+    // Explains why no concrete category is associated with the entity change.
+    // These are category outcomes within COMPLETE, not processing failures.
     enum CategoryFallback {
+      // No fallback outcome specified. Invalid for an entity change.
       CATEGORY_FALLBACK_UNSPECIFIED = 0;
+      // An available unmapped value or a deliberately uncategorized policy case.
       CATEGORY_FALLBACK_OTHER = 1;
+      // Required historical facts could not be obtained, including reference
+      // cycles and per-resolution depth limits.
       CATEGORY_FALLBACK_UNAVAILABLE = 2;
+      // Required facts were available, but expected optional classification
+      // was absent and inference supplied no category.
       CATEGORY_FALLBACK_MISSING = 3;
     }
 
     bytes entity_id = 1 [(buf.validate.field).bytes.len = 16];
+    // The affected entity's lifecycle change.
     Verb verb = 2 [(buf.validate.field).enum = {
       defined_only: true
       not_in: [0]
@@ -610,8 +621,10 @@ message HistoryEnrichmentFinished {
     oneof category {
       option (buf.validate.oneof).required = true;
 
+      // The concrete category associated with this entity change.
       // Unknown nonzero values from newer producers remain concrete categories.
       motif.data.external.v1.RevitCategory revit_category = 3 [(buf.validate.field).enum.not_in = 0];
+      // The fallback classification outcome for this entity change.
       CategoryFallback category_fallback = 4 [(buf.validate.field).enum = {
         defined_only: true
         not_in: [0]
@@ -623,12 +636,18 @@ message HistoryEnrichmentFinished {
   bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
   int32 version = 2 [(buf.validate.field).int32.gt = 0];
 
+  // Terminal outcome of semantic history enrichment for the model version.
   enum Status {
+    // No terminal outcome specified.
     STATUS_UNSPECIFIED = 0;
+    // Enrichment completed successfully. Inline stage summaries may be
+    // omitted for a compatibility or oversize hint.
     STATUS_COMPLETE = 2;
+    // Enrichment failed. No stage summaries are included.
     STATUS_FAILED = 3;
   }
 
+  // The terminal enrichment outcome for this model version.
   Status status = 4;
 
   // Present only for COMPLETE: one CLIENT summary, followed by DERIVED
