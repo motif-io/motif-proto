@@ -42,6 +42,11 @@ message TextAnnotation {
   // translation/rotation. Empty on annotations authored before leader support.
   // IDs must be unique across every leader and endpoint in this annotation.
   repeated AnnotationLeader leaders = 7;
+  // Line styling shared by every leader on this annotation (one style per
+  // note, not per leader), independent of the box border, which is styled
+  // through the entity's own style components. Unset reads as the application
+  // default: pen 1, continuous stroke, black.
+  AnnotationLeaderStyle leader_style = 8;
 }
 
 // One shoulder from the annotation to an elbow, branching to one or more heads.
@@ -72,6 +77,16 @@ message AnnotationLeader {
 message AnnotationLeaderEndpoint {
   string id = 1 [(buf.validate.field).string.uuid = true];
   motif.data.geometry.v1.Point2 position = 2 [(buf.validate.field).required = true];
+}
+
+// Stroke styling for an annotation's leaders.
+message AnnotationLeaderStyle {
+  // Unset reads as the application default (black).
+  motif.data.style.v1.Color color = 1;
+  // Pen index travels in `pen_size` (unset or 0 reads as pen 1) and the catalog
+  // pattern in `pattern_ref` (unset or "Solid" is a continuous stroke). `width`
+  // is written as 0 and ignored: leaders are pen-sized lines.
+  motif.data.style.v1.LineStyle line = 2;
 }
 
 // A persisted dimension annotation.
