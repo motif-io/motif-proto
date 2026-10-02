@@ -564,8 +564,10 @@ message HistoryEnrichmentFinished {
 
     Stage stage = 1;
 
-    // FAILED have no count rows. COMPLETE may have no rows for a no-op
-    // stage. Unknown future states must never be interpreted as COMPLETE.
+    // <remove>FAILED have no count rows. COMPLETE may have no rows for a no-op
+    // stage. Unknown future states must never be interpreted as COMPLETE.</remove>
+    // <add>FAILED has no entity records. COMPLETE may have no records for a
+    // no-op stage. Unknown future states must not be interpreted as COMPLETE.</add>
     enum State {
       STATE_UNSPECIFIED = 0;
       STATE_COMPLETE = 2;
@@ -585,10 +587,39 @@ message HistoryEnrichmentFinished {
       expression: "this.change_counts.map(row, string(row.verb) + ':' + (has(row.revit_category) ? 'r:' + string(row.revit_category) : 'f:' + string(row.category_fallback))).unique()"
     };
 
+    // <add>
+    option (buf.validate.message).cel = {
+      id: "stage_summary.state_requires_empty_entities"
+      message: "entity_changes must be empty unless state is STATE_COMPLETE"
+      expression: "this.state == 2 || this.entity_changes.size() == 0"
+    };
+    option (buf.validate.message).cel = {
+      id: "stage_summary.unique_entity_changes"
+      message: "each entity may contribute only once per stage"
+      expression: "this.entity_changes.map(row, row.entity_id).unique()"
+    };
+    option (buf.validate.message).cel = {
+      id: "stage_summary.single_payload_representation"
+      message: "deprecated change_counts and entity_changes must not be mixed"
+      expression: "this.change_counts.size() == 0 || this.entity_changes.size() == 0"
+    };
+    // </add>
+
     // Rows are unique by (verb, category arm and value). Producers emit them by
     // verb number, then category field number, then category value. Consumers
     // treat this as a set of absolute counts, never additive increments.
-    repeated StageChangeCount change_counts = 3;
+    // <remove>repeated StageChangeCount change_counts = 3;</remove>
+    // <add>Deprecated: count-only compatibility data does not identify entities.
+    // New producers must leave this field empty and write entity_changes.</add>
+    // <add>
+    repeated StageChangeCount change_counts = 3 [deprecated = true];
+
+    // Absolute entity records, unique and ordered by the unsigned entity UUID
+    // bytes. Counts may be derived from these records. Duplicate delivery
+    // replaces the snapshot rather than adding contributions. An explicit
+    // empty COMPLETE stage represents a no-op; absent stages are not no-ops.
+    repeated EntityChange entity_changes = 4;
+    // </add>
   }
 
   // A count of distinct affected entities in one verb/category bucket.
@@ -600,12 +631,21 @@ message HistoryEnrichmentFinished {
       VERB_DELETE = 3;
     }
 
-    // OTHER means all required facts were available but no category resolved.
-    // UNAVAILABLE means facts required for resolution could not be obtained.
+    // <remove>OTHER means all required facts were available but no category resolved.
+    // UNAVAILABLE means facts required for resolution could not be obtained.</remove>
+    // <add>MISSING means required facts were available but expected optional
+    // classification was absent and inference supplied no category. OTHER is
+    // an available unmapped value or a deliberately uncategorized policy case.
+    // UNAVAILABLE means required historical facts could not be obtained,
+    // including reference cycles and per-resolution depth limits. These are
+    // category outcomes within COMPLETE, not processing failures.</add>
     enum CategoryFallback {
       CATEGORY_FALLBACK_UNSPECIFIED = 0;
       CATEGORY_FALLBACK_OTHER = 1;
       CATEGORY_FALLBACK_UNAVAILABLE = 2;
+      // <add>
+      CATEGORY_FALLBACK_MISSING = 3;
+      // </add>
     }
 
     Verb verb = 1;
@@ -619,6 +659,30 @@ message HistoryEnrichmentFinished {
       CategoryFallback category_fallback = 4;
     }
   }
+
+  // <add>
+  // One affected entity's lifecycle and category in the enclosing stage.
+  // DELETE retains the affected ID even when that entity no longer exists.
+  // Reference lookup does not include unchanged referenced entities.
+  message EntityChange {
+    bytes entity_id = 1 [(buf.validate.field).bytes.len = 16];
+    StageChangeCount.Verb verb = 2 [(buf.validate.field).enum = {
+      defined_only: true
+      not_in: [0]
+    }];
+
+    oneof category {
+      option (buf.validate.oneof).required = true;
+
+      // Unknown nonzero values from newer producers remain concrete categories.
+      motif.data.external.v1.RevitCategory revit_category = 3 [(buf.validate.field).enum.not_in = 0];
+      StageChangeCount.CategoryFallback category_fallback = 4 [(buf.validate.field).enum = {
+        defined_only: true
+        not_in: [0]
+      }];
+    }
+  }
+  // </add>
 
   // Must equal the enclosing ModelContent.model_id.
   bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
@@ -635,7 +699,11 @@ message HistoryEnrichmentFinished {
   // Present only for COMPLETE: one CLIENT summary, followed by DERIVED
   // exactly when the version has derived changes. Every included stage is
   // COMPLETE, even an empty/no-op stage. Producers copy the committed result;
-  // they must not reclassify or truncate counts to fit transport limits.
+  // <remove>they must not reclassify or truncate counts to fit transport limits.</remove>
+  // <add>they must not reclassify, truncate entity sets or split the snapshot
+  // to fit transport limits. A payload-free COMPLETE event is a compatibility
+  // or oversize hint, not an empty completed stage. It signals missing inline
+  // detail; authorized semantic-history reads are needed when available.</add>
   repeated StageSummary stage_summaries = 5 [(buf.validate.field).repeated.max_items = 2];
 }
 
