@@ -2,7 +2,7 @@
 min_version = "2026.4.5"
 
 [tools]
-buf = "1.68.4"
+buf = "1.73.0"
 taplo = "0.10.0"
 jq = "1.8.2"
 
