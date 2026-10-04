@@ -7,8 +7,10 @@ syntax = "proto3";
 // stored here.
 package motif.data.fde.poly_body.v1;
 
+import "buf/validate/validate.proto";
 import "motif/data/geometry/v1/geometry.proto";
 import "motif/extension/v1/options.proto";
+import "motif/extension/v1/reference.proto";
 
 // The authored body.
 //
@@ -24,6 +26,20 @@ message PolyBody {
   repeated PolyBodyEdge edges = 2;
   // Faces, in id order. Index is the face id.
   repeated PolyBodyFace faces = 3;
+}
+
+// A mass floor: the planar surface where a level's plane cuts a poly body.
+//
+// The surface itself is derived from the body and the level and is not stored;
+// it follows the body as the body is edited. The entity carrying this component
+// names its level through a `motif.data.model.v1.PlanarReference`, the same way
+// the body names its placement level. Deleting the body or the level deletes the
+// mass floor.
+message MassFloor {
+  option (motif.extension.v1.message).component = 187;
+
+  // The poly body the floor is cut from. Required.
+  motif.extension.v1.EntityReference body = 1 [(buf.validate.field).required = true];
 }
 
 // One vertex of a body. Absent `position` is meaningful only when `removed`.
