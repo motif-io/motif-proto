@@ -188,9 +188,6 @@ message Curve2List {
 }
 
 // A line in three-dimensional space, parameterized over a domain.
-//
-// The parameter `t` maps to `origin + t * dir`. A finite segment uses a finite
-// domain; an infinite line leaves a bound unset.
 message Line3 {
   // A point on the line (the parametric origin).
   Point3 origin = 1;
