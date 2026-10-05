@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+// A conceptual mass: one planar polyhedron edited as faces and edges.
+//
+// The triangle mesh drawn for a mass is derived from this component and is not
+// stored here.
+package motif.data.model.v1;
+
+import "motif/data/geometry/v1/geometry.proto";
+import "motif/extension/v1/options.proto";
+
+// The authored body of a mass.
+//
+// Vertex, edge, and face ids are indexes into `vertices`, `edges`, and
+// `faces`. A removed element stays at its index with `removed` set, so an id
+// is never reused and later indexes do not shift.
+message Mass {
+  option (motif.extension.v1.message).component = 186;
+
+  // Vertices, in id order. Index is the vertex id.
+  repeated MassVertex vertices = 1;
+  // Edges, in id order. Index is the edge id.
+  repeated MassEdge edges = 2;
+  // Faces, in id order. Index is the face id.
+  repeated MassFace faces = 3;
+}
+
+// One vertex of a mass. Absent `position` is meaningful only when `removed`.
+message MassVertex {
+  // The vertex position, in model coordinates, meters.
+  motif.data.geometry.v1.Point3 position = 1;
+  // The vertex has been deleted. Its index remains reserved.
+  bool removed = 2;
+}
+
+// One edge of a mass, shared by the faces whose loops name it.
+//
+// `curve` is a straight segment today. Further curve kinds join this oneof
+// without renumbering `line`.
+message MassEdge {
+  // The vertex id at the start of `curve` when the edge is not reversed.
+  uint32 vertex_a = 1;
+  // The vertex id at the end of `curve` when the edge is not reversed.
+  uint32 vertex_b = 2;
+  // The edge has been deleted. Its index remains reserved.
+  bool removed = 3;
+  // The edge geometry. Exactly one kind is set on a live edge.
+  oneof curve {
+    // A straight segment between `vertex_a` and `vertex_b`.
+    motif.data.geometry.v1.Line3 line = 4;
+  }
+}
+
+// One directed use of an edge in a face loop.
+message MassCoedge {
+  // The edge id.
+  uint32 edge = 1;
+  // The face walks the edge from `vertex_b` to `vertex_a`.
+  bool reversed = 2;
+}
+
+// An ordered closed chain of coedges.
+message MassLoop {
+  // The coedges, in walk order. A live loop has at least three.
+  repeated MassCoedge coedges = 1;
+}
+
+// One face of a mass: a plane, an outer loop, and any holes.
+//
+// The outer loop is wound so the plane normal points outward. Each hole loop
+// is wound opposite the outer loop.
+message MassFace {
+  // The face plane. A live face's corners lie on this plane.
+  motif.data.geometry.v1.Plane plane = 1;
+  // The outer boundary.
+  MassLoop outer = 2;
+  // Holes in the face, each a closed loop.
+  repeated MassLoop holes = 3;
+  // The face has been deleted. Its index remains reserved.
+  bool removed = 4;
+}
