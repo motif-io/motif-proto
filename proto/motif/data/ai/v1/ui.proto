@@ -177,13 +177,9 @@ message Launcher {
 
 // Wires one action declared by a UI to the entity that action targets.
 //
-// One binding per entity, not a map on the UI instance. That is forced by
-// reference scoping: a component carries at most one `ModelReference` and it
-// governs every entity reference within it, so a map with a pin per entry cannot
-// exist. The unit that can carry a pin is the component, and the unit that can
-// carry a component is the entity. Splitting bindings across entities is what
-// lets each one pin its own target version, and lets one UI instance drive a
-// model-local target from one action and a library target from another.
+// One binding per entity, not a map on the UI instance. Each binding pins its
+// own target version, so one UI instance can drive a model-local target from one
+// action and a library target from another.
 //
 // A binding entity lives in the same model as the UI instance it belongs to, and
 // hangs off it with `Member`. Discover an instance's bindings with a

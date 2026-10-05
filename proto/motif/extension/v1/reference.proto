@@ -7,9 +7,9 @@ import "google/protobuf/empty.proto";
 
 // A reference to a single target entity.
 //
-// If the component contains a ModelReference, the referenced entity is
-// resolved against that model and version. If there is no ModelReference in
-// the component, the entity is in the model containing this reference.
+// The entity is resolved against the ModelReference that scopes this reference
+// (see ModelReference). If no ModelReference scopes it, the entity is in the
+// model containing this reference.
 message EntityReference {
   // The target entity's ID, a 16-byte UUID. Required.
   bytes entity_id = 1 [(buf.validate.field).bytes.len = 16];
@@ -17,10 +17,23 @@ message EntityReference {
 
 // A reference to a specific version of a model.
 //
-// A component can have at most one ModelReference, and if present, any
-// entity references are resolved against the referenced model and version.
-// If no entity references are present on the component, the reference
-// is to the referenced model itself (at the specified version).
+// A ModelReference scopes the entity and data references in the message that
+// declares it, including those in messages nested beneath it. Each instance of
+// that message resolves independently: when its ModelReference is set, the
+// references beneath it are resolved against that model and version; when it is
+// unset, they are in the model containing them. So a repeated message carrying
+// an EntityReference and an optional ModelReference gives each element its own
+// model, and a component can mix local and linked targets.
+//
+// If no reference resolves against a set ModelReference, the reference is to the
+// referenced model itself (at the specified version). An entity reference beneath
+// it resolves against it, and so does a data reference with an explicit entity_id
+// and no model of its own.
+//
+// When more than one message on a reference's path declares a ModelReference
+// field, the innermost one scopes it, even when that field is unset. A message
+// instance must not set more than one ModelReference, since the references
+// beneath it would then have no single model to resolve against.
 message ModelReference {
   // The model ID, a 16-byte UUID. Required.
   bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
@@ -46,10 +59,10 @@ message RepresentationReference {
 // entity the data lives on, component_id selects a component on that entity, and
 // an optional path narrows further to a field within that component.
 //
-// As with an EntityReference, if the component contains a ModelReference, an
-// explicit entity_id is resolved against that model and version; otherwise it is
-// in the model containing this reference. (this_entity is always the entity
-// containing this reference.)
+// As with an EntityReference, an explicit entity_id is resolved against the
+// ModelReference that scopes this reference, if one is set; otherwise it is in
+// the model containing this reference. (this_entity is always the entity
+// containing this reference, in the model containing it.)
 message DataReference {
   // The target entity. A target must be set: either an explicit entity ID, or
   // this_entity for the entity containing this reference.
@@ -71,13 +84,13 @@ message DataReference {
   FieldPath path = 4;
 
   // The model the target entity lives in. When unset, the target resolves per
-  // the component-level rule above: the component's ModelReference if present,
-  // otherwise the model containing this reference.
+  // the scoping rule above: the ModelReference that scopes this reference if one
+  // is set, otherwise the model containing this reference.
   //
   // Set this only when the reference means an entity in another model
   // independently of any relationship on the same component — e.g. a
   // parameter-bindings declarations reference into an external asset
-  // definition. An explicit model here outranks the component-level rule.
+  // definition. An explicit model here outranks the scoping ModelReference.
   ModelReference model = 5;
 }
 
