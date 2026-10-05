@@ -187,6 +187,16 @@ message Curve2List {
   repeated Curve2 curves = 1;
 }
 
+// A line in three-dimensional space, parameterized over a domain.
+message Line3 {
+  // A point on the line (the parametric origin).
+  Point3 origin = 1;
+  // The line's direction.
+  UnitVector3 dir = 2;
+  // The parametric extent of the segment.
+  Domain domain = 3;
+}
+
 // A planar surface in three-dimensional space.
 //
 // Parameter `(u, v)` evaluates to `origin + u * u_axis + v * (normal × u_axis)`
