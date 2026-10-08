@@ -17,26 +17,30 @@ message EntityReference {
 
 // A reference to a specific version of a model.
 //
-// A ModelReference scopes the entity and data references declared alongside it
-// in the same message. Each instance of that message resolves independently:
-// when its ModelReference is set, those references are resolved against that
-// model and version; when it is unset, they are in the model containing them.
-// So a repeated message carrying an EntityReference and an optional
-// ModelReference gives each element its own model, and a component can mix local
-// and linked targets.
-//
-// A ModelReference does not reach into nested messages: a reference inside a
-// nested message is scoped only by a ModelReference declared in that same nested
-// message, so a message type's references mean the same thing wherever it is
-// embedded.
+// A ModelReference scopes the entity and data references in the message that
+// declares it, including those in messages nested beneath it. Each instance of
+// that message resolves independently: when its ModelReference is set, the
+// references beneath it are resolved against that model and version; when it is
+// unset, they are in the model containing them. So a repeated message carrying
+// an EntityReference and an optional ModelReference gives each element its own
+// model, and a component can mix local and linked targets.
 //
 // If no reference resolves against a set ModelReference, the reference is to the
-// referenced model itself (at the specified version). An entity reference
-// alongside it resolves against it, and so does a data reference with an
-// explicit entity_id and no model of its own.
+// referenced model itself (at the specified version). An entity reference beneath
+// it resolves against it, and so does a data reference with an explicit entity_id
+// and no model of its own.
+//
+// When more than one message on a reference's path declares a ModelReference
+// field, the innermost one scopes it. If that ModelReference is unset, the
+// reference is in the model containing it: it does not fall back to a
+// ModelReference set on an enclosing message. A nested message that declares no
+// ModelReference field is scoped by the enclosing one, so its references can
+// resolve differently depending on where it is embedded; to keep them local
+// beside an enclosing ModelReference, declare one on the nested message and
+// leave it unset.
 //
 // A message instance must not set more than one ModelReference, since the
-// references alongside them would then have no single model to resolve against.
+// references beneath it would then have no single model to resolve against.
 message ModelReference {
   // The model ID, a 16-byte UUID. Required.
   bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
