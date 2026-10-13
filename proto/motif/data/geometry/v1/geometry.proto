@@ -5,6 +5,7 @@ syntax = "proto3";
 // types and are not themselves components.
 package motif.data.geometry.v1;
 
+import "buf/validate/validate.proto";
 import "google/protobuf/empty.proto";
 
 // A point in two-dimensional space.
@@ -180,11 +181,63 @@ message Size2 {
   double height = 2;
 }
 
-// Closed boundary profile as an ordered sequence of line segments in
-// workplane-local coordinates. Each segment is a `Curve2` line; consecutive
-// segments share endpoints and the last segment connects back to the first.
+// Closed boundary profile as an ordered sequence of `Curve2` segments in
+// workplane-local coordinates. Consecutive segments share endpoints and the
+// last segment connects back to the first. One list is one loop.
 message Curve2List {
   repeated Curve2 curves = 1;
+}
+
+// A planar region: one outer loop and zero or more interior loops (holes).
+//
+// Each loop is a `Curve2List` (lines, arcs, ellipses, NURBS), not a
+// polyline-only ring. Interior loops wind opposite the exterior (CW holes if
+// the outer is CCW). Proto does not check winding or that segments close;
+// consumers must refuse an open or empty loop when building a face. Several
+// disconnected outers or a nested island (positive material inside a hole)
+// belong on `MultiClosedRegion2D`, not on this message.
+//
+// Legacy dual-read: a lone `Curve2List` in a profile `Any` is this message
+// with that list as `exterior` and no `interiors`.
+message ClosedRegion2D {
+  // The single outer loop. Required and nonempty.
+  Curve2List exterior = 1 [
+    (buf.validate.field).required = true,
+    (buf.validate.field).cel = {
+      id: "closed_region_exterior_nonempty"
+      message: "exterior must contain at least one curve"
+      expression: "size(this.curves) > 0"
+    }
+  ];
+
+  // Holes inside the exterior. Empty means a simply-connected region. Each
+  // hole is nonempty.
+  repeated Curve2List interiors = 2 [(buf.validate.field).repeated = {
+    items: {
+      cel: {
+        id: "closed_region_interior_nonempty"
+        message: "each interior loop must contain at least one curve"
+        expression: "size(this.curves) > 0"
+      }
+    }
+  }];
+}
+
+// One or more disjoint closed regions (MultiPolygon-shaped).
+//
+// Each `ClosedRegion2D` has one exterior and optional holes. A nested island
+// (positive material inside another region's hole) is a separate entry in
+// `regions` — regions do not parent each other. Proto does not check
+// containment or overlap between regions; consumers that build faces must
+// refuse geometrically inconsistent input.
+//
+// Legacy dual-read: a lone `Curve2List` in a profile `Any` is one
+// `ClosedRegion2D` (that exterior, no interiors) as the sole element of
+// `regions`.
+message MultiClosedRegion2D {
+  // Nonempty list of closed regions. One region is the usual slab; several
+  // are disjoint outers or islands.
+  repeated ClosedRegion2D regions = 1 [(buf.validate.field).repeated.min_items = 1];
 }
 
 // A line in three-dimensional space, parameterized over a domain.
