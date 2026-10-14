@@ -227,6 +227,21 @@ message ViewScale {
   double ratio = 1 [(buf.validate.field).double.gt = 0];
 }
 
+// Paper-size multiplier for the level, section, and elevation tags drawn in a
+// view. Distinct from `ViewScale`: the drawing scale still converts paper to
+// model, and this only changes how large those tags are on paper.
+//
+// Lives on the view the tags are drawn in. Absent means scale 1, matching tags
+// authored before this component existed.
+message ViewTagGraphics {
+  option (motif.extension.v1.message).component = 186;
+
+  // Multiplier on the tags' paper size, including labels. Must be positive.
+  // 1 is today's size; 0.6 draws heads, marks, arrows, tails, and numbers at
+  // 0.6 of that size.
+  double scale = 1 [(buf.validate.field).double.gt = 0];
+}
+
 // A 3D oriented bounding box that clips the view's visible volume.
 message SectionBox {
   option (motif.extension.v1.message).component = 48;
