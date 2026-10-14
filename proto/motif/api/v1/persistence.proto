@@ -891,7 +891,12 @@ message TraverseReferencesResponse {
     // Host model version the traversal read.
     int32 changeset_version = 1;
 
-    // One traversed entity. Each entity appears once.
+    // One traversed entity. An entity is identified by its model, model
+    // version, and entity ID, and each appears once, however many roots or
+    // steps reach it. The same entity ID can appear again in another model or
+    // at another version of the same model; that is a different entity. An
+    // entity ID alone is therefore not unique within a response: to tell
+    // entities apart, compare both `model` and `entity.entity_id`.
     TraversedEntity entity = 2;
 
     // Traversal summary.
