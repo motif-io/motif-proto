@@ -181,9 +181,9 @@ message Size2 {
   double height = 2;
 }
 
-// Closed boundary profile as an ordered sequence of `Curve2` segments in
-// workplane-local coordinates. Consecutive segments share endpoints and the
-// last segment connects back to the first. One list is one loop.
+// An ordered sequence of `Curve2` segments in workplane-local coordinates.
+// Further requirements (closure, shared endpoints, winding) are defined by
+// the message that embeds this list.
 message Curve2List {
   repeated Curve2 curves = 1;
 }
@@ -191,11 +191,13 @@ message Curve2List {
 // A planar region: one outer loop and zero or more interior loops (holes).
 //
 // Each loop is a `Curve2List` (lines, arcs, ellipses, NURBS), not a
-// polyline-only ring. Interior loops wind opposite the exterior (CW holes if
-// the outer is CCW). Proto does not check winding or that segments close;
-// consumers must refuse an open or empty loop when building a face. Several
-// disconnected outers or a nested island (positive material inside a hole)
-// belong on `MultiClosedRegion2D`, not on this message.
+// polyline-only ring. Consecutive segments share endpoints and the last
+// segment connects back to the first. Interior loops wind opposite the
+// exterior (CW holes if the outer is CCW). Proto does not check winding or
+// that segments close; consumers must refuse an open or empty loop when
+// building a face. Several disconnected outers or a nested island (positive
+// material inside a hole) belong on `MultiClosedRegion2D`, not on this
+// message.
 //
 // Legacy dual-read: a lone `Curve2List` in a profile `Any` is this message
 // with that list as `exterior` and no `interiors`.
