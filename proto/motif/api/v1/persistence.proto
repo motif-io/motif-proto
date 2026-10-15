@@ -656,7 +656,8 @@ message ReferencedModelVersion {
 // own model and crosses into other models, each of which must be viewable by
 // the caller, unless the step sets `host_model_only`.
 //
-// Errors: NOT_FOUND when the host model does not exist or is deleted.
+// Errors: NOT_FOUND when the host model does not exist. A deleted (archived)
+// host model is traversed like any other.
 // FAILED_PRECONDITION, with ErrorInfo reason MODEL_NOT_INDEXED (domain
 // persistence.motif.io), when the host model has no reference index at the
 // requested version: the model predates reference indexing, or a version at or
@@ -858,8 +859,9 @@ message TraverseReferencesResponse {
       enum Reason {
         // Invalid.
         REASON_UNSPECIFIED = 0;
-        // The model does not exist, is deleted, or the caller cannot view it.
-        // These cases are deliberately not distinguished.
+        // The model does not exist, or the caller cannot view it. These cases
+        // are deliberately not distinguished. A deleted model is not omitted:
+        // deletion is soft, so other models can keep referencing it.
         REASON_UNAVAILABLE = 1;
         // The model has no reference index at the pinned version. Entities in
         // the model are still returned, but their references are not followed.
