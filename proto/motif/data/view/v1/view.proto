@@ -249,11 +249,11 @@ message ViewTagGraphics {
 message SectionLineBreak {
   option (motif.extension.v1.message).component = 187;
 
-  // Length from the head end toward the middle, in meters on paper before the
-  // host view's tag-size multiplier is applied.
+  // Length from the head end toward the middle, in meters on paper. The host
+  // view's tag-size multiplier does not change the cut line or its stubs.
   double head_stub_paper_meters = 1 [(buf.validate.field).double.gt = 0];
 
-  // Length from the tail end toward the middle, with the same units and scale.
+  // Length from the tail end toward the middle, with the same units.
   double tail_stub_paper_meters = 2 [(buf.validate.field).double.gt = 0];
 }
 
