@@ -650,11 +650,12 @@ message ReferencedModelVersion {
 // otherwise the source's model.
 //
 // Steps run in order, and each step starts from every entity reached so far:
-// the roots plus the entities reached by earlier steps. An INBOUND step finds
-// referrers among the host model's edges only; it never reads edges stored in
-// other models. An OUTBOUND step follows each entity's edges in that entity's
-// own model and crosses into other models, each of which must be viewable by
-// the caller, unless the step sets `host_model_only`.
+// the roots plus the entities reached by earlier steps, unless the step sets
+// `expand_previous_step_only`. An INBOUND step finds referrers among the host
+// model's edges only; it never reads edges stored in other models. An OUTBOUND
+// step follows each entity's edges in that entity's own model and crosses into
+// other models, each of which must be viewable by the caller, unless the step
+// sets `host_model_only`.
 //
 // Errors: NOT_FOUND when the host model does not exist. A deleted (archived)
 // host model is traversed like any other.
@@ -756,6 +757,16 @@ message TraverseReferencesRequest {
     // and the edges from them back into the host are followed. INBOUND steps
     // only ever return host entities, so this has no effect on them.
     bool host_model_only = 5;
+
+    // Start from only the entities the previous step reached first, those no
+    // root or earlier step had reached, instead of every entity reached so
+    // far. For the first step, those are the roots. This lets a step continue
+    // from a filtered step's results without also expanding what the filtered
+    // step started from: an unfiltered INBOUND closure after an INBOUND hop
+    // matching `target_component_ids` expands only the referrers that hop
+    // found, not the roots again. Within its depth, the step still follows
+    // edges through every entity it reaches, including ones reached earlier.
+    bool expand_previous_step_only = 6;
   }
 
   // Host model ID. Requires View access.
