@@ -242,6 +242,21 @@ message ViewTagGraphics {
   double scale = 1 [(buf.validate.field).double.gt = 0];
 }
 
+// Graphic break in a section view's cut-line marker. Lives on the section view
+// whose marker is broken, so the cut and crop remain unchanged. Absent means a
+// continuous line. The two visible runs start at the head and tail and extend
+// inward, leaving one gap between them; the gap grows or shrinks with the crop.
+message SectionLineBreak {
+  option (motif.extension.v1.message).component = 187;
+
+  // Length from the head end toward the middle, in meters on paper before the
+  // host view's tag-size multiplier is applied.
+  double head_stub_paper_meters = 1 [(buf.validate.field).double.gt = 0];
+
+  // Length from the tail end toward the middle, with the same units and scale.
+  double tail_stub_paper_meters = 2 [(buf.validate.field).double.gt = 0];
+}
+
 // A 3D oriented bounding box that clips the view's visible volume.
 message SectionBox {
   option (motif.extension.v1.message).component = 48;
