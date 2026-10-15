@@ -689,7 +689,8 @@ message TraverseReferencesRequest {
       DIRECTION_OUTBOUND = 2;
     }
 
-    // Matches edges by kind and by the component that holds the reference.
+    // Matches edges by kind, by the component that holds the reference and, for
+    // DATA edges, by the component the reference points at.
     message EdgeMatch {
       // The kind of reference an edge was extracted from.
       enum Kind {
@@ -712,6 +713,19 @@ message TraverseReferencesRequest {
       // Component IDs (type tags) of the source components to match. When
       // empty, edges from any source component match.
       repeated int32 source_component_ids = 2;
+
+      // Component IDs (type tags) of the target components to match: the
+      // DataReference's `component_id`. When empty, edges into any component
+      // match. Only valid with KIND_DATA; entity and model references do not
+      // point at a component. On an INBOUND step, this selects the entities
+      // that read particular components of the entities reached so far.
+      //
+      // When both component lists are set, an edge must match both. Each
+      // entry contributes one term per source and target component pair (one
+      // per component when only one list is set, one when neither is), and a
+      // step's entries may contribute at most 10,000 terms; more is
+      // INVALID_ARGUMENT.
+      repeated int32 target_component_ids = 3;
     }
 
     // Direction to follow edges in.
