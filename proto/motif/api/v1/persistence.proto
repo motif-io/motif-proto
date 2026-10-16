@@ -60,11 +60,19 @@ service Persistence {
   // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
   rpc ListChangesets(ListChangesetRequest) returns (ListChangesetsResponse);
 
-  // Streams the diff between two model-history cursor positions.
+  // Streams the diff between two model-history cursor positions. Auxiliary
+  // components are excluded.
   //
   // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
   // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
   rpc GetChanges(GetChangesRequest) returns (stream VersionedEntityResponse);
+
+  // Streams auxiliary component changes between two model versions. Changeset
+  // components are excluded, and a changeset commit does not wake this stream.
+  //
+  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
+  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
+  rpc GetAuxiliary(GetAuxiliaryRequest) returns (stream VersionedEntityResponse);
 
   // Applies a streamed changeset atomically.
   //
@@ -92,6 +100,10 @@ service Persistence {
   // references: EntityReference, DataReference, and ModelReference fields
   // (motif/extension/v1/reference.proto). See TraverseReferencesRequest.
   rpc TraverseReferences(TraverseReferencesRequest) returns (stream TraverseReferencesResponse);
+
+  // Stores auxiliary components at an existing model version. This write does
+  // not allocate a changeset version.
+  rpc ApplyAuxiliary(ApplyAuxiliaryRequest) returns (ApplyAuxiliaryResponse);
 }
 
 // A single component value attached to an entity.
@@ -493,6 +505,43 @@ message GetChangesRequest {
   repeated bytes where_entity_ids = 8;
 }
 
+// Requests auxiliary component changes between two model versions.
+//
+// Auxiliary components are stored at an existing model version. This request
+// has no stage cursor, and an auxiliary write does not allocate a changeset
+// version.
+//
+// Both from and to are exclusive. The response contains the latest auxiliary
+// value, including a tombstone, for each entity component whose stored version
+// is strictly between the two positions. Changeset components are excluded.
+//
+// If wait is true and the client is already at the current model version, the
+// server long-polls for an auxiliary update stored at that version. Timeout
+// returns an OK empty stream.
+message GetAuxiliaryRequest {
+  // Target model id.
+  bytes model_id = 1;
+
+  // Exclusive start version.
+  int32 from_version = 2;
+
+  // Exclusive end version. Omit to use the current model version, or to
+  // long-poll when wait is true.
+  optional int32 to_version = 3;
+
+  // When true and to_version is unset, wait for an auxiliary update at the
+  // current model version. Timeout returns an empty stream.
+  bool wait = 4;
+
+  // Only return changes to these auxiliary components. Empty matches all
+  // auxiliary components.
+  repeated int32 where_any_components = 5;
+
+  // Entity-id filter, combined with the component filter (set intersection).
+  // Empty matches all entities.
+  repeated bytes where_entity_ids = 6;
+}
+
 // Stream item containing either an entity or a changeset version.
 message VersionedEntityResponse {
   // Either an entity or a changeset version.
@@ -542,6 +591,9 @@ message ChangesetResponse {
     // The client's model is out of date because an entity in the changeset
     // changed after max_known_version. ConflictDetails provides more details.
     ERROR_CONCURRENT_ENTITY_UPDATE = 1;
+
+    // The payload contains an auxiliary component.
+    ERROR_AUXILIARY_COMPONENT_IN_PAYLOAD = 2;
   }
 }
 
@@ -590,6 +642,55 @@ message ChangesetStream {
 
   // Empty message that marks the streamed changeset complete.
   message Footer {}
+}
+
+// Stores auxiliary components at one existing model version.
+message ApplyAuxiliaryRequest {
+  // Model id which bounds the auxiliary components.
+  bytes model_id = 1;
+
+  // Existing model version at which these auxiliary components are stored.
+  // The write does not allocate a new changeset version.
+  int32 version = 2;
+
+  // Entities carrying the auxiliary components to store at `version`. Setting
+  // `Component.deleted` removes that auxiliary component. Setting
+  // `Entity.deleted` is rejected.
+  repeated Entity auxiliaries = 3;
+}
+
+// Result of storing auxiliary components without committing a changeset.
+message ApplyAuxiliaryResponse {
+  // Model id.
+  bytes model_id = 1;
+
+  // Either the updated auxiliary snapshot or an application-level rejection.
+  oneof result {
+    // Model version whose auxiliary components were updated. This echoes the
+    // requested version and is not a newly allocated changeset version.
+    int32 version = 2;
+
+    // Reason the auxiliary components were not stored.
+    Error error = 3;
+  }
+
+  // Explains why a syntactically valid auxiliary payload was not stored.
+  enum Error {
+    // No rejection reason was specified.
+    ERROR_UNSPECIFIED = 0;
+
+    // Model must exist
+    ERROR_MODEL_DOES_NOT_EXIST = 1;
+
+    // Version must exist
+    ERROR_VERSION_DOES_NOT_EXIST = 2;
+
+    // Entity must exist
+    ERROR_ENTITY_DOES_NOT_EXIST = 3;
+
+    // Only auxiliary components can be added
+    ERROR_NON_AUXILIARY_COMPONENT_IN_PAYLOAD = 4;
+  }
 }
 
 // Requests a new changeset which restores the model state at "latest" to a prior

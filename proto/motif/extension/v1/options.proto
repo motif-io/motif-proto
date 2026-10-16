@@ -9,6 +9,7 @@ syntax = "proto3";
 package motif.extension.v1;
 
 import "google/protobuf/descriptor.proto";
+import "google/protobuf/empty.proto";
 import "motif/extension/v1/type.proto";
 
 // Motif message options.
@@ -25,6 +26,10 @@ extend google.protobuf.FieldOptions {
 message MotifMessageOptions {
   // Marks a message as a component type and defines its component ID.
   int32 component = 1;
+
+  // Marks the component as auxiliary when present. Source content authored by
+  // or on behalf of the user MUST NOT be captured as auxiliary.
+  google.protobuf.Empty auxiliary = 2;
 }
 
 // Motif options applied to a field, via `option (motif.extension.v1.field)`.
