@@ -251,10 +251,10 @@ message SectionLineBreak {
 
   // Length from the head end toward the middle, in meters on paper. The host
   // view's tag-size multiplier does not change the cut line or its stubs.
-  double head_stub_paper_meters = 1 [(buf.validate.field).double.gt = 0];
+  double head_stub_paper_length = 1 [(buf.validate.field).double.gt = 0];
 
   // Length from the tail end toward the middle, with the same units.
-  double tail_stub_paper_meters = 2 [(buf.validate.field).double.gt = 0];
+  double tail_stub_paper_length = 2 [(buf.validate.field).double.gt = 0];
 }
 
 // A 3D oriented bounding box that clips the view's visible volume.
