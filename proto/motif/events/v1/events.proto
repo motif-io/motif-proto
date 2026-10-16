@@ -551,8 +551,9 @@ message ProjectRenamed {
 // Semantic history enrichment completed successfully for one committed model
 // version. Processing failures do not publish this event.
 message HistoryEnrichmentFinished {
-  // <add>The semantic operation represented by this result. Common stage
-  // details are independent of operation metadata.</add>
+  // <add>The semantic operation represented by this result. Proto validate
+  // annotations will be used to describe the parent message schema for a given
+  // kind carries  optional, one of, and collection fields.</add>
   enum Kind {
     KIND_UNSPECIFIED = 0;
     // <add>Ordinary write operation. Ex: ApplyChangeset, ApplyChangesetStream.</add>
@@ -564,7 +565,7 @@ message HistoryEnrichmentFinished {
   // <add>Public operation metadata for a restore result. The target is the
   // version restored, distinct from the newly committed result version.</add>
   message RevertToVersion {
-    // <add>The positive model version restored.</add>
+    // <add>The model version restored.</add>
     int32 target_version = 1 [(buf.validate.field).int32.gt = 0];
   }
 
