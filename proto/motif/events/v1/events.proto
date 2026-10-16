@@ -595,12 +595,15 @@ message HistoryEnrichmentFinished {
     // Semantic entity change records, unique by the unsigned entity UUID
     // bytes. An explicit empty stage represents a no-op; absent stages are
     // not no-ops.
-    repeated EntityChange entity_changes = 2;
+    repeated EntityChange entity_changes = 4;
   }
 
   // One affected entity's lifecycle, actual classifications and any
   // classification issue in the enclosing stage.
   message EntityChange {
+    reserved 3, 4;
+    reserved "revit_category", "category_fallback";
+
     // The entity's lifecycle change in the enclosing stage.
     enum Verb {
       // No lifecycle change specified. Invalid for an entity change.
@@ -623,11 +626,11 @@ message HistoryEnrichmentFinished {
     // Independent actual assignments. This collection has no permanent
     // ordering or cardinality restriction. No assignments and no issue means
     // that classification facts were available but no assignment was present.
-    repeated Classification classifications = 3;
+    repeated Classification classifications = 5;
     // An issue may coexist with usable classifications; it does not
     // invalidate assignments that were obtained. Preserve unknown nonzero
     // issues without treating them as missing assignments.
-    optional ClassificationIssue classification_issue = 4 [(buf.validate.field).enum = {
+    optional ClassificationIssue classification_issue = 6 [(buf.validate.field).enum = {
       not_in: [0]
     }];
   }
@@ -680,7 +683,7 @@ message HistoryEnrichmentFinished {
 
   // Known operation kinds and their metadata must agree.
   option (buf.validate.message).cel = {
-    id: "history_enrichment_finished_v2.kind_metadata"
+    id: "history_enrichment_finished.kind_metadata"
     message: "kind and operation metadata must agree"
     expression: "this.kind == 2 ? has(this.revert_to_version) : !has(this.revert_to_version)"
   };
