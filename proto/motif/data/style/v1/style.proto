@@ -86,6 +86,26 @@ message LineStyle {
   }
 }
 
+// Default appearance of level, section, and elevation tag foregrounds.
+// Stored on a model for defaults, or on a host view for field-wise exceptions.
+// Absent fields inherit the model value, then the built-in role appearance.
+// Paper interiors and level datum lines retain their existing appearance.
+message TagInk {
+  option (motif.extension.v1.message).component = 188;
+
+  // Foreground ink, including tag labels. Unset retains the role's color.
+  Color color = 1;
+
+  // Pen-table index. Unset retains the role's screen-pixel fallback weight.
+  optional uint32 pen_size = 2 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 16
+  }];
+
+  // Future graphic-style identity. Retained but not resolved by this stand-in.
+  optional string style_id = 3 [(buf.validate.field).string.uuid = true];
+}
+
 // A line pattern definition: one repeating cycle of dashes, spaces, and dots.
 // Shared by the built-in catalog and by inline definitions on an entity (see
 // LineStyle.pattern_def). An empty cycle is a continuous solid stroke.
