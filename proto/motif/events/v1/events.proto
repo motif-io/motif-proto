@@ -551,6 +551,63 @@ message ProjectRenamed {
 // Semantic history enrichment completed successfully for one committed model
 // version. Processing failures do not publish this event.
 message HistoryEnrichmentFinished {
+  // <add>
+  // Identifies the version-level meaning independently of its stage details.
+  enum Kind {
+    // Missing kind; producers must select an explicit kind.
+    KIND_UNSPECIFIED = 0;
+    // Ordinary committed entity effects, regardless of the initiating action.
+    KIND_STANDARD = 1;
+    // A restore action identified by an authoritative action source.
+    KIND_REVERT_TO_VERSION = 2;
+  }
+
+  // Typed version-level metadata. Model and committed-version identity are
+  // supplied by the enclosing event.
+  message Metadata {
+    // The historical version selected by an explicitly identified restore action.
+    message RevertToVersion {
+      int32 target_version = 1 [(buf.validate.field).int32.gt = 0];
+    }
+
+    oneof metadata {
+      RevertToVersion revert_to_version = 1;
+    }
+  }
+
+  // An actual assignment in the Revit classification scheme. Unknown nonzero
+  // category numbers retain their identity.
+  message RevitClassification {
+    motif.data.external.v1.RevitCategory revit_category = 1 [(buf.validate.field).enum.not_in = 0];
+  }
+
+  // An actual IFC assignment, preserving the source spelling.
+  message IfcClassification {
+    string ifc_class = 1 [(buf.validate.field).string = {
+      min_len: 1
+      pattern: "\\S"
+    }];
+  }
+
+  // One independently typed assignment. The collection may contain several
+  // schemes; its order does not establish a permanent presentation preference.
+  message Classification {
+    oneof classification {
+      option (buf.validate.oneof).required = true;
+      RevitClassification revit = 1;
+      IfcClassification ifc = 2;
+    }
+  }
+
+  // An issue resolving historical assignments, independent of usable values.
+  enum ClassificationIssue {
+    // No issue specified; omit the optional field instead of writing this value.
+    CLASSIFICATION_ISSUE_UNSPECIFIED = 0;
+    // Some required evidence was unavailable, cyclic or beyond inspection limits.
+    CLASSIFICATION_ISSUE_UNAVAILABLE = 1;
+  }
+  // </add>
+
   // Semantic history for one persisted stage of a model version.
   message StageSummary {
     // Only persisted stages are summaries; version cursor boundaries are not.
@@ -579,7 +636,8 @@ message HistoryEnrichmentFinished {
     repeated EntityChange entity_changes = 4;
   }
 
-  // One affected entity's lifecycle and category in the enclosing stage.
+  // <remove>One affected entity's lifecycle and category in the enclosing stage.</remove>
+  // <add>One affected entity's lifecycle, assignments and optional resolution issue.</add>
   message EntityChange {
     // The entity's lifecycle change in the enclosing stage.
     enum Verb {
@@ -617,16 +675,32 @@ message HistoryEnrichmentFinished {
     }];
 
     oneof category {
-      option (buf.validate.oneof).required = true;
+      // <remove>option (buf.validate.oneof).required = true;</remove>
 
       // The concrete category associated with this entity change.
-      motif.data.external.v1.RevitCategory revit_category = 3 [(buf.validate.field).enum.not_in = 0];
+      // <add>Deprecated: use classifications. Do not write.</add>
+      motif.data.external.v1.RevitCategory revit_category = 3 [
+        deprecated = true,
+        (buf.validate.field).enum.not_in = 0
+      ];
       // The fallback classification outcome for this entity change.
-      CategoryFallback category_fallback = 4 [(buf.validate.field).enum = {
-        defined_only: true
-        not_in: [0]
-      }];
+      // <add>Deprecated: use classifications and classification_issue. Do not write.</add>
+      CategoryFallback category_fallback = 4 [
+        deprecated = true,
+        (buf.validate.field).enum = {
+          defined_only: true
+          not_in: [0]
+        }
+      ];
     }
+
+    // <add>
+    // Actual historical assignments. An empty collection without an issue means
+    // no supported assignment was found; native components do not imply one.
+    repeated Classification classifications = 5;
+    // May coexist with usable assignments. Unknown issues must not imply absence.
+    optional ClassificationIssue classification_issue = 6 [(buf.validate.field).enum.not_in = 0];
+    // </add>
   }
 
   // Must equal the enclosing ModelContent.model_id.
@@ -636,6 +710,20 @@ message HistoryEnrichmentFinished {
   // One CLIENT summary, followed by DERIVED exactly when the version has
   // derived changes.
   repeated StageSummary stage_summaries = 5 [(buf.validate.field).repeated.max_items = 2];
+
+  // <add>
+  // STANDARD has no version-level metadata. REVERT_TO_VERSION requires its
+  // corresponding typed metadata. Unknown kinds must retain version identity
+  // while consumers omit unsupported semantic details.
+  Kind kind = 6 [(buf.validate.field).enum.not_in = 0];
+  Metadata metadata = 7;
+
+  option (buf.validate.message).cel = {
+    id: "history_enrichment_finished.kind_metadata"
+    message: "STANDARD omits metadata; REVERT_TO_VERSION requires a positive target version"
+    expression: "(this.kind != 1 || !has(this.metadata)) && (this.kind != 2 || (has(this.metadata) && has(this.metadata.revert_to_version)))"
+  };
+  // </add>
 }
 
 // A project stopped being visible to the recipient: deleted, or the recipient's
