@@ -463,6 +463,7 @@ message ModelContent {
 
   oneof action {
     HistoryEnrichmentFinished history_enrichment_finished = 10;
+    HistoryEnrichmentFinishedV2 history_enrichment_finished_v2 = 11;
   }
 }
 
@@ -551,24 +552,6 @@ message ProjectRenamed {
 // Semantic history enrichment completed successfully for one committed model
 // version. Processing failures do not publish this event.
 message HistoryEnrichmentFinished {
-  // <add>The semantic operation represented by this result. Proto validate
-  // annotations will be used to describe the parent message schema for a given
-  // kind carries  optional, one of, and collection fields.</add>
-  enum Kind {
-    KIND_UNSPECIFIED = 0;
-    // <add>Ordinary write operation. Ex: ApplyChangeset, ApplyChangesetStream.</add>
-    KIND_STANDARD = 1;
-    // <add>A result associated with restoring a target version.</add>
-    KIND_CLIENT_REVERT = 2;
-  }
-
-  // <add>Public operation metadata for a restore result. The target is the
-  // version restored, distinct from the newly committed result version.</add>
-  message RevertToVersion {
-    // <add>The model version restored.</add>
-    int32 target_version = 1 [(buf.validate.field).int32.gt = 0];
-  }
-
   // Semantic history for one persisted stage of a model version.
   message StageSummary {
     // Only persisted stages are summaries; version cursor boundaries are not.
@@ -597,9 +580,7 @@ message HistoryEnrichmentFinished {
     repeated EntityChange entity_changes = 4;
   }
 
-  // <remove>One affected entity's lifecycle and category in the enclosing stage.</remove>
-  // <add>One affected entity's lifecycle, actual classifications and any
-  // classification issue in the enclosing stage.</add>
+  // One affected entity's lifecycle and category in the enclosing stage.
   message EntityChange {
     // The entity's lifecycle change in the enclosing stage.
     enum Verb {
@@ -636,36 +617,115 @@ message HistoryEnrichmentFinished {
       not_in: [0]
     }];
 
-    // <add>Legacy category representation. New producers use classifications
-    // and classification_issue. An absent legacy category is valid.</add>
     oneof category {
-      // <remove>option (buf.validate.oneof).required = true;</remove>
+      option (buf.validate.oneof).required = true;
 
       // The concrete category associated with this entity change.
-      // <add>Deprecated: use classifications. Do not write.</add>
-      motif.data.external.v1.RevitCategory revit_category = 3 [deprecated = true];
-      // <remove>(buf.validate.field).enum.not_in = 0</remove>
+      motif.data.external.v1.RevitCategory revit_category = 3 [(buf.validate.field).enum.not_in = 0];
       // The fallback classification outcome for this entity change.
-      // <add>Deprecated: use classifications and classification_issue. Do not write.</add>
-      CategoryFallback category_fallback = 4 [deprecated = true];
-      // <remove>(buf.validate.field).enum = { defined_only: true, not_in: [0] }</remove>
+      CategoryFallback category_fallback = 4 [(buf.validate.field).enum = {
+        defined_only: true
+        not_in: [0]
+      }];
+    }
+  }
+
+  // Must equal the enclosing ModelContent.model_id.
+  bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
+  int32 version = 2 [(buf.validate.field).int32.gt = 0];
+
+  // One CLIENT summary, followed by DERIVED exactly when the version has
+  // derived changes.
+  repeated StageSummary stage_summaries = 5 [(buf.validate.field).repeated.max_items = 2];
+}
+
+// Semantic history enrichment with typed operation metadata and source
+// classifications for one committed model version. Processing failures do not
+// publish this event.
+message HistoryEnrichmentFinishedV2 {
+  // The semantic operation represented by this result. Proto validate
+  // annotations will be used to describe the parent message schema for a given
+  // kind carries  optional, one of, and collection fields.
+  enum Kind {
+    KIND_UNSPECIFIED = 0;
+    // Ordinary write operation. Ex: ApplyChangeset, ApplyChangesetStream.
+    KIND_STANDARD = 1;
+    // A result associated with restoring a target version.
+    KIND_CLIENT_REVERT = 2;
+  }
+
+  // Public operation metadata for a restore result. The target is the
+  // version restored, distinct from the newly committed result version.
+  message RevertToVersion {
+    // The model version restored.
+    int32 target_version = 1 [(buf.validate.field).int32.gt = 0];
+  }
+
+  // Semantic history for one persisted stage of a model version.
+  message StageSummary {
+    // Only persisted stages are summaries; version cursor boundaries are not.
+    // Numbers match the corresponding persistence cursor stages.
+    enum Stage {
+      // No persisted stage specified.
+      STAGE_UNSPECIFIED = 0;
+      // Changes submitted by a client.
+      STAGE_CLIENT = 10;
+      // System-derived changes in the version.
+      STAGE_DERIVED = 69;
     }
 
-    // <add>Independent actual assignments. This collection has no permanent
+    // The persisted stage represented by this summary.
+    Stage stage = 1;
+
+    option (buf.validate.message).cel = {
+      id: "stage_summary.unique_entity_changes"
+      message: "each entity may contribute only once per stage"
+      expression: "this.entity_changes.map(row, row.entity_id).unique()"
+    };
+
+    // Semantic entity change records, unique by the unsigned entity UUID
+    // bytes. An explicit empty stage represents a no-op; absent stages are
+    // not no-ops.
+    repeated EntityChange entity_changes = 2;
+  }
+
+  // One affected entity's lifecycle, actual classifications and any
+  // classification issue in the enclosing stage.
+  message EntityChange {
+    // The entity's lifecycle change in the enclosing stage.
+    enum Verb {
+      // No lifecycle change specified. Invalid for an entity change.
+      VERB_UNSPECIFIED = 0;
+      // The entity was created in this stage.
+      VERB_CREATE = 1;
+      // The entity was updated in this stage.
+      VERB_UPDATE = 2;
+      // The entity was deleted in this stage; its affected ID is retained.
+      VERB_DELETE = 3;
+    }
+
+    bytes entity_id = 1 [(buf.validate.field).bytes.len = 16];
+    // The affected entity's lifecycle change.
+    Verb verb = 2 [(buf.validate.field).enum = {
+      defined_only: true
+      not_in: [0]
+    }];
+
+    // Independent actual assignments. This collection has no permanent
     // ordering or cardinality restriction. No assignments and no issue means
-    // that classification facts were available but no assignment was present.</add>
-    repeated Classification classifications = 5;
-    // <add>An issue may coexist with usable classifications; it does not
+    // that classification facts were available but no assignment was present.
+    repeated Classification classifications = 3;
+    // An issue may coexist with usable classifications; it does not
     // invalidate assignments that were obtained. Preserve unknown nonzero
-    // issues without treating them as missing assignments.</add>
-    optional ClassificationIssue classification_issue = 6 [(buf.validate.field).enum = {
+    // issues without treating them as missing assignments.
+    optional ClassificationIssue classification_issue = 4 [(buf.validate.field).enum = {
       not_in: [0]
     }];
   }
 
-  // <add>One individually typed source classification.</add>
+  // One individually typed source classification.
   message Classification {
-    // <add>The source scheme selects the type of the assignment.</add>
+    // The source scheme selects the type of the assignment.
     oneof assignment {
       option (buf.validate.oneof).required = true;
 
@@ -674,24 +734,24 @@ message HistoryEnrichmentFinished {
     }
   }
 
-  // <add>An actual Revit assignment. Unknown nonzero enum values retain their
-  // numeric identity and are valid assignments.</add>
+  // An actual Revit assignment. Unknown nonzero enum values retain their
+  // numeric identity and are valid assignments.
   message RevitClassification {
     motif.data.external.v1.RevitCategory category = 1 [(buf.validate.field).enum.not_in = 0];
   }
 
-  // <add>An actual IFC assignment, preserving the exact source string.</add>
+  // An actual IFC assignment, preserving the exact source string.
   message IfcClassification {
     string ifc_class = 1 [(buf.validate.field).string.min_len = 1];
   }
 
-  // <add>Why some classification evidence could not be obtained. Missing
-  // assignments with available evidence do not constitute an issue.</add>
+  // Why some classification evidence could not be obtained. Missing
+  // assignments with available evidence do not constitute an issue.
   enum ClassificationIssue {
-    // <add>No issue supplied. Omit the optional field instead.</add>
+    // No issue supplied. Omit the optional field instead.
     CLASSIFICATION_ISSUE_UNSPECIFIED = 0;
-    // <add>Required historical evidence was unavailable, including cycles or
-    // resolution bounds. Other usable assignments may still be present.</add>
+    // Required historical evidence was unavailable, including cycles or
+    // resolution bounds. Other usable assignments may still be present.
     CLASSIFICATION_ISSUE_UNAVAILABLE = 1;
   }
 
@@ -699,20 +759,20 @@ message HistoryEnrichmentFinished {
   bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
   int32 version = 2 [(buf.validate.field).int32.gt = 0];
 
-  // <add>Explicit operation kind; the default is not STANDARD.</add>
+  // Explicit operation kind; the default is not STANDARD.
   Kind kind = 3 [(buf.validate.field).enum.not_in = 0];
 
-  // <add>STANDARD has no operation metadata. A CLIENT_REVERT result has
+  // STANDARD has no operation metadata. A CLIENT_REVERT result has
   // revert_to_version metadata. Future kinds may combine their own metadata
-  // with common stage details.</add>
+  // with common stage details.
   oneof metadata {
     RevertToVersion revert_to_version = 4;
   }
 
-  // <add>Known operation kinds and their metadata must agree.</add>
+  // Known operation kinds and their metadata must agree.
   option (buf.validate.message).cel = {
-    id: "history_enrichment_finished.kind_metadata"
-    message: "<add>kind and operation metadata must agree</add>"
+    id: "history_enrichment_finished_v2.kind_metadata"
+    message: "kind and operation metadata must agree"
     expression: "this.kind == 2 ? has(this.revert_to_version) : !has(this.revert_to_version)"
   };
 
