@@ -678,13 +678,16 @@ message HistoryEnrichmentFinished {
       // <remove>option (buf.validate.oneof).required = true;</remove>
 
       // The concrete category associated with this entity change.
-      // <add>Deprecated: use classifications. Do not write.</add>
+      // <add>
+      // Deprecated: use classifications. Do not write.
       motif.data.external.v1.RevitCategory revit_category = 3 [
         deprecated = true,
         (buf.validate.field).enum.not_in = 0
       ];
+      // </add>
       // The fallback classification outcome for this entity change.
-      // <add>Deprecated: use classifications and classification_issue. Do not write.</add>
+      // <add>
+      // Deprecated: use classifications and classification_issue. Do not write.
       CategoryFallback category_fallback = 4 [
         deprecated = true,
         (buf.validate.field).enum = {
@@ -692,6 +695,7 @@ message HistoryEnrichmentFinished {
           not_in: [0]
         }
       ];
+      // </add>
     }
 
     // <add>
