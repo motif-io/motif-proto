@@ -656,9 +656,9 @@ message HistoryEnrichmentFinished {
     // that classification facts were available but no assignment was present.</add>
     repeated Classification classifications = 5;
     // <add>An issue may coexist with usable classifications; it does not
-    // invalidate assignments that were obtained.</add>
+    // invalidate assignments that were obtained. Preserve unknown nonzero
+    // issues without treating them as missing assignments.</add>
     optional ClassificationIssue classification_issue = 6 [(buf.validate.field).enum = {
-      defined_only: true
       not_in: [0]
     }];
   }
