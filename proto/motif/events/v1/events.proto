@@ -552,20 +552,12 @@ message ProjectRenamed {
 // classifications for one committed model version. Processing failures do not
 // publish this event.
 message HistoryEnrichmentFinished {
-  // The semantic operation represented by this result. Proto validate
-  // annotations will be used to describe the parent message schema for a given
-  // kind carries  optional, one of, and collection fields.
-  enum Kind {
-    KIND_UNSPECIFIED = 0;
-    // Ordinary write operation. Ex: ApplyChangeset, ApplyChangesetStream.
-    KIND_STANDARD = 1;
-    // A result associated with restoring a target version.
-    KIND_CLIENT_REVERT = 2;
-  }
+  // Ordinary write operation. Ex: ApplyChangeset, ApplyChangesetStream.
+  message Standard {}
 
-  // Public operation metadata for a restore result. The target is the
-  // version restored, distinct from the newly committed result version.
-  message RevertToVersion {
+  // A result that restores an earlier model version. The restored version is
+  // distinct from the newly committed result version.
+  message ClientRevert {
     // The model version restored.
     int32 target_version = 1 [(buf.validate.field).int32.gt = 0];
   }
@@ -671,22 +663,13 @@ message HistoryEnrichmentFinished {
   bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
   int32 version = 2 [(buf.validate.field).int32.gt = 0];
 
-  // Explicit operation kind; the default is not STANDARD.
-  Kind kind = 3 [(buf.validate.field).enum.not_in = 0];
+  // The semantic operation represented by this result, with its metadata.
+  oneof operation {
+    option (buf.validate.oneof).required = true;
 
-  // STANDARD has no operation metadata. A CLIENT_REVERT result has
-  // revert_to_version metadata. Future kinds may combine their own metadata
-  // with common stage details.
-  oneof metadata {
-    RevertToVersion revert_to_version = 4;
+    Standard standard = 3;
+    ClientRevert client_revert = 4;
   }
-
-  // Known operation kinds and their metadata must agree.
-  option (buf.validate.message).cel = {
-    id: "history_enrichment_finished.kind_metadata"
-    message: "kind and operation metadata must agree"
-    expression: "this.kind == 2 ? has(this.revert_to_version) : !has(this.revert_to_version)"
-  };
 
   // One CLIENT summary, followed by DERIVED exactly when the version has
   // derived changes.
