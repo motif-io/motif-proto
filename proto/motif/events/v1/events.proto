@@ -554,12 +554,11 @@ message HistoryEnrichmentFinished {
   // <add>The semantic operation represented by this result. Common stage
   // details are independent of operation metadata.</add>
   enum Kind {
-    // <add>No kind was supplied; this is not an ordinary successful result.</add>
     KIND_UNSPECIFIED = 0;
-    // <add>Ordinary entity effects, without operation metadata.</add>
+    // <add>Ordinary write operation. Ex: ApplyChangeset, ApplyChangesetStream.</add>
     KIND_STANDARD = 1;
-    // <add>A result associated with restoring a positive target version.</add>
-    KIND_REVERT_TO_VERSION = 2;
+    // <add>A result associated with restoring a target version.</add>
+    KIND_CLIENT_REVERT = 2;
   }
 
   // <add>Public operation metadata for a restore result. The target is the
@@ -702,7 +701,7 @@ message HistoryEnrichmentFinished {
   // <add>Explicit operation kind; the default is not STANDARD.</add>
   Kind kind = 3 [(buf.validate.field).enum.not_in = 0];
 
-  // <add>STANDARD has no operation metadata. A REVERT_TO_VERSION result has
+  // <add>STANDARD has no operation metadata. A CLIENT_REVERT result has
   // revert_to_version metadata. Future kinds may combine their own metadata
   // with common stage details.</add>
   oneof metadata {
