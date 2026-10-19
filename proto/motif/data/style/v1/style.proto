@@ -131,6 +131,33 @@ message LinePatternElement {
   message Dot {}
 }
 
+// A named, reusable set of line properties: a line style asset. Lives on an
+// asset entity (core.v1.Asset + a name) in any library a model can reach.
+//
+// Every field is optional; an unset field leaves that property to whatever
+// applies beneath this style (ultimately the application default), so a style
+// may specify any subset of properties.
+message LineStyleAsset {
+  option (motif.extension.v1.message).component = 190;
+
+  // Stroke color.
+  Color color = 1;
+  // Stroke opacity, 0 (transparent) to 1 (opaque).
+  optional float opacity = 2 [(buf.validate.field).float = {
+    gte: 0
+    lte: 1
+  }];
+  // Pen index (Revit-style), resolved to an on-paper width from the project's
+  // pen-width table at the presenting view's scale (see LineStyle.pen_size).
+  optional uint32 pen_size = 3 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 16
+  }];
+  // Line pattern, by name, as LineStyle.pattern_ref names one. "Solid" is an
+  // explicit continuous stroke; an absent field leaves the pattern unset.
+  optional string pattern_ref = 4;
+}
+
 // Font identity that survives reload (family name, not an unstable runtime
 // font-database id). A plain embedded message, not a standalone component.
 message Font {
