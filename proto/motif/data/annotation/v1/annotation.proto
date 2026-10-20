@@ -524,8 +524,15 @@ message TextStyleAsset {
   // Printed (paper) glyph height in millimeters, held constant across drawing
   // scales. Where the host has no drawing scale it is read as a model height.
   optional float printed_height_mm = 4 [(buf.validate.field).float = {gt: 0}];
-  // Text color.
-  motif.data.style.v1.Color color = 5;
+  // Text color: set directly, or taken from a color style asset. Neither set
+  // leaves the color unset.
+  oneof color_source {
+    // A color set directly on this style.
+    motif.data.style.v1.Color color = 5;
+    // A color style asset (style.v1.ColorStyleAsset) whose color this style
+    // uses.
+    motif.data.style.v1.StyleAssetReference color_style = 8;
+  }
   // Horizontal alignment; UNSPECIFIED leaves it unset.
   Justify justify = 6;
 
