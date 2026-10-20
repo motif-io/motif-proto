@@ -565,14 +565,16 @@ message ParameterBindingsBehavior {
 //
 // Who wins:
 // * `parameter_keys` is authoritative for the group's variants. A variant
-//   value for a key outside the list is ignored. A writer that adds a key
-//   writes a value for it into every variant of the group, and a writer that
-//   removes a key rebinds each instance bound to it to a literal value.
+//   value for a key outside the list is not part of the variant: readers do
+//   not list or bake it, and writers do not bind instances to it. A writer
+//   that adds a key writes a value for it into every variant of the group,
+//   and a writer that removes a key rebinds each instance bound to it to a
+//   literal value.
 // * Groups of the same asset cover disjoint keys; the writer that creates or
 //   edits a group enforces this. Evaluation stays well defined if a reader
 //   meets an overlap anyway, because each instance binding names one variant.
-//   Only "which variant of this group does the instance use" becomes
-//   ambiguous, and the reader then reports none for that group.
+//   A binding of an overlapping key counts only toward the group of the
+//   variant it names, so the other group counts as unused by that instance.
 // * An instance's bindings are the only record of which variant it uses. A
 //   group whose keys an instance binds to different variants, or not at all,
 //   counts as unused by that instance.
@@ -586,8 +588,11 @@ message ParameterBindingsBehavior {
 // before deleting a variant.
 //
 // A reader that predates this component still evaluates variant-bound
-// instances correctly, because the bindings are ordinary `DataReference`s; it
-// only cannot list or edit the groups.
+// instances, because the bindings are ordinary `DataReference`s; it only
+// cannot list or edit the groups. A writer that bakes an instance's literal
+// parameter values into a shared copy of its asset must follow these
+// references to the variant's values; one that predates this component treats
+// them like any other reference binding and does not bake the instance.
 message AssetVariantGroup {
   option (motif.extension.v1.message).component = 189;
 
