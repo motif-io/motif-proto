@@ -420,6 +420,12 @@ message DimensionStyle {
   // 10 reserved: a reference to a shared dimension style asset. When it
   // arrives it takes precedence over every field above, per the composed-style
   // model where referencing a dimension style takes the whole style from it.
+
+  // Place text on the opposite side of its dimension line or arc, keeping the
+  // same readable orientation. False uses the application's usual readable
+  // side; true reflects the label's clearance across the line, without moving
+  // the line, witnesses, or measurement. Unset inherits the application default.
+  optional bool text_side_flipped = 11;
 }
 
 // Rich-text content + styling for a text annotation. Box geometry stays in
