@@ -641,13 +641,14 @@ message ReferencedModelVersion {
 //
 // ENTITY edges come from EntityReference fields. DATA edges come from
 // DataReference fields; a `this_entity` target is the source entity itself.
-// MODEL edges come from a set ModelReference that no entity or data reference
-// resolves against (see motif.extension.v1.ModelReference); their target is the
+// MODEL edges come from a set ModelReference that no entity reference resolves
+// against (see motif.extension.v1.ModelReference); their target is the
 // referenced model's sentinel entity (00000000-0000-4000-8000-000000000000).
 //
-// An edge's target resolves in: the DataReference's own `model`, if set;
-// otherwise the ModelReference that scopes the reference, if one is set;
-// otherwise the source's model.
+// An ENTITY edge's target resolves in the ModelReference that scopes the
+// reference, if one is set; otherwise in the source's model. A DATA edge's
+// target resolves in the DataReference's own `model`, if set; otherwise in the
+// source's model. A ModelReference never scopes a DataReference.
 //
 // Steps run in order, and each step starts from every entity reached so far:
 // the roots plus the entities reached by earlier steps, unless the step sets
