@@ -134,7 +134,7 @@ message LinePatternElement {
 // A named, reusable set of line properties: a line style asset. Lives on an
 // asset entity (core.v1.Asset + a name) in any library a model can reach.
 //
-// Every field is optional; an unset field leaves that property to whatever
+// Every property is optional; an unset one leaves that property to whatever
 // applies beneath this style (ultimately the application default), so a style
 // may specify any subset of properties.
 message LineStyleAsset {
@@ -147,15 +147,12 @@ message LineStyleAsset {
     gte: 0
     lte: 1
   }];
-  // Pen index (Revit-style), resolved to an on-paper width from the project's
-  // pen-width table at the presenting view's scale (see LineStyle.pen_size).
-  optional uint32 pen_size = 3 [(buf.validate.field).uint32 = {
-    gte: 1
-    lte: 16
-  }];
-  // Line pattern, by name, as LineStyle.pattern_ref names one. "Solid" is an
-  // explicit continuous stroke; an absent field leaves the pattern unset.
-  optional string pattern_ref = 4;
+  // Stroke weight and pattern, as an entity's own LineStyle carries them. An
+  // unset `line` leaves both unset. Within it, an unset `pen_size` leaves the
+  // weight unset, and an unset `pattern` leaves the pattern unset rather than
+  // meaning a solid stroke; "Solid" by reference is an explicit continuous
+  // stroke. `width` is written as 0 and ignored: styles are pen-sized lines.
+  LineStyle line = 3;
 }
 
 // Font identity that survives reload (family name, not an unstable runtime
