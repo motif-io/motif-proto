@@ -257,6 +257,57 @@ message SectionLineBreak {
   double tail_stub_paper_length = 2 [(buf.validate.field).double.gt = 0];
 }
 
+// Appearance overrides for level datums drawn in this elevation or section view.
+// Missing entries and fields inherit the model's placement and displayed extent.
+message LevelTagOverrides {
+  option (motif.extension.v1.message).component = 189;
+
+  option (buf.validate.message).cel = {
+    id: "level_tag_overrides.unique_levels"
+    message: "each level may have at most one override in a view"
+    expression: "this.entries.map(entry, entry.level.entity_id).unique()"
+  };
+
+  // At most one entry per level. Empty entries are omitted.
+  repeated LevelTagOverride entries = 1;
+}
+
+// Appearance of one level's datum in the owning view. Does not change the level.
+message LevelTagOverride {
+  // The level being annotated, in the same model as the host view.
+  motif.extension.v1.EntityReference level = 1 [(buf.validate.field).required = true];
+
+  // Which heads and labels are visible. The datum remains when neither is shown.
+  // Unset inherits model placement; an explicitly unspecified value is invalid.
+  optional Ends ends = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: 0
+  }];
+
+  // Distances inward from the inherited displayed endpoints, in model meters.
+  // Left and right are defined by the host view's horizontal axis. Crop changes
+  // recompute the inherited endpoints; these distances remain unchanged.
+  // If the trims exceed the available span, display them proportionally reduced
+  // to retain a drawable line, without changing these authored distances.
+  optional double left_trim = 3 [(buf.validate.field).double = {
+    gte: 0
+    finite: true
+  }];
+  optional double right_trim = 4 [(buf.validate.field).double = {
+    gte: 0
+    finite: true
+  }];
+
+  // Visible ends of a level datum, as seen in the host view.
+  enum Ends {
+    ENDS_UNSPECIFIED = 0;
+    ENDS_LEFT = 1;
+    ENDS_RIGHT = 2;
+    ENDS_BOTH = 3;
+    ENDS_NONE = 4;
+  }
+}
+
 // A 3D oriented bounding box that clips the view's visible volume.
 message SectionBox {
   option (motif.extension.v1.message).component = 48;
