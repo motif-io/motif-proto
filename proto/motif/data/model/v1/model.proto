@@ -544,6 +544,74 @@ message ParameterBindingsBehavior {
   map<string, ParameterBinding> bindings = 3;
 }
 
+// A named set of an asset's parameters that the asset's variants set together.
+// Lives on a group entity, which is named by `motif.data.core.v1.AssignedName`.
+//
+// A variant of the group is an entity with `motif.data.core.v1.IsOfType` at
+// the group (`BINDING_MODE_ASSIGNED`), a `motif.data.core.v1.AssignedName`, and
+// a `ResolvedParameters` holding one value per key in `parameter_keys`. An
+// instance uses a variant by binding each of the group's parameters in its
+// `ParameterBindingsBehavior` to a `DataReference` at the variant's
+// `ResolvedParameters.values[<key>]`. Editing a variant value therefore reaches
+// every instance bound to it, and replacing such a binding with a literal
+// detaches the instance from the variant for that parameter. An instance uses
+// at most one variant per group, and can use variants of several groups of its
+// asset. An instance's asset is the entity its `motif.data.core.v1.Instance`
+// names or, when that entity is a materialized clone, the asset the clone's
+// `SourceAsset` names. A materialized clone is never a group's asset.
+//
+// Absent means the entity is not a variant group. A group with no variants is
+// valid: no instance can use it yet.
+//
+// Who wins:
+// * `parameter_keys` is authoritative for the group's variants. A variant
+//   value for a key outside the list is ignored. A writer that adds a key
+//   writes a value for it into every variant of the group, and a writer that
+//   removes a key rebinds each instance bound to it to a literal value.
+// * Groups of the same asset cover disjoint keys; the writer that creates or
+//   edits a group enforces this. Evaluation stays well defined if a reader
+//   meets an overlap anyway, because each instance binding names one variant.
+//   Only "which variant of this group does the instance use" becomes
+//   ambiguous, and the reader then reports none for that group.
+// * An instance's bindings are the only record of which variant it uses. A
+//   group whose keys an instance binds to different variants, or not at all,
+//   counts as unused by that instance.
+//
+// Dangling references and unknown values: a group whose `asset` does not
+// resolve is ignored; instance bindings to its variants still resolve, since
+// they name the variant entities directly. A key that the asset's
+// `ParameterDeclarations` does not declare is ignored. A deleted variant
+// leaves the bindings to it unresolved, which `ParameterBindingsBehavior`
+// treats as an incomplete evaluation, so a writer rebinds every instance
+// before deleting a variant.
+//
+// A reader that predates this component still evaluates variant-bound
+// instances correctly, because the bindings are ordinary `DataReference`s; it
+// only cannot list or edit the groups.
+message AssetVariantGroup {
+  option (motif.extension.v1.message).component = 189;
+
+  // The asset whose parameters the group covers. Required.
+  motif.extension.v1.EntityReference asset = 1 [(buf.validate.field).required = true];
+
+  // Optional. When set, `asset` is resolved against this model rather than the
+  // group's own model, for example a Standard Library asset. Readers match a
+  // group to an asset by model ID and entity ID; `model_version` records the
+  // asset version whose declarations `parameter_keys` was checked against.
+  motif.extension.v1.ModelReference model = 2;
+
+  // Keys into the asset's `ParameterDeclarations.declarations` that the
+  // group's variants set. At least one, each non-empty and listed once. Order
+  // carries no meaning.
+  repeated string parameter_keys = 3 [(buf.validate.field).repeated = {
+    min_items: 1
+    unique: true
+    items: {
+      string: {min_len: 1}
+    }
+  }];
+}
+
 // A behavior which copies component data from configured sources to output entities.
 // Each map key is the destination component type ID; the value describes how to
 // obtain the payload and where to place it. Inputs and outputs resolve through
