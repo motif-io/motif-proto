@@ -593,7 +593,8 @@ message ParameterBindingsBehavior {
 // parameter values into a shared copy of its asset must follow these
 // references to the variant's values; one that predates this component treats
 // them like any other reference binding, so it does not bake an instance whose
-// variant sets a parameter the asset's geometry reads.
+// variant sets a parameter that the asset's `BuiltinAssetConfiguration`
+// evaluates.
 message AssetVariantGroup {
   option (motif.extension.v1.message).component = 189;
 
