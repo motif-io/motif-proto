@@ -793,24 +793,6 @@ message TraverseReferencesRequest {
   // selects the server default. Values above the server's cap are lowered to
   // the cap.
   uint32 max_nodes = 6;
-
-  // Report reference cycles in `TraversedEntity.in_cycle` and
-  // `Summary.has_cycles`. Costs one extra edge read per step and model.
-  //
-  // Cycles are found among the edges the traversal followed: the matching edges
-  // out of every entity an OUTBOUND step expanded, and into every entity an
-  // INBOUND step expanded, across all steps. Edges keep their source-to-target
-  // direction whatever the step's direction, so following an edge inbound and
-  // then outbound does not form a cycle. A cycle passes through at least two
-  // distinct entities; a reference from an entity to itself, such as a
-  // `this_entity` DataReference, is not one. Cycles are between entities, not
-  // components: entities on a cycle need not have components that depend on
-  // each other.
-  //
-  // A cycle is not detected when it closes only through edges the traversal
-  // did not follow: from entities reached at a step's `max_depth`, into models
-  // in `omitted_models`, or outside the host model under `host_model_only`.
-  bool detect_cycles = 7;
 }
 
 // Which components to return for traversed entities.
@@ -870,10 +852,6 @@ message TraverseReferencesResponse {
     // neighbours matching the step's edges. An entity reached at a step's
     // `max_depth` is returned without being expanded by that step.
     repeated uint32 expanded_steps = 5;
-
-    // Whether the entity lies on a reference cycle. Always false unless the
-    // request sets `detect_cycles`.
-    bool in_cycle = 6;
   }
 
   // Summary sent after the last traversed entity.
@@ -907,10 +885,6 @@ message TraverseReferencesResponse {
     // Models a root or an OUTBOUND step reached but that could not be fully
     // traversed.
     repeated OmittedModel omitted_models = 1;
-
-    // Whether any traversed entity has `in_cycle` set. Always false unless the
-    // request sets `detect_cycles`.
-    bool has_cycles = 2;
   }
 
   // The message payload.
