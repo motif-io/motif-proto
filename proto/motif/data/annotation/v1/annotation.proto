@@ -282,6 +282,19 @@ message Dimension {
   // Per-dimension placement. Never a world-space point: the placement point is
   // converted to basis + offset at commit and the plane re-derives on load.
   message OwnPlacement {
+    // Label side in the captured dimension plane, independent of view rotation
+    // and the text's readable orientation.
+    enum TextSide {
+      // Preserve the application's automatic, readable-side placement.
+      TEXT_SIDE_UNSPECIFIED = 0;
+      // Linear: along `basis.offset_direction`. Angular: radially outward
+      // from the vertex.
+      TEXT_SIDE_POSITIVE = 1;
+      // Linear: against `basis.offset_direction`. Angular: radially inward
+      // toward the vertex.
+      TEXT_SIDE_NEGATIVE = 2;
+    }
+
     // The captured dimension plane.
     PlaneBasis basis = 1;
     // Signed offset h from the measured line to the dimension line, meters.
@@ -303,6 +316,11 @@ message Dimension {
     // motivating case: a run of short segments cannot place every label at its
     // own midpoint without collisions, and sliding is per-label by nature.
     repeated double text_slides = 4;
+    // Label side for every segment. Explicit sides use
+    // `DimensionStyle.text_offset` as the clearance magnitude, without moving
+    // the dimension line or witnesses. Unset (0) preserves automatic placement
+    // for existing records.
+    TextSide text_side = 5;
   }
 
   // The definition geometry.
