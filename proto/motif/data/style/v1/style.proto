@@ -6,6 +6,7 @@ package motif.data.style.v1;
 
 import "buf/validate/validate.proto";
 import "motif/extension/v1/options.proto";
+import "motif/extension/v1/reference.proto";
 
 // A color, expressed in either the sRGB or linear-RGB color space.
 message Color {
@@ -129,6 +130,58 @@ message LinePatternElement {
 
   // A dot marker (no fields).
   message Dot {}
+}
+
+// A named, reusable set of line properties: a line style asset. Lives on an
+// asset entity (core.v1.Asset + a name) in any library a model can reach.
+//
+// Every property is optional; an unset one leaves that property to whatever
+// applies beneath this style (ultimately the application default), so a style
+// may specify any subset of properties.
+message LineStyleAsset {
+  option (motif.extension.v1.message).component = 190;
+
+  // Stroke color: set directly, or taken from a color style asset. Neither set
+  // leaves the color unset.
+  oneof color_source {
+    // A color set directly on this style.
+    Color color = 1;
+    // A color style asset (ColorStyleAsset) whose color this style uses.
+    StyleAssetReference color_style = 4;
+  }
+  // Stroke opacity, 0 (transparent) to 1 (opaque).
+  optional float opacity = 2 [(buf.validate.field).float = {
+    gte: 0
+    lte: 1
+  }];
+  // Stroke weight and pattern, as an entity's own LineStyle carries them. An
+  // unset `line` leaves both unset. Within it, an unset `pen_size` leaves the
+  // weight unset, and an unset `pattern` leaves the pattern unset rather than
+  // meaning a solid stroke; "Solid" by reference is an explicit continuous
+  // stroke. `width` is written as 0 and ignored: styles are pen-sized lines.
+  LineStyle line = 3;
+}
+
+// A named, reusable color: a color style asset. Lives on an asset entity
+// (core.v1.Asset + a name) in any library a model can reach. Line and text
+// style assets can take their color from one instead of setting it directly.
+message ColorStyleAsset {
+  option (motif.extension.v1.message).component = 191;
+
+  // The color. Unset leaves the color unset for every style that uses this one.
+  Color color = 1;
+}
+
+// A reference from one style asset to another (e.g. a line style's color
+// style). Not a component: embedded in the referencing style.
+message StyleAssetReference {
+  // The referenced style asset entity. Required.
+  motif.extension.v1.EntityReference asset = 1 [(buf.validate.field).required = true];
+
+  // The library model holding the referenced style. Unset means the model that
+  // contains the referencing style. Readers match the model by ID, not
+  // version, so a library update reaches every style that references it.
+  motif.extension.v1.ModelReference model = 2;
 }
 
 // Font identity that survives reload (family name, not an unstable runtime
