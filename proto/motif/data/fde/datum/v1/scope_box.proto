@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+// Scope boxes group levels, column grids, and reference planes inside one
+// oriented volume.
+package motif.data.fde.datum.v1;
+
+import "buf/validate/validate.proto";
+import "motif/extension/v1/options.proto";
+import "motif/extension/v1/reference.proto";
+
+// Marks an entity as a scope box.
+//
+// The box's volume is `ScopeBoxBounds` on the same entity. A datum carries
+// `ScopeBoxMembership` when it is assigned to the box.
+message ScopeBox {
+  option (motif.extension.v1.message).component = 198;
+}
+
+// Oriented footprint and elevation range of a scope box.
+//
+// The footprint is an axis-aligned rectangle in world XY, then yawed about its
+// center. Spans are the full width and length before that rotation.
+message ScopeBoxBounds {
+  option (motif.extension.v1.message).component = 199;
+
+  // Lower elevation, in meters, relative to the model's 0.
+  double base_elevation = 1 [(buf.validate.field).double.finite = true];
+  // Upper elevation, in meters, relative to the model's 0.
+  double top_elevation = 2 [(buf.validate.field).double.finite = true];
+  // East-west center of the footprint, in world meters.
+  double center_x = 3 [(buf.validate.field).double.finite = true];
+  // North-south center of the footprint, in world meters.
+  double center_y = 4 [(buf.validate.field).double.finite = true];
+  // East-west span of the footprint before rotation, in meters.
+  double width = 5 [(buf.validate.field).double = {
+    gt: 0
+    finite: true
+  }];
+  // North-south span of the footprint before rotation, in meters.
+  double length = 6 [(buf.validate.field).double = {
+    gt: 0
+    finite: true
+  }];
+  // Rotation of the footprint about its center, in degrees, counter-clockwise
+  // about +Z.
+  double rotation_degrees = 7 [(buf.validate.field).double.finite = true];
+}
+
+// Assigns a level, column grid, or reference plane to one scope box.
+//
+// The component is present only while the datum is assigned. Its absence
+// leaves the datum's own extent in effect.
+message ScopeBoxMembership {
+  option (motif.extension.v1.message).component = 200;
+
+  // The scope box this datum belongs to. Required.
+  motif.extension.v1.EntityReference scope_box = 1 [(buf.validate.field).required = true];
+}
