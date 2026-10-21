@@ -567,7 +567,7 @@ message ParameterBindingsBehavior {
 // that predates this component still evaluates variant-bound instances, because
 // the bindings are ordinary `DataReference`s.
 message AssetVariantGroup {
-  option (motif.extension.v1.message).component = 189;
+  option (motif.extension.v1.message).component = 192;
 
   // The asset whose parameters the group covers. Required.
   motif.extension.v1.EntityReference asset = 1 [(buf.validate.field).required = true];
