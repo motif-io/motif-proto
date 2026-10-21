@@ -1,0 +1,206 @@
+syntax = "proto3";
+
+// Stored curtain topology: the cells, edges, and nodes derived from a curtain
+// system's grid, plus one wall segment's baseline and division.
+package motif.data.fde.curtain.v1;
+
+import "buf/validate/validate.proto";
+import "motif/data/fde/geometry/v1/geometry.proto";
+import "motif/extension/v1/options.proto";
+import "motif/extension/v1/reference.proto";
+
+// Local assignment on a cell, edge, or node. Unspecified defers to the curtain
+// preset. A stored value outranks the preset.
+enum CurtainAssignmentKind {
+  // Defer to the curtain preset.
+  CURTAIN_ASSIGNMENT_KIND_UNSPECIFIED = 0;
+  // Glazed.
+  CURTAIN_ASSIGNMENT_KIND_GLASS = 1;
+  // A mullion.
+  CURTAIN_ASSIGNMENT_KIND_MULLION = 2;
+  // A point support.
+  CURTAIN_ASSIGNMENT_KIND_POINT_SUPPORT = 3;
+  // Present in the grid but not drawn.
+  CURTAIN_ASSIGNMENT_KIND_SUPPRESSED = 4;
+}
+
+// How a curtain edge runs between crossings.
+enum CurtainEdgeRun {
+  // Unspecified run.
+  CURTAIN_EDGE_RUN_UNSPECIFIED = 0;
+  // One piece from end to end.
+  CURTAIN_EDGE_RUN_CONTINUOUS = 1;
+  // Broken at each bay.
+  CURTAIN_EDGE_RUN_PER_BAY = 2;
+  // The domain boundary.
+  CURTAIN_EDGE_RUN_BOUNDARY = 3;
+}
+
+// Where a curtain node sits in the grid.
+enum CurtainNodeKind {
+  // Unspecified node.
+  CURTAIN_NODE_KIND_UNSPECIFIED = 0;
+  // An interior crossing.
+  CURTAIN_NODE_KIND_INTERIOR = 1;
+  // On the domain boundary, not a corner.
+  CURTAIN_NODE_KIND_BOUNDARY = 2;
+  // A corner of the domain.
+  CURTAIN_NODE_KIND_CORNER = 3;
+}
+
+// Which side of a curtain wall is glazed.
+enum CurtainGlazingSide {
+  // Unspecified side.
+  CURTAIN_GLAZING_SIDE_UNSPECIFIED = 0;
+  // The front of the baseline.
+  CURTAIN_GLAZING_SIDE_FRONT = 1;
+  // The back of the baseline.
+  CURTAIN_GLAZING_SIDE_BACK = 2;
+}
+
+// The mullion and support pattern of a curtain wall.
+enum CurtainWallPreset {
+  // Unspecified preset.
+  CURTAIN_WALL_PRESET_UNSPECIFIED = 0;
+  // Mullions on the grid lines.
+  CURTAIN_WALL_PRESET_MULLIONED = 1;
+  // Point supports at the nodes.
+  CURTAIN_WALL_PRESET_POINT_SUPPORTED = 2;
+}
+
+// How a curtain wall divides one direction.
+//
+// Unspecified means the direction was not stored. Readers fall back to equal
+// stations from the bay count. For V, unspecified also means "same rule as U"
+// on walls saved before the directions were independent.
+enum CurtainDivisionKind {
+  // Not stored.
+  CURTAIN_DIVISION_KIND_UNSPECIFIED = 0;
+  // Equal stations, including both ends.
+  CURTAIN_DIVISION_KIND_COUNT = 1;
+  // Fixed spacing measured from the start.
+  CURTAIN_DIVISION_KIND_DISTANCE = 2;
+}
+
+// A UV cell identified by the grid lines on its four sides.
+message CurtainCell {
+  option (motif.extension.v1.message).component = 201;
+
+  // The owning curtain system entity.
+  motif.extension.v1.EntityReference system = 1 [(buf.validate.field).required = true];
+  // The bound at the low U side. `0` is the domain low, `1` the domain high,
+  // and `2` the grid line in `u0_line`.
+  int32 u0_kind = 2;
+  // The grid line at the low U side, when `u0_kind` is `2`.
+  motif.extension.v1.EntityReference u0_line = 3;
+  // The bound at the high U side. Same encoding as `u0_kind`.
+  int32 u1_kind = 4;
+  // The grid line at the high U side, when `u1_kind` is `2`.
+  motif.extension.v1.EntityReference u1_line = 5;
+  // The bound at the low V side. Same encoding as `u0_kind`.
+  int32 v0_kind = 6;
+  // The grid line at the low V side, when `v0_kind` is `2`.
+  motif.extension.v1.EntityReference v0_line = 7;
+  // The bound at the high V side. Same encoding as `u0_kind`.
+  int32 v1_kind = 8;
+  // The grid line at the high V side, when `v1_kind` is `2`.
+  motif.extension.v1.EntityReference v1_line = 9;
+  // Local assignment. Unspecified defers to the preset.
+  CurtainAssignmentKind assignment = 10;
+}
+
+// One segment of a grid line or domain boundary, between two crossings.
+message CurtainEdge {
+  option (motif.extension.v1.message).component = 202;
+
+  // The owning curtain system entity.
+  motif.extension.v1.EntityReference system = 1 [(buf.validate.field).required = true];
+  // Which surface parameter this edge follows.
+  motif.data.fde.geometry.v1.SurfaceIsoDirection direction = 2;
+  // Whether `grid_line` is a domain end or a grid line. `0` is the domain
+  // low, `1` the domain high, and `2` the grid line in `grid_line`.
+  int32 line_kind = 3;
+  // The grid line this edge lies on, when `line_kind` is `2`.
+  motif.extension.v1.EntityReference grid_line = 4;
+  // The bound at the start of the edge. Same encoding as `line_kind`.
+  int32 from_kind = 5;
+  // The crossing line at the start, when `from_kind` is `2`.
+  motif.extension.v1.EntityReference from_line = 6;
+  // The bound at the end of the edge. Same encoding as `line_kind`.
+  int32 to_kind = 7;
+  // The crossing line at the end, when `to_kind` is `2`.
+  motif.extension.v1.EntityReference to_line = 8;
+  // How the edge runs between the crossings.
+  CurtainEdgeRun run = 9;
+  // Local assignment. Unspecified defers to the preset.
+  CurtainAssignmentKind assignment = 10;
+}
+
+// A grid crossing, including domain boundary and corner sentinels.
+message CurtainNode {
+  option (motif.extension.v1.message).component = 203;
+
+  // The owning curtain system entity.
+  motif.extension.v1.EntityReference system = 1 [(buf.validate.field).required = true];
+  // The bound along U. `0` is the domain low, `1` the domain high, and `2`
+  // the grid line in `u_line`.
+  int32 u_kind = 2;
+  // The U grid line, when `u_kind` is `2`.
+  motif.extension.v1.EntityReference u_line = 3;
+  // The bound along V. Same encoding as `u_kind`.
+  int32 v_kind = 4;
+  // The V grid line, when `v_kind` is `2`.
+  motif.extension.v1.EntityReference v_line = 5;
+  // Where the node sits in the grid.
+  CurtainNodeKind kind = 6;
+  // Offset of a point support from the node, in meters.
+  double support_offset = 7;
+}
+
+// One pane's inset attachment at a shared node.
+message CurtainPaneAttachment {
+  option (motif.extension.v1.message).component = 204;
+
+  // The node the pane attaches to.
+  motif.extension.v1.EntityReference node = 1 [(buf.validate.field).required = true];
+  // The cell the pane fills.
+  motif.extension.v1.EntityReference cell = 2 [(buf.validate.field).required = true];
+  // Inset from the node, in meters.
+  double inset = 3;
+}
+
+// The drawn baseline, height, and preset for one curtain-wall segment.
+message CurtainWallSegment {
+  option (motif.extension.v1.message).component = 205;
+
+  // The curtain system this segment owns.
+  motif.extension.v1.EntityReference system = 1 [(buf.validate.field).required = true];
+  // The baseline curve.
+  motif.extension.v1.EntityReference baseline = 2 [(buf.validate.field).required = true];
+  // The top rail, when the height is not a plain extrusion.
+  motif.extension.v1.EntityReference top_rail = 3;
+  // Wall height, in meters.
+  double height = 4 [(buf.validate.field).double.finite = true];
+  // Offset of the base from the baseline plane, in meters.
+  double base_offset = 5 [(buf.validate.field).double.finite = true];
+  // Which side is glazed.
+  CurtainGlazingSide glazing_side = 6;
+  // Bay count along the baseline. Used when U division is unspecified.
+  uint32 u_bays = 7;
+  // Bay count up the extrusion. Used when V division is unspecified.
+  uint32 v_bays = 8;
+  // Mullion and support pattern.
+  CurtainWallPreset preset = 9;
+  // How U, along the baseline, is divided.
+  CurtainDivisionKind division_kind = 10;
+  // U spacing, in meters, when `division_kind` is `DISTANCE`.
+  double division_spacing = 11;
+  // U station count when `division_kind` is `COUNT`.
+  uint32 division_stations = 12;
+  // How V, up the extrusion, is divided.
+  CurtainDivisionKind v_division_kind = 13;
+  // V spacing, in meters, when `v_division_kind` is `DISTANCE`.
+  double v_division_spacing = 14;
+  // V station count when `v_division_kind` is `COUNT`.
+  uint32 v_division_stations = 15;
+}
