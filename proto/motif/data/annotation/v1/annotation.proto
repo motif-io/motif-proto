@@ -89,9 +89,9 @@ message AnnotationLeaderStyle {
   motif.data.style.v1.LineStyle line = 2;
   // The head shape. UNSPECIFIED reads as ARROW_CLOSED.
   ArrowheadType arrowhead_type = 3;
-  // The head's printed size in millimetres, measured to the stroke centreline.
+  // The head's printed size in metres, measured to the stroke centreline.
   // Unset reads as the model's unit default (2.5 mm metric, 3/32 in imperial).
-  optional float arrowhead_size_mm = 4;
+  optional float arrowhead_size = 4;
   // The included tip angle of the two arrow shapes in radians, 0 < angle <= pi/2.
   // Unset reads as 30 degrees. The other shapes keep it unused.
   optional float arrowhead_angle_rad = 5;
