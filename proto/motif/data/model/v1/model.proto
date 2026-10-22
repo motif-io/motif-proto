@@ -1410,7 +1410,7 @@ message SourceAsset {
 // copy does not depend on its source, which may later be removed: these
 // references are provenance only and are not followed to load the source.
 message CopiedFrom {
-  option (motif.extension.v1.message).component = 189;
+  option (motif.extension.v1.message).component = 194;
 
   // The source asset entity. Required.
   motif.extension.v1.EntityReference entity = 1 [(buf.validate.field).required = true];
