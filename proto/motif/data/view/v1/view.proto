@@ -260,7 +260,7 @@ message SectionLineBreak {
 // Appearance overrides for level datums drawn in this elevation or section view.
 // Missing entries and fields inherit the model's placement and displayed extent.
 message LevelTagOverrides {
-  option (motif.extension.v1.message).component = 189;
+  option (motif.extension.v1.message).component = 194;
 
   option (buf.validate.message).cel = {
     id: "level_tag_overrides.unique_levels"
