@@ -9,12 +9,27 @@ import "motif/data/fde/geometry/v1/geometry.proto";
 import "motif/extension/v1/options.proto";
 import "motif/extension/v1/reference.proto";
 
+// Which grid lines a mullion set fills.
+//
+// The zero value means both directions, so an unset field fills every grid
+// line. `BOTH` is the same choice stored explicitly.
+enum CurtainMullionDirection {
+  // U and V grid lines.
+  CURTAIN_MULLION_DIRECTION_UNSPECIFIED = 0;
+  // U grid lines only.
+  CURTAIN_MULLION_DIRECTION_U = 1;
+  // V grid lines only.
+  CURTAIN_MULLION_DIRECTION_V = 2;
+  // U and V grid lines.
+  CURTAIN_MULLION_DIRECTION_BOTH = 3;
+}
+
 // A curtain subdivision hosted on an entity that carries `MultiRailSurface`.
 //
 // Grid lines are explicit U/V parameters. Cell topology is derived from those
 // lines and is not stored on this component.
 message CurtainSystem {
-  option (motif.extension.v1.message).component = 194;
+  option (motif.extension.v1.message).component = 206;
 
   // The host surface entity.
   motif.extension.v1.EntityReference surface = 1 [(buf.validate.field).required = true];
@@ -22,13 +37,16 @@ message CurtainSystem {
 
 // One grid line of a curtain system: an iso U or V at a fixed parameter.
 message CurtainGridLine {
-  option (motif.extension.v1.message).component = 195;
+  option (motif.extension.v1.message).component = 207;
 
   // The owning curtain system entity.
   motif.extension.v1.EntityReference system = 1 [(buf.validate.field).required = true];
 
-  // Which surface parameter is held fixed.
-  motif.data.fde.geometry.v1.SurfaceIsoDirection direction = 2;
+  // Which surface parameter is held fixed. Unspecified is rejected.
+  motif.data.fde.geometry.v1.SurfaceIsoDirection direction = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
 
   // The fixed parameter value, normalized to [0, 1].
   double param = 3 [(buf.validate.field).double = {
@@ -40,29 +58,39 @@ message CurtainGridLine {
 // Panel fill recipe for a curtain system. Panel solids are derived from the
 // system's cells; this stores the owning system and the panel depth.
 message CurtainPanelSet {
-  option (motif.extension.v1.message).component = 196;
+  option (motif.extension.v1.message).component = 208;
 
   // The owning curtain system entity.
-  motif.extension.v1.EntityReference system = 1;
+  motif.extension.v1.EntityReference system = 1 [(buf.validate.field).required = true];
 
-  // Panel thickness, in meters.
-  double depth = 2;
+  // Panel thickness, in meters. Must be positive; a negative value is not a
+  // side offset.
+  double depth = 2 [(buf.validate.field).double = {
+    gt: 0
+    finite: true
+  }];
 }
 
 // Mullion fill recipe for a curtain system. Mullion solids are derived along
 // grid lines; this stores the section and which directions to fill.
 message CurtainMullionSet {
-  option (motif.extension.v1.message).component = 197;
+  option (motif.extension.v1.message).component = 209;
 
   // The owning curtain system entity.
-  motif.extension.v1.EntityReference system = 1;
+  motif.extension.v1.EntityReference system = 1 [(buf.validate.field).required = true];
 
   // Mullion section width, in meters.
-  double width = 2;
+  double width = 2 [(buf.validate.field).double = {
+    gt: 0
+    finite: true
+  }];
 
   // Mullion section height, in meters.
-  double height = 3;
+  double height = 3 [(buf.validate.field).double = {
+    gt: 0
+    finite: true
+  }];
 
-  // Which grid lines to fill: "u", "v", or "both".
-  string dir = 4;
+  // Which grid lines to fill. Unspecified fills both directions.
+  CurtainMullionDirection dir = 4 [(buf.validate.field).enum.defined_only = true];
 }
