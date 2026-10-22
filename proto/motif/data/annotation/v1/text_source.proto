@@ -26,25 +26,9 @@ message TextSource {
     // Use the authored TextBlock without substituting its text.
     google.protobuf.Empty static_text = 1;
 
-    // Read a text parameter from the containing asset instance.
-    InputTextSource input = 2;
-
     // Compose text from ordered literals and property reads.
     SmartTextSource smart = 3;
   }
-}
-
-// A text parameter declared by the containing asset definition. Its value
-// is read from that asset instance's resolved parameters, so separate instances
-// can display different values. This source does not declare a parameter or
-// store its value.
-message InputTextSource {
-  // The key in ParameterDeclarations.declarations and ResolvedParameters.values.
-  // The declaration must have TYPE_STRING. This is a stable identity, not the
-  // display label; editing the declaration's description does not change it.
-  // A missing declaration, instance, or resolved value is unresolved, not a
-  // request to fall back to the authored TextBlock.
-  string parameter = 1 [(buf.validate.field).string.min_len = 1];
 }
 
 // An ordered composition. Concatenate each part's resolved text without
