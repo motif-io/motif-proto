@@ -282,6 +282,19 @@ message Dimension {
   // Per-dimension placement. Never a world-space point: the placement point is
   // converted to basis + offset at commit and the plane re-derives on load.
   message OwnPlacement {
+    // Label side in the captured dimension plane, independent of view rotation
+    // and the text's readable orientation.
+    enum TextSide {
+      // Preserve the application's automatic, readable-side placement.
+      TEXT_SIDE_UNSPECIFIED = 0;
+      // Linear: along `basis.offset_direction`. Angular: radially outward
+      // from the vertex.
+      TEXT_SIDE_POSITIVE = 1;
+      // Linear: against `basis.offset_direction`. Angular: radially inward
+      // toward the vertex.
+      TEXT_SIDE_NEGATIVE = 2;
+    }
+
     // The captured dimension plane.
     PlaneBasis basis = 1;
     // Signed offset h from the measured line to the dimension line, meters.
@@ -303,6 +316,11 @@ message Dimension {
     // motivating case: a run of short segments cannot place every label at its
     // own midpoint without collisions, and sliding is per-label by nature.
     repeated double text_slides = 4;
+    // Label side for every segment. Explicit sides use
+    // `DimensionStyle.text_offset` as the clearance magnitude, without moving
+    // the dimension line or witnesses. Unset (0) preserves automatic placement
+    // for existing records.
+    TextSide text_side = 5;
   }
 
   // The definition geometry.
@@ -504,4 +522,39 @@ enum ListKind {
   // between two items ends the list — a NONE paragraph between two NUMBERED
   // paragraphs starts a second list at 1.
   LIST_KIND_SPACER = 6;
+}
+
+// A named, reusable set of text properties: a text style asset. Lives on an
+// asset entity (core.v1.Asset + a name) in any library a model can reach.
+//
+// Every field is optional; an unset field leaves that property to whatever
+// applies beneath this style (ultimately the application default), so a style
+// may specify any subset of properties.
+message TextStyleAsset {
+  option (motif.extension.v1.message).component = 189;
+
+  // Font family name, e.g. "Roboto".
+  optional string font_family = 1;
+  // Bold weight.
+  optional bool bold = 2;
+  // Italic slant.
+  optional bool italic = 3;
+  // Printed (paper) glyph height in millimeters, held constant across drawing
+  // scales. Where the host has no drawing scale it is read as a model height.
+  optional float printed_height_mm = 4 [(buf.validate.field).float = {gt: 0}];
+  // Text color: set directly, or taken from a color style asset. Neither set
+  // leaves the color unset.
+  oneof color_source {
+    // A color set directly on this style.
+    motif.data.style.v1.Color color = 5;
+    // A color style asset (style.v1.ColorStyleAsset) whose color this style
+    // uses.
+    motif.data.style.v1.StyleAssetReference color_style = 8;
+  }
+  // Horizontal alignment; UNSPECIFIED leaves it unset.
+  Justify justify = 6;
+
+  // Formerly list_kind: lists belong to the text, not its style.
+  reserved 7;
+  reserved "list_kind";
 }
