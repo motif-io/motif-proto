@@ -1,0 +1,117 @@
+syntax = "proto3";
+
+package motif.data.annotation.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/empty.proto";
+import "motif/extension/v1/options.proto";
+import "motif/extension/v1/reference.proto";
+
+// Selects how a text annotation obtains its text. This component lives on
+// the annotation alongside TextBlock, which continues to own authored text,
+// styling, and layout. Resolved text is derived and is not stored here.
+//
+// An annotation without this component uses its authored TextBlock. A present
+// component must select a source. An unrecognized source must not be treated
+// as static text or overwritten merely because a reader cannot resolve it.
+// Changing source is an authoring operation: converting resolved text to static
+// text requires writing that text into TextBlock in the same update.
+message TextSource {
+  option (motif.extension.v1.message).component = 193;
+
+  // Exactly one source supplies the annotation's text.
+  oneof source {
+    option (buf.validate.oneof).required = true;
+
+    // Use the authored TextBlock without substituting its text.
+    google.protobuf.Empty static_text = 1;
+
+    // Compose text from ordered literals and property reads.
+    SmartTextSource smart = 3;
+  }
+}
+
+// An ordered composition. Concatenate each part's resolved text without
+// inserting separators. Literals can contain whitespace and line breaks.
+// Property reads happen in the annotation's current evaluation context; an
+// unresolved read must not substitute stale text from a previous host or model
+// version. Presentation of unresolved values is a reader concern.
+message SmartTextSource {
+  // The parts in display order. A single property part is a simple label.
+  repeated SmartTextPart parts = 1 [(buf.validate.field).repeated.min_items = 1];
+}
+
+// One literal or property read in a smart text composition.
+message SmartTextPart {
+  // The content supplied by this part.
+  oneof content {
+    option (buf.validate.oneof).required = true;
+
+    // Literal text, including an explicitly empty string.
+    string text = 1;
+
+    // A field of a specific version of project metadata.
+    ProjectTextSource project_field = 2;
+
+    // A field of the sheet hosting this annotation's evaluated instance.
+    HostSheetTextSource sheet_field = 3;
+  }
+}
+
+// A field read from ProjectFields on the referenced metadata model's
+// sentinel entity (00000000-0000-4000-8000-000000000000). The model must carry
+// ProjectMetadataStore. Resolve exactly the specified model version; this is
+// not an implicit reference to the project containing the annotation.
+message ProjectTextSource {
+  // The metadata model and version to read.
+  motif.extension.v1.ModelReference model = 1 [(buf.validate.field).required = true];
+
+  // The project property to read.
+  Field field = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+
+  // Supported project text properties.
+  enum Field {
+    // No field selected; invalid for a saved source.
+    FIELD_UNSPECIFIED = 0;
+    // ProjectFields.project_name.
+    FIELD_NAME = 1;
+    // ProjectFields.project_number.
+    FIELD_NUMBER = 2;
+  }
+}
+
+// A sheet property resolved relative to the annotation's evaluated
+// placement. For text inside a title block, use the sheet hosting that title
+// block instance. Do not persist a sheet entity ID in the asset definition:
+// rehosting an instance changes the sheet this source reads. No unique host
+// sheet means the read is unresolved.
+message HostSheetTextSource {
+  // The host sheet property to read.
+  Field field = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+
+  // Supported host sheet text properties.
+  enum Field {
+    // No field selected; invalid for a saved source.
+    FIELD_UNSPECIFIED = 0;
+    // The host sheet's AssignedName.name.
+    FIELD_NAME = 1;
+    // The host sheet's SheetNumber.number.
+    FIELD_NUMBER = 2;
+    // A display summary of source-view scales on the host sheet. Include
+    // plan, reflected ceiling plan, elevation, drafting, and orthographic 3D
+    // views presented by sheet placements; exclude drawing-content placements
+    // and perspective views. Use ViewScale.ratio, defaulting to 1:1 when absent;
+    // placement overrides do not contribute. No eligible views produces empty
+    // text, one common ratio produces its scale notation, and differing ratios
+    // produce a mixed-scale indication (for example, "As noted"). Formatting
+    // and localization belong to the reader. This is derived text, not a
+    // stored scalar sheet property.
+    FIELD_SCALE = 3;
+  }
+}

@@ -1405,6 +1405,20 @@ message SourceAsset {
   motif.extension.v1.ModelReference model = 2;
 }
 
+// Records the asset definition a copied asset was copied from, in another
+// model or the Standard Library. Set on the root definition of a copy. The
+// copy does not depend on its source, which may later be removed: these
+// references are provenance only and are not followed to load the source.
+message CopiedFrom {
+  option (motif.extension.v1.message).component = 194;
+
+  // The source asset entity. Required.
+  motif.extension.v1.EntityReference entity = 1 [(buf.validate.field).required = true];
+
+  // The source model, at the version the copy was taken from. Required.
+  motif.extension.v1.ModelReference model = 2 [(buf.validate.field).required = true];
+}
+
 // Authored declarations for stable reference geometry on an asset.
 //
 // A resolver evaluates each entry and writes a `ReferenceGeometry` component
