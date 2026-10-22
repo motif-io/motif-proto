@@ -544,6 +544,51 @@ message ParameterBindingsBehavior {
   map<string, ParameterBinding> bindings = 3;
 }
 
+// A named set of an asset's parameters that the asset's variants set together.
+// Lives on a group entity named by `motif.data.core.v1.AssignedName`. A group
+// with no variants is valid.
+//
+// A variant is an entity with `motif.data.core.v1.IsOfType` at the group
+// (`BINDING_MODE_ASSIGNED`), an `AssignedName`, and a `ResolvedParameters` with
+// one value per key in `parameter_keys`. An instance uses a variant by binding
+// each of the group's parameters in its `ParameterBindingsBehavior` to a
+// `DataReference` at the variant's `ResolvedParameters.values[<key>]`, so a
+// variant edit reaches every bound instance. These bindings are the only record
+// of which variant an instance uses, and an instance uses at most one variant
+// per group. An instance's asset is the one its `SourceAsset` names, or else
+// the one its `motif.data.core.v1.Instance` names.
+//
+// Writers keep the groups of one asset on disjoint keys, write a value into
+// every variant when they add a key, and rebind instances to literal values
+// before they remove a key or delete a variant.
+//
+// Readers ignore a variant value for a key outside `parameter_keys`, a key the
+// asset does not declare, and a group whose `asset` does not resolve. A reader
+// that predates this component still evaluates variant-bound instances, because
+// the bindings are ordinary `DataReference`s.
+message AssetVariantGroup {
+  option (motif.extension.v1.message).component = 192;
+
+  // The asset whose parameters the group covers. Required.
+  motif.extension.v1.EntityReference asset = 1 [(buf.validate.field).required = true];
+
+  // Optional. When set, `asset` is resolved against this model rather than the
+  // group's own model, for example a Standard Library asset. Readers match a
+  // group to an asset by model ID and entity ID; `model_version` records the
+  // asset version whose declarations `parameter_keys` was checked against.
+  motif.extension.v1.ModelReference model = 2;
+
+  // Keys into the asset's `ParameterDeclarations.declarations` that the
+  // group's variants set. Order carries no meaning.
+  repeated string parameter_keys = 3 [(buf.validate.field).repeated = {
+    min_items: 1
+    unique: true
+    items: {
+      string: {min_len: 1}
+    }
+  }];
+}
+
 // A behavior which copies component data from configured sources to output entities.
 // Each map key is the destination component type ID; the value describes how to
 // obtain the payload and where to place it. Inputs and outputs resolve through
