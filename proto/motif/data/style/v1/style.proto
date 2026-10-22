@@ -172,6 +172,39 @@ message ColorStyleAsset {
   Color color = 1;
 }
 
+// A named, reusable look for a closed 2D shape: its fill and its border. A
+// shape style asset. Lives on an asset entity (core.v1.Asset + a name) in any
+// library a model can reach. The host owns the boundary (for a text
+// annotation, the box around its text); the style only says how to draw it.
+//
+// Every field is optional; an unset field leaves that property to whatever
+// applies beneath this style (ultimately the application default).
+message ShapeStyleAsset {
+  option (motif.extension.v1.message).component = 193;
+
+  // Fill color: set directly, or taken from a color style asset (ColorStyleAsset).
+  // Neither set leaves the fill color unset.
+  oneof fill_source {
+    // A color set directly on this style.
+    Color fill_color = 1;
+    // A color style asset whose color this style fills with.
+    StyleAssetReference fill_color_style = 2;
+  }
+  // Fill opacity, 0 (no fill) to 1 (opaque). Applies to either fill source.
+  optional float fill_opacity = 3 [(buf.validate.field).float = {
+    gte: 0
+    lte: 1
+  }];
+  // The border: a line style asset (LineStyleAsset), or the line properties set
+  // on this style itself. Neither set leaves the border unset.
+  oneof border {
+    // A line style asset whose color, opacity, weight and pattern the border uses.
+    StyleAssetReference line_style = 4;
+    // The border's own line properties, as a line style asset carries them.
+    LineStyleAsset border_properties = 5;
+  }
+}
+
 // A reference from one style asset to another (e.g. a line style's color
 // style). Not a component: embedded in the referencing style.
 message StyleAssetReference {
