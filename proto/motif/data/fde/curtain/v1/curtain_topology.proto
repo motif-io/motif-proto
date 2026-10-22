@@ -82,28 +82,64 @@ enum CurtainDivisionKind {
   CURTAIN_DIVISION_KIND_DISTANCE = 2;
 }
 
+// Which boundary a cell side, edge end, or node coordinate refers to.
+//
+// Domain low is parameter 0 and domain high is parameter 1. A grid write
+// orders each cell from the lesser parameter to the greater one, so the
+// lesser side is domain low or a grid line and the greater side is domain
+// high or a grid line. Domain high is not stored on the lesser side.
+enum CurtainBoundKind {
+  // Not stored.
+  CURTAIN_BOUND_KIND_UNSPECIFIED = 0;
+  // The domain low, parameter 0.
+  CURTAIN_BOUND_KIND_DOMAIN_LOW = 1;
+  // The domain high, parameter 1.
+  CURTAIN_BOUND_KIND_DOMAIN_HIGH = 2;
+  // The grid line named by the paired reference.
+  CURTAIN_BOUND_KIND_GRID_LINE = 3;
+}
+
 // A UV cell identified by the grid lines on its four sides.
 message CurtainCell {
-  option (motif.extension.v1.message).component = 201;
+  option (motif.extension.v1.message).component = 210;
+
+  // Lesser parameter first. In the expression, `1` is domain low and `2` is
+  // domain high.
+  option (buf.validate.message).cel = {
+    id: "curtain_cell.bound_order"
+    message: "the lesser bound is not the domain high, and the greater bound is not the domain low"
+    expression: "this.u0_kind != 2 && this.v0_kind != 2 && this.u1_kind != 1 && this.v1_kind != 1"
+  };
 
   // The owning curtain system entity.
   motif.extension.v1.EntityReference system = 1 [(buf.validate.field).required = true];
-  // The bound at the low U side. `0` is the domain low, `1` the domain high,
-  // and `2` the grid line in `u0_line`.
-  int32 u0_kind = 2;
-  // The grid line at the low U side, when `u0_kind` is `2`.
+  // The bound at the lesser U. Domain high is not used here.
+  CurtainBoundKind u0_kind = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // The grid line at the lesser U, when `u0_kind` is `GRID_LINE`.
   motif.extension.v1.EntityReference u0_line = 3;
-  // The bound at the high U side. Same encoding as `u0_kind`.
-  int32 u1_kind = 4;
-  // The grid line at the high U side, when `u1_kind` is `2`.
+  // The bound at the greater U. Domain low is not used here.
+  CurtainBoundKind u1_kind = 4 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // The grid line at the greater U, when `u1_kind` is `GRID_LINE`.
   motif.extension.v1.EntityReference u1_line = 5;
-  // The bound at the low V side. Same encoding as `u0_kind`.
-  int32 v0_kind = 6;
-  // The grid line at the low V side, when `v0_kind` is `2`.
+  // The bound at the lesser V. Domain high is not used here.
+  CurtainBoundKind v0_kind = 6 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // The grid line at the lesser V, when `v0_kind` is `GRID_LINE`.
   motif.extension.v1.EntityReference v0_line = 7;
-  // The bound at the high V side. Same encoding as `u0_kind`.
-  int32 v1_kind = 8;
-  // The grid line at the high V side, when `v1_kind` is `2`.
+  // The bound at the greater V. Domain low is not used here.
+  CurtainBoundKind v1_kind = 8 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // The grid line at the greater V, when `v1_kind` is `GRID_LINE`.
   motif.extension.v1.EntityReference v1_line = 9;
   // Local assignment. Unspecified defers to the preset.
   CurtainAssignmentKind assignment = 10;
@@ -111,24 +147,35 @@ message CurtainCell {
 
 // One segment of a grid line or domain boundary, between two crossings.
 message CurtainEdge {
-  option (motif.extension.v1.message).component = 202;
+  option (motif.extension.v1.message).component = 211;
 
   // The owning curtain system entity.
   motif.extension.v1.EntityReference system = 1 [(buf.validate.field).required = true];
-  // Which surface parameter this edge follows.
-  motif.data.fde.geometry.v1.SurfaceIsoDirection direction = 2;
-  // Whether `grid_line` is a domain end or a grid line. `0` is the domain
-  // low, `1` the domain high, and `2` the grid line in `grid_line`.
-  int32 line_kind = 3;
-  // The grid line this edge lies on, when `line_kind` is `2`.
+  // Which surface parameter this edge follows. Unspecified is rejected.
+  motif.data.fde.geometry.v1.SurfaceIsoDirection direction = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // Whether `grid_line` is a domain end or a grid line.
+  CurtainBoundKind line_kind = 3 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // The grid line this edge lies on, when `line_kind` is `GRID_LINE`.
   motif.extension.v1.EntityReference grid_line = 4;
-  // The bound at the start of the edge. Same encoding as `line_kind`.
-  int32 from_kind = 5;
-  // The crossing line at the start, when `from_kind` is `2`.
+  // The bound at the start of the edge.
+  CurtainBoundKind from_kind = 5 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // The crossing line at the start, when `from_kind` is `GRID_LINE`.
   motif.extension.v1.EntityReference from_line = 6;
-  // The bound at the end of the edge. Same encoding as `line_kind`.
-  int32 to_kind = 7;
-  // The crossing line at the end, when `to_kind` is `2`.
+  // The bound at the end of the edge.
+  CurtainBoundKind to_kind = 7 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // The crossing line at the end, when `to_kind` is `GRID_LINE`.
   motif.extension.v1.EntityReference to_line = 8;
   // How the edge runs between the crossings.
   CurtainEdgeRun run = 9;
@@ -138,40 +185,45 @@ message CurtainEdge {
 
 // A grid crossing, including domain boundary and corner sentinels.
 message CurtainNode {
-  option (motif.extension.v1.message).component = 203;
+  option (motif.extension.v1.message).component = 212;
 
   // The owning curtain system entity.
   motif.extension.v1.EntityReference system = 1 [(buf.validate.field).required = true];
-  // The bound along U. `0` is the domain low, `1` the domain high, and `2`
-  // the grid line in `u_line`.
-  int32 u_kind = 2;
-  // The U grid line, when `u_kind` is `2`.
+  // The bound along U.
+  CurtainBoundKind u_kind = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // The U grid line, when `u_kind` is `GRID_LINE`.
   motif.extension.v1.EntityReference u_line = 3;
-  // The bound along V. Same encoding as `u_kind`.
-  int32 v_kind = 4;
-  // The V grid line, when `v_kind` is `2`.
+  // The bound along V.
+  CurtainBoundKind v_kind = 4 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // The V grid line, when `v_kind` is `GRID_LINE`.
   motif.extension.v1.EntityReference v_line = 5;
   // Where the node sits in the grid.
   CurtainNodeKind kind = 6;
-  // Offset of a point support from the node, in meters.
-  double support_offset = 7;
+  // Offset of a point support from the node, in meters. May be negative.
+  double support_offset = 7 [(buf.validate.field).double.finite = true];
 }
 
 // One pane's inset attachment at a shared node.
 message CurtainPaneAttachment {
-  option (motif.extension.v1.message).component = 204;
+  option (motif.extension.v1.message).component = 213;
 
   // The node the pane attaches to.
   motif.extension.v1.EntityReference node = 1 [(buf.validate.field).required = true];
   // The cell the pane fills.
   motif.extension.v1.EntityReference cell = 2 [(buf.validate.field).required = true];
   // Inset from the node, in meters.
-  double inset = 3;
+  double inset = 3 [(buf.validate.field).double.finite = true];
 }
 
 // The drawn baseline, height, and preset for one curtain-wall segment.
 message CurtainWallSegment {
-  option (motif.extension.v1.message).component = 205;
+  option (motif.extension.v1.message).component = 214;
 
   // The curtain system this segment owns.
   motif.extension.v1.EntityReference system = 1 [(buf.validate.field).required = true];
@@ -180,7 +232,10 @@ message CurtainWallSegment {
   // The top rail, when the height is not a plain extrusion.
   motif.extension.v1.EntityReference top_rail = 3;
   // Wall height, in meters.
-  double height = 4 [(buf.validate.field).double.finite = true];
+  double height = 4 [(buf.validate.field).double = {
+    gt: 0
+    finite: true
+  }];
   // Offset of the base from the baseline plane, in meters.
   double base_offset = 5 [(buf.validate.field).double.finite = true];
   // Which side is glazed.
