@@ -18,7 +18,7 @@ import "motif/extension/v1/reference.proto";
 // `faces`. A removed element stays at its index with `removed` set, so an id
 // is never reused and later indexes do not shift.
 message PolyBody {
-  option (motif.extension.v1.message).component = 186;
+  option (motif.extension.v1.message).component = 193;
 
   // Vertices, in id order. Index is the vertex id.
   repeated PolyBodyVertex vertices = 1;
@@ -36,7 +36,7 @@ message PolyBody {
 // the body names its placement level. Deleting the body or the level deletes the
 // mass floor.
 message MassFloor {
-  option (motif.extension.v1.message).component = 187;
+  option (motif.extension.v1.message).component = 194;
 
   // The poly body the floor is cut from. Required.
   motif.extension.v1.EntityReference body = 1 [(buf.validate.field).required = true];
