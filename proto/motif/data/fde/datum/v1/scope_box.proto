@@ -13,7 +13,7 @@ import "motif/extension/v1/reference.proto";
 // The box's volume is `ScopeBoxBounds` on the same entity. A datum carries
 // `ScopeBoxMembership` when it is assigned to the box.
 message ScopeBox {
-  option (motif.extension.v1.message).component = 195;
+  option (motif.extension.v1.message).component = 199;
 }
 
 // Oriented footprint and elevation range of a scope box.
@@ -21,7 +21,7 @@ message ScopeBox {
 // The footprint is an axis-aligned rectangle in world XY, then yawed about its
 // center. Spans are the full width and length before that rotation.
 message ScopeBoxBounds {
-  option (motif.extension.v1.message).component = 196;
+  option (motif.extension.v1.message).component = 200;
 
   // Lower elevation, in meters, relative to the model's 0.
   double base_elevation = 1 [(buf.validate.field).double.finite = true];
@@ -51,7 +51,7 @@ message ScopeBoxBounds {
 // The component is present only while the datum is assigned. Its absence
 // leaves the datum's own extent in effect.
 message ScopeBoxMembership {
-  option (motif.extension.v1.message).component = 197;
+  option (motif.extension.v1.message).component = 201;
 
   // The scope box this datum belongs to. Required.
   motif.extension.v1.EntityReference scope_box = 1 [(buf.validate.field).required = true];
