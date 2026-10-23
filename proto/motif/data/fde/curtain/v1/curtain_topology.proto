@@ -101,7 +101,7 @@ enum CurtainBoundKind {
 
 // A UV cell identified by the grid lines on its four sides.
 message CurtainCell {
-  option (motif.extension.v1.message).component = 210;
+  option (motif.extension.v1.message).component = 214;
 
   // Lesser parameter first. In the expression, `1` is domain low and `2` is
   // domain high.
@@ -147,7 +147,7 @@ message CurtainCell {
 
 // One segment of a grid line or domain boundary, between two crossings.
 message CurtainEdge {
-  option (motif.extension.v1.message).component = 211;
+  option (motif.extension.v1.message).component = 215;
 
   // The owning curtain system entity.
   motif.extension.v1.EntityReference system = 1 [(buf.validate.field).required = true];
@@ -185,7 +185,7 @@ message CurtainEdge {
 
 // A grid crossing, including domain boundary and corner sentinels.
 message CurtainNode {
-  option (motif.extension.v1.message).component = 212;
+  option (motif.extension.v1.message).component = 216;
 
   // The owning curtain system entity.
   motif.extension.v1.EntityReference system = 1 [(buf.validate.field).required = true];
@@ -211,7 +211,7 @@ message CurtainNode {
 
 // One pane's inset attachment at a shared node.
 message CurtainPaneAttachment {
-  option (motif.extension.v1.message).component = 213;
+  option (motif.extension.v1.message).component = 217;
 
   // The node the pane attaches to.
   motif.extension.v1.EntityReference node = 1 [(buf.validate.field).required = true];
@@ -223,7 +223,7 @@ message CurtainPaneAttachment {
 
 // The drawn baseline, height, and preset for one curtain-wall segment.
 message CurtainWallSegment {
-  option (motif.extension.v1.message).component = 214;
+  option (motif.extension.v1.message).component = 218;
 
   // The curtain system this segment owns.
   motif.extension.v1.EntityReference system = 1 [(buf.validate.field).required = true];
