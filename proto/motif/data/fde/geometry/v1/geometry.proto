@@ -33,7 +33,7 @@ enum SurfaceIsoDirection {
 
 // Normalized parameter of a point hosted on a curve.
 message CurveHostParam {
-  option (motif.extension.v1.message).component = 198;
+  option (motif.extension.v1.message).component = 202;
 
   // Normalized curve parameter in [0, 1].
   double t = 1 [(buf.validate.field).double = {
@@ -44,7 +44,7 @@ message CurveHostParam {
 
 // Places a point on a host curve at a normalized parameter.
 message CurveHostedPointBehavior {
-  option (motif.extension.v1.message).component = 199;
+  option (motif.extension.v1.message).component = 203;
 
   // The host curve geometry.
   motif.extension.v1.DataReference host_curve = 1 [
@@ -76,7 +76,7 @@ message CurveHostedPointBehavior {
 
 // A curve driven by an ordered sequence of Point3 entities.
 message CurveThroughPoints {
-  option (motif.extension.v1.message).component = 200;
+  option (motif.extension.v1.message).component = 204;
 
   // The driver Point3 entities, in order.
   repeated motif.extension.v1.EntityReference points = 1 [(buf.validate.field).repeated = {
@@ -101,7 +101,7 @@ message CurveThroughPoints {
 // One rail is extruded along `direction`, two rails are ruled, and three or
 // more are a piecewise ruled loft.
 message MultiRailSurface {
-  option (motif.extension.v1.message).component = 201;
+  option (motif.extension.v1.message).component = 205;
 
   // A single rail is an extrusion, so its direction has to leave the origin.
   // Two or more rails ignore `direction`.
@@ -123,7 +123,7 @@ message MultiRailSurface {
 
 // An iso curve on a host that carries `MultiRailSurface`.
 message SurfaceIsoCurve {
-  option (motif.extension.v1.message).component = 202;
+  option (motif.extension.v1.message).component = 206;
 
   // The host surface entity.
   motif.extension.v1.EntityReference surface = 1 [(buf.validate.field).required = true];
@@ -143,7 +143,7 @@ message SurfaceIsoCurve {
 
 // Normalized `(u, v)` of a point hosted on a `MultiRailSurface`.
 message SurfaceHostParam {
-  option (motif.extension.v1.message).component = 203;
+  option (motif.extension.v1.message).component = 207;
 
   // The host surface entity.
   motif.extension.v1.EntityReference surface = 1 [(buf.validate.field).required = true];
@@ -163,7 +163,7 @@ message SurfaceHostParam {
 
 // Resolved spine and placement frame for a bar between two points.
 message ResolvedBarSweepInputs {
-  option (motif.extension.v1.message).component = 204;
+  option (motif.extension.v1.message).component = 208;
 
   // The bar's spine in its placement frame: a line from local (0,0) with
   // length equal to the node-to-node distance.
@@ -176,7 +176,7 @@ message ResolvedBarSweepInputs {
 
 // Builds a bar between two point entities.
 message TwoPointBarBehavior {
-  option (motif.extension.v1.message).component = 205;
+  option (motif.extension.v1.message).component = 209;
 
   // The start point.
   motif.extension.v1.DataReference start_point = 1 [
