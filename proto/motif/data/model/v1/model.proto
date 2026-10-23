@@ -2304,3 +2304,7 @@ message CompositePresentation {
     repeated string row_keys = 2 [(buf.validate.field).repeated.min_items = 1];
   }
 }
+
+message CustomRegenerateBehavior {
+  option (motif.extension.v1.message).component = 197;
+}
