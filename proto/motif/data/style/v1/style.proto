@@ -180,7 +180,7 @@ message ColorStyleAsset {
 // Every field is optional; an unset field leaves that property to whatever
 // applies beneath this style (ultimately the application default).
 message ShapeStyleAsset {
-  option (motif.extension.v1.message).component = 193;
+  option (motif.extension.v1.message).component = 196;
 
   // Fill color: set directly, or taken from a color style asset (ColorStyleAsset).
   // Neither set leaves the fill color unset.
