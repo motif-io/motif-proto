@@ -1989,7 +1989,8 @@ message Geometry2dEntrySpec {
     Geometry2dConstruction construction = 5;
   }
 
-  // How the derived entry draws the source curves.
+  // How the derived entry draws the source curves. Readers mark an entry
+  // whose shape they do not recognize FAILED.
   Geometry2dEntryShape shape = 6 [(buf.validate.field).enum.defined_only = true];
 }
 
@@ -2132,7 +2133,7 @@ message Geometry2dEntry {
     // Curves (open or closed), drawn as linework.
     motif.data.geometry.v1.Curve2List curves = 5;
 
-    // A closed region, drawn as a solid fill.
+    // A closed region, drawn as a solid fill with its boundary as linework.
     motif.data.geometry.v1.ClosedRegion2D region = 6;
   }
 }
