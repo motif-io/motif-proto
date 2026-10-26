@@ -1989,8 +1989,9 @@ message Geometry2dEntrySpec {
     Geometry2dConstruction construction = 5;
   }
 
-  // How the derived entry draws the source curves. Readers mark an entry
-  // whose shape they do not recognize FAILED.
+  // How the derived entry draws the source curves. Evaluators that predate
+  // this field derive every entry as curves; evaluators that do not recognize
+  // the value mark the entry FAILED.
   Geometry2dEntryShape shape = 6 [(buf.validate.field).enum.defined_only = true];
 }
 
