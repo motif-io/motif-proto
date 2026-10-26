@@ -1988,6 +1988,23 @@ message Geometry2dEntrySpec {
     // Curves constructed from resolved parameters.
     Geometry2dConstruction construction = 5;
   }
+
+  // How the derived entry draws the source curves.
+  Geometry2dEntryShape shape = 6 [(buf.validate.field).enum.defined_only = true];
+}
+
+// How a `Geometry2d` entry draws its curves.
+enum Geometry2dEntryShape {
+  // The reader's default, which is `CURVES`.
+  GEOMETRY2D_ENTRY_SHAPE_UNSPECIFIED = 0;
+
+  // Linework: the derived entry carries the curves as `curves`.
+  GEOMETRY2D_ENTRY_SHAPE_CURVES = 1;
+
+  // A solid fill: the curves, in order, form one closed loop that becomes the
+  // `exterior` of the derived entry's `region`. Writers mark the entry FAILED
+  // when the curves do not close.
+  GEOMETRY2D_ENTRY_SHAPE_REGION = 2;
 }
 
 // An authored construction producing one entry's curves and the local frame
@@ -2073,9 +2090,9 @@ message Arc2Construction {
 }
 
 // Derived 2D drawing geometry produced from an asset's `Geometry2dBehavior`.
-// Curves are display linework, not solid model geometry. Entries are keyed by
-// the authored entry name; draw order is the entries' `priority`, not map
-// iteration or encoding order.
+// Entries are display linework and fills, not solid model geometry. Entries
+// are keyed by the authored entry name; draw order is the entries' `priority`,
+// not map iteration or encoding order.
 message Geometry2d {
   option (motif.extension.v1.message).component = 176;
 
@@ -2097,8 +2114,8 @@ message Geometry2dEntry {
   // Draw order copied from the authored entry.
   uint32 priority = 2;
 
-  // Whether this entry's curves were generated from the current inputs.
-  // `curves` is empty unless the status is SUCCEEDED, so consumers never use
+  // Whether this entry's geometry was generated from the current inputs.
+  // `primitive` is unset unless the status is SUCCEEDED, so consumers never use
   // stale geometry produced from older input values.
   Geometry2dEntryStatus status = 3 [(buf.validate.field).enum.defined_only = true];
 
@@ -2109,10 +2126,14 @@ message Geometry2dEntry {
   // composes an absent (degenerate, zero-axis) frame.
   motif.data.geometry.v1.CoordinateSystem3 frame = 4;
 
-  // The drawable geometry.
+  // The drawable geometry. A reader that does not recognize the set member
+  // does not draw the entry.
   oneof primitive {
     // Curves (open or closed), drawn as linework.
     motif.data.geometry.v1.Curve2List curves = 5;
+
+    // A closed region, drawn as a solid fill.
+    motif.data.geometry.v1.ClosedRegion2D region = 6;
   }
 }
 
@@ -2136,7 +2157,7 @@ enum Geometry2dEntryStatus {
   // The entry was generated from the current inputs.
   GEOMETRY2D_ENTRY_STATUS_SUCCEEDED = 1;
 
-  // The entry could not be generated; `curves` is empty.
+  // The entry could not be generated; `primitive` is unset.
   GEOMETRY2D_ENTRY_STATUS_FAILED = 2;
 }
 
