@@ -2305,6 +2305,8 @@ message CompositePresentation {
   }
 }
 
+// Reserved component id for a custom regeneration behavior. The field layout
+// stays local until it stabilizes.
 message CustomRegenerateBehavior {
-  option (motif.extension.v1.message).component = 197;
+  option (motif.extension.v1.message).component = 220;
 }
