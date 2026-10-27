@@ -50,6 +50,15 @@ motif.extension.v1.DataReference curve = 3 [
 ];
 ```
 
+Once a component type exists, the expected type of each of its `DataReference`
+fields, including those in messages it contains, cannot change or be removed. A
+`DataReference` stores only its target, so the declared expected type is the
+only record of what kind of data stored references point at, and changing it
+would change how existing data is read. A field without an expected type may
+gain one. `buf breaking` enforces this with the
+`MOTIF_DATA_REFERENCE_EXPECTED_TYPE_CHANGED` rule. To reference a different
+type, define a new component type.
+
 Representation blob IDs use the well-known
 `motif.extension.v1.RepresentationReference` message (same structural discovery
 pattern as `EntityReference` / `ModelReference`):
