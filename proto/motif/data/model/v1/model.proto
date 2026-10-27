@@ -2305,8 +2305,42 @@ message CompositePresentation {
   }
 }
 
-// Reserved component id for a custom regeneration behavior. The field layout
-// stays local until it stabilizes.
+// A stored relationship. `inputs` are the function's parameters, in order.
+// `output` is the list of values the function writes, in result order: one
+// value is the function's result, and more than one is a record with one
+// field per output.
+//
+// When `member_cap` is set, the function returns either a count or a list of
+// section poses, instead of `output`. A count copies `member_component_data`
+// onto that many entities. A section pose is the plane normal to a curve:
+// origin, X across the section, Z along the tangent. Regeneration copies the
+// template and writes that pose as an Isometry, so a translation in the plane
+// and a rotation about its normal are stored on the member. Indices from the
+// list length, or the count, up to the cap are deleted. A count or a list
+// past the cap fails the pass.
 message CustomRegenerateBehavior {
   option (motif.extension.v1.message).component = 220;
+
+  // The function's parameters, in order. Each reference may name a different
+  // component, so a single expected type would reject a legal input.
+  // buf:lint:ignore MOTIF_DATA_REFERENCE_MISSING_EXPECTED_TYPE
+  repeated motif.extension.v1.DataReference inputs = 1;
+  // The values the function writes, in result order. One value is the
+  // function's result. More than one is a record with one field per output.
+  // Unused when `member_cap` is set. Each reference may name a different
+  // component, so a single expected type would reject a legal output.
+  // buf:lint:ignore MOTIF_DATA_REFERENCE_MISSING_EXPECTED_TYPE
+  repeated motif.extension.v1.DataReference output = 2;
+  // The compiled regeneration function.
+  bytes function = 3;
+  // A human-readable description of the relationship.
+  string description = 4;
+  // When set, the function returns a count or a list of section poses instead
+  // of `output`, and regeneration creates at most this many member entities.
+  uint32 member_cap = 5;
+  // The component copied onto each member when the function returns a count.
+  int32 member_component_type = 6;
+  // The component payload copied onto each member when the function returns a
+  // count.
+  bytes member_component_data = 7;
 }
