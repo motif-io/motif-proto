@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 // Components specific to models and model-related feature sets: workplanes,
-// sketches, levels, walls, joins, and unit settings.
+// sketches, levels, walls, joins, rooms, and unit settings.
 package motif.data.model.v1;
 
 import "buf/validate/validate.proto";
@@ -2366,4 +2366,14 @@ message CustomRegenerateBehavior {
   // The component payload copied onto each member when the function returns a
   // count.
   bytes member_component_data = 7;
+}
+
+// A marker component identifying a room's area representation.
+message SpaceAreaRepresentation {
+  option (motif.extension.v1.message).component = 221;
+}
+
+// A marker component identifying a room's volume representation.
+message SpaceVolumeRepresentation {
+  option (motif.extension.v1.message).component = 222;
 }
