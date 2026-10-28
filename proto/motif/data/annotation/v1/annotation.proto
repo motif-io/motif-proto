@@ -4,6 +4,7 @@ syntax = "proto3";
 package motif.data.annotation.v1;
 
 import "buf/validate/validate.proto";
+import "google/protobuf/empty.proto";
 import "motif/data/geometry/v1/geometry.proto";
 import "motif/data/model/v1/model.proto";
 import "motif/data/style/v1/style.proto";
@@ -122,7 +123,8 @@ message Dimension {
   option (motif.extension.v1.message).component = 120;
 
   // Which curve of the referenced entity a feature anchor evaluates: the
-  // entity's own Curve2, or a wall's symbolic thickness-aware derived curves
+  // entity's own Curve2, an authored boundary segment, or a wall's symbolic
+  // thickness-aware derived curves
   // (the baseline behind its Requires link, or a face offset by half the
   // footprint width — re-derived at every resolve, so a thickness edit moves
   // the face and the dimension follows). Face sides are named in the baseline
@@ -138,6 +140,8 @@ message Dimension {
     CURVE_REF_WALL_FACE_LEFT = 3;
     // The wall face right of the baseline curve direction.
     CURVE_REF_WALL_FACE_RIGHT = 4;
+    // A segment of the entity's authored boundary in stored curve order.
+    CURVE_REF_BOUNDARY_SEGMENT = 5;
   }
 
   // Where along the referenced curve the definition point sits. NEAREST is a
@@ -181,10 +185,44 @@ message Dimension {
     MEASUREMENT_DIRECTION_PLANE_Y = 3;
   }
 
-  // A structured feature reference on a synced entity. Stable across reload
-  // and reimport because it references the component's own topology (curves,
-  // baselines, footprint widths), never a mesh buffer.
+  // A zero-based position in an entity's authored boundary. All indices follow
+  // stored region, interior-loop, and curve order. This is not topological
+  // identity: reordering or replacing the boundary can change its meaning.
+  message BoundarySegmentIndex {
+    // Region in MultiClosedRegion2D.regions. A lone ClosedRegion2D or legacy
+    // Curve2List has one region at index 0.
+    uint32 region_index = 1;
+    // The exterior loop or one of the region's interior loops.
+    oneof loop {
+      option (buf.validate.oneof).required = true;
+      // The region's exterior loop.
+      google.protobuf.Empty exterior = 2;
+      // Interior loop in ClosedRegion2D.interiors.
+      uint32 interior_index = 3;
+    }
+    // Curve in the selected loop's Curve2List.curves.
+    uint32 segment_index = 4;
+  }
+
+  // A boundary-segment target. The wrapper reserves room for future reference
+  // forms without changing how an EntityFeature carries its boundary target.
+  message BoundarySegmentReference {
+    oneof target {
+      option (buf.validate.oneof).required = true;
+      // A positional reference in stored boundary order.
+      BoundarySegmentIndex by_index = 1;
+    }
+  }
+
+  // A structured feature reference on a synced entity. References authored
+  // curves and parameters rather than a mesh buffer.
   message EntityFeature {
+    option (buf.validate.message).cel = {
+      id: "boundary_segment_matches_curve"
+      message: "boundary_segment must be set exactly when curve is BOUNDARY_SEGMENT"
+      expression: "(this.curve == 5) == has(this.boundary_segment)"
+    };
+
     // The referenced entity. Commit asserts the target is persisted. Required.
     motif.extension.v1.EntityReference entity = 1 [(buf.validate.field).required = true];
     // Which curve of the referenced entity the anchor evaluates.
@@ -193,6 +231,8 @@ message Dimension {
     CurveStation station = 3;
     // Curve parameter, meaningful only when station == CURVE_STATION_PARAM.
     double param = 4;
+    // Required exactly when curve is CURVE_REF_BOUNDARY_SEGMENT.
+    BoundarySegmentReference boundary_segment = 5;
   }
 
   // A reference to one of an entity's ReferenceGeometry datums — a named plane
