@@ -2368,12 +2368,12 @@ message CustomRegenerateBehavior {
   bytes member_component_data = 7;
 }
 
-// A marker component identifying a room's area representation.
+// A marker component identifying a space's area representation.
 message SpaceAreaRepresentation {
   option (motif.extension.v1.message).component = 221;
 }
 
-// A marker component identifying a room's volume representation.
+// A marker component identifying a space's volume representation.
 message SpaceVolumeRepresentation {
   option (motif.extension.v1.message).component = 222;
 }
