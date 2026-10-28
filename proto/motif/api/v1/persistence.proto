@@ -55,10 +55,7 @@ service Persistence {
   // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
   rpc ApplyChangeset(Changeset) returns (ChangesetResponse);
 
-  // Lists changeset metadata for a model, optionally including complete
-  // stored semantic results. Semantic retrieval failures omit the affected
-  // results while preserving successful metadata. Authorization, validation
-  // and ordinary history-query errors retain their normal behavior.
+  // Lists changeset metadata for a model.
   //
   // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
   rpc ListChangesets(ListChangesetRequest) returns (ListChangesetsResponse);
@@ -267,9 +264,7 @@ message Changeset {
   repeated Entity derived_changes = 8;
 }
 
-// Requests changeset history for a model. Default: newest first, with
-// metadata only. Ordinary version selectors and pagination also apply when
-// stored semantic results are requested.
+// Requests changeset history for a model. Default: newest first.
 message ListChangesetRequest {
   // Controls whether model history is listed before or after from_version.
   //
@@ -293,17 +288,13 @@ message ListChangesetRequest {
   // server-defined. Values must be 1..500, else returns INVALID_ARGUMENT.
   optional uint32 page_size = 4;
 
-  // Include complete committed semantic results for the selected versions.
-  // Defaults to false. Missing, not-ready or unreadable results are omitted;
-  // omission does not mean an empty result or expose processing status.
-  // Retry using the same ordinary page selectors and an explicit version
-  // anchor. Available results are returned in full, without semantic paging
-  // or size-based omission; existing transport limits still apply.
+  // Include complete stored results; default false. Unavailable or unreadable
+  // results are omitted without failing metadata. Retry ordinary pages with
+  // stable anchors. No semantic paging or truncation; transport limits apply.
   bool include_semantic_history = 5;
 }
 
-// Metadata and optional complete semantic facts for one model version.
-// The request identifies the model; version identifies the result within it.
+// Metadata for one changeset in model history.
 message ChangesetListItem {
   option (buf.validate.message).cel = {
     id: "changeset_list_item.semantic_stage_applicability"
@@ -342,18 +333,14 @@ message ChangesetListItem {
   // the same entities. Certain race conditions will be rejected by the server.
   ChangesetRace race = 6;
 
-  // Complete committed facts, present only when requested and available.
-  // A present result includes CLIENT and, exactly when has_derived is true,
-  // DERIVED. Each applicable stage may be explicitly empty. Omission never
-  // retracts facts retained by a client and must not be treated as zero changes.
+  // Complete result when requested and available. Empty stages are authoritative;
+  // omission preserves retained facts.
   SemanticHistory semantic_history = 7;
 }
 
-// Complete stored semantic facts for the enclosing changeset version.
-// This result is independent of notification envelopes and operation metadata.
-// It replaces a client's received semantic subset, including with empty stages.
+// Complete facts for the enclosing version; replaces retained subsets.
 message SemanticHistory {
-  // Complete entity changes in one persisted stage.
+  // Complete stage facts.
   message StageResult {
     option (buf.validate.message).cel = {
       id: "semantic_history.unique_entities"
@@ -361,7 +348,7 @@ message SemanticHistory {
       expression: "this.entity_changes.map(entity, entity.entity_id).unique()"
     };
 
-    // The persisted stage; version cursor boundaries are not result stages.
+    // CLIENT or DERIVED.
     Stage stage = 1 [(buf.validate.field).enum = {
       in: [
         10,
@@ -369,56 +356,53 @@ message SemanticHistory {
       ]
     }];
 
-    // Every affected entity in this stage. Empty means a completed no-op stage.
+    // Empty means a completed no-op.
     repeated EntityChange entity_changes = 2;
   }
 
-  // One entity's lifecycle change and independent classification facts.
+  // Entity lifecycle and classifications.
   message EntityChange {
-    // The entity's lifecycle change within the stage.
+    // Lifecycle change.
     enum Verb {
-      // No lifecycle change specified; invalid in a result.
+      // Invalid.
       VERB_UNSPECIFIED = 0;
-      // The entity was created.
+      // Created.
       VERB_CREATE = 1;
-      // The entity was updated.
+      // Updated.
       VERB_UPDATE = 2;
-      // The entity was deleted; its identity is retained.
+      // Deleted.
       VERB_DELETE = 3;
     }
 
-    // Affected entity UUID, scoped to the requested model.
+    // Entity UUID.
     bytes entity_id = 1 [(buf.validate.field).bytes.len = 16];
-    // Lifecycle change, independent of classifications or issues.
     Verb verb = 2 [(buf.validate.field).enum = {
       defined_only: true
       not_in: [0]
     }];
-    // Actual assignments, with no permanent ordering or cardinality restriction.
-    // No assignments and no issue means evidence was available but unassigned.
+    // Independent assignments; empty can mean unclassified.
     repeated Classification classifications = 3;
-    // May coexist with usable assignments. Preserve unknown nonzero values.
+    // May coexist with assignments; preserves unknown nonzero values.
     optional ClassificationIssue classification_issue = 4 [(buf.validate.field).enum.not_in = 0];
   }
 
-  // One individually typed source assignment.
+  // Typed source assignment.
   message Classification {
-    // The source scheme determines the assignment's type.
     oneof assignment {
       option (buf.validate.oneof).required = true;
 
-      // Actual Revit category; preserve unknown nonzero numeric identities.
+      // Preserves unknown nonzero values.
       motif.data.external.v1.RevitCategory revit_category = 1 [(buf.validate.field).enum.not_in = 0];
-      // Exact source IFC class string, including its original case.
+      // Exact source string.
       string ifc_class = 2 [(buf.validate.field).string.min_len = 1];
     }
   }
 
-  // Why some classification evidence could not be obtained.
+  // Missing classification evidence.
   enum ClassificationIssue {
-    // No issue supplied; omit the optional field instead.
+    // Omit instead.
     CLASSIFICATION_ISSUE_UNSPECIFIED = 0;
-    // Required historical evidence was unavailable. Other assignments may exist.
+    // Evidence unavailable.
     CLASSIFICATION_ISSUE_UNAVAILABLE = 1;
   }
 
@@ -433,7 +417,7 @@ message SemanticHistory {
     expression: "this.stages.exists(result, result.stage == 10)"
   };
 
-  // One CLIENT stage and DERIVED exactly when the version has derived changes.
+  // CLIENT, plus DERIVED exactly when has_derived.
   repeated StageResult stages = 1 [(buf.validate.field).repeated = {
     min_items: 1
     max_items: 2
