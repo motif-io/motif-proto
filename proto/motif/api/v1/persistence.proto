@@ -5,9 +5,7 @@ package motif.api.v1;
 import "buf/validate/validate.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
-// <add>
 import "motif/data/external/v1/categories.proto";
-// </add>
 
 // The persistence service stores model state and changeset history.
 //
@@ -57,11 +55,10 @@ service Persistence {
   // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
   rpc ApplyChangeset(Changeset) returns (ChangesetResponse);
 
-  // <remove>Lists changeset metadata for a model.</remove>
-  // <add>Lists changeset metadata for a model, optionally including complete
+  // Lists changeset metadata for a model, optionally including complete
   // stored semantic results. Semantic retrieval failures omit the affected
   // results while preserving successful metadata. Authorization, validation
-  // and ordinary history-query errors retain their normal behavior.</add>
+  // and ordinary history-query errors retain their normal behavior.
   //
   // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
   rpc ListChangesets(ListChangesetRequest) returns (ListChangesetsResponse);
@@ -270,10 +267,9 @@ message Changeset {
   repeated Entity derived_changes = 8;
 }
 
-// <remove>Requests changeset history for a model. Default: newest first.</remove>
-// <add>Requests changeset history for a model. Default: newest first, with
+// Requests changeset history for a model. Default: newest first, with
 // metadata only. Ordinary version selectors and pagination also apply when
-// stored semantic results are requested.</add>
+// stored semantic results are requested.
 message ListChangesetRequest {
   // Controls whether model history is listed before or after from_version.
   //
@@ -297,7 +293,6 @@ message ListChangesetRequest {
   // server-defined. Values must be 1..500, else returns INVALID_ARGUMENT.
   optional uint32 page_size = 4;
 
-  // <add>
   // Include complete committed semantic results for the selected versions.
   // Defaults to false. Missing, not-ready or unreadable results are omitted;
   // omission does not mean an empty result or expose processing status.
@@ -305,20 +300,16 @@ message ListChangesetRequest {
   // anchor. Available results are returned in full, without semantic paging
   // or size-based omission; existing transport limits still apply.
   bool include_semantic_history = 5;
-  // </add>
 }
 
-// <remove>Metadata for one changeset in model history.</remove>
-// <add>Metadata and optional complete semantic facts for one model version.
-// The request identifies the model; version identifies the result within it.</add>
+// Metadata and optional complete semantic facts for one model version.
+// The request identifies the model; version identifies the result within it.
 message ChangesetListItem {
-  // <add>
   option (buf.validate.message).cel = {
     id: "changeset_list_item.semantic_stage_applicability"
     message: "a semantic result must include DERIVED exactly when has_derived is true"
     expression: "!has(this.semantic_history) || this.semantic_history.stages.exists(result, result.stage == 69) == this.has_derived"
   };
-  // </add>
 
   // buf:lint:ignore ENUM_VALUE_PREFIX
   // buf:lint:ignore ENUM_ZERO_VALUE_SUFFIX
@@ -351,16 +342,13 @@ message ChangesetListItem {
   // the same entities. Certain race conditions will be rejected by the server.
   ChangesetRace race = 6;
 
-  // <add>
   // Complete committed facts, present only when requested and available.
   // A present result includes CLIENT and, exactly when has_derived is true,
   // DERIVED. Each applicable stage may be explicitly empty. Omission never
   // retracts facts retained by a client and must not be treated as zero changes.
   SemanticHistory semantic_history = 7;
-  // </add>
 }
 
-// <add>
 // Complete stored semantic facts for the enclosing changeset version.
 // This result is independent of notification envelopes and operation metadata.
 // It replaces a client's received semantic subset, including with empty stages.
@@ -451,7 +439,6 @@ message SemanticHistory {
     max_items: 2
   }];
 }
-// </add>
 
 // Changeset history page for a model.
 message ListChangesetsResponse {
