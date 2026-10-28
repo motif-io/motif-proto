@@ -105,6 +105,29 @@ from the sequence. `mise run check-id-gaps` (part of `mise run lint`, and run in
 CI) fails if more than 15 consecutive IDs are left unused between two assigned
 IDs — a guard against typos like `600` for `60`.
 
+## Evolving an existing component type
+
+A component type is *existing* once it is merged to `main`. Its stored data,
+including model history, must stay readable, and the platform must know every
+reference a type can hold from the moment the type exists. These rules cover the
+type and every message nested in or used by it, and a passing `buf breaking`
+does not mean a change is allowed:
+
+- **Never remove a field or the type.** Deprecate it instead, permanently:
+  `[deprecated = true]` on a field, `option deprecated = true;` on a message.
+- **Never add a field that holds a reference** (`EntityReference`,
+  `ModelReference`, `DataReference`, `RepresentationReference`), directly or
+  through a nested message, and never encode one as a plain ID field instead.
+  Fields without references may be added.
+- **Never put a reference inside a `google.protobuf.Any`.** It will not be found.
+- To remove a field or add a reference, define a new component type
+  (`mise run next-id`) that declares every reference it will need, and deprecate
+  the type it supersedes.
+
+Merging is not deployment. Do not write data of a new component type until the
+server has loaded the published schema, because servers may reject component IDs
+they do not know.
+
 ## After making changes
 
 Format, then run the full lint suite (the same checks CI runs, including the
