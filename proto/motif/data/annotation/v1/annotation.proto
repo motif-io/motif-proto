@@ -384,6 +384,32 @@ message Dimension {
     // the dimension line or witnesses. Unset (0) preserves automatic placement
     // for existing records.
     TextSide text_side = 5;
+    // Displacement from a label's natural resting point in its dimension plane,
+    // in model meters. X follows the live dimension axis and Y its perpendicular.
+    // For angular dimensions these are the label's tangent and radial axes.
+    message TextOffset {
+      // Displacement along the label axis, meters.
+      double x = 1;
+      // Displacement perpendicular to the label axis, meters.
+      double y = 2;
+    }
+    // Per-span displacements in station order. Missing entries mean zero.
+    // An angular dimension uses entry zero.
+    repeated TextOffset text_offsets = 6;
+    // Whether a displaced label has a witness connector to its dimension.
+    // Unset preserves the enabled default for existing records.
+    optional bool label_witness_line = 7;
+    // Shape of the connector between the dimension and its label.
+    enum LabelWitnessLineType {
+      // Preserve the curved connector for existing records.
+      LABEL_WITNESS_LINE_TYPE_UNSPECIFIED = 0;
+      // A curved connector with at most a quarter turn.
+      LABEL_WITNESS_LINE_TYPE_CURVE = 1;
+      // A straight connector between its two attachment points.
+      LABEL_WITNESS_LINE_TYPE_LINE = 2;
+    }
+    // Unset uses the curved connector.
+    LabelWitnessLineType label_witness_line_type = 8;
   }
 
   // The definition geometry.
