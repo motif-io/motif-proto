@@ -4,6 +4,7 @@ syntax = "proto3";
 package motif.data.core.v1;
 
 import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
 import "motif/data/geometry/v1/geometry.proto";
 import "motif/data/graphics/v1/graphics.proto";
 import "motif/extension/v1/options.proto";
@@ -198,6 +199,20 @@ message ThumbnailRepresentation {
 
   // Identifier used to fetch the thumbnail. Required.
   motif.extension.v1.RepresentationReference id = 1 [(buf.validate.field).required = true];
+
+  // Metadata for a thumbnail that was automatically generated. If present,
+  // the thumbnail was generated automatically. If a user manually sets the thumbnail,
+  // this field will not be present/will be removed.
+  optional GeneratedThumbnail generated = 2;
+
+  message GeneratedThumbnail {
+    // The time the thumbnail was generated. This can be used to
+    // determine if thumbnail generation should be run again.
+    google.protobuf.Timestamp generated_at = 1;
+    // The model version reflected in the thumbnail. This can be used to
+    // determine if thumbnail generation should be run again.
+    int32 model_version = 2;
+  }
 }
 
 // How a type's values relate to the entity it is bound to.
