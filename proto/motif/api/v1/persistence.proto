@@ -312,6 +312,14 @@ message ListChangesetRequest {
 // <add>Metadata and optional complete semantic facts for one model version.
 // The request identifies the model; version identifies the result within it.</add>
 message ChangesetListItem {
+  // <add>
+  option (buf.validate.message).cel = {
+    id: "changeset_list_item.semantic_stage_applicability"
+    message: "a semantic result must include DERIVED exactly when has_derived is true"
+    expression: "!has(this.semantic_history) || this.semantic_history.stages.exists(result, result.stage == 69) == this.has_derived"
+  };
+  // </add>
+
   // buf:lint:ignore ENUM_VALUE_PREFIX
   // buf:lint:ignore ENUM_ZERO_VALUE_SUFFIX
   enum ChangesetRace {
@@ -430,6 +438,11 @@ message SemanticHistory {
     id: "semantic_history.unique_stages"
     message: "each persisted stage must appear once"
     expression: "this.stages.map(result, result.stage).unique()"
+  };
+  option (buf.validate.message).cel = {
+    id: "semantic_history.client_stage"
+    message: "a semantic result must include CLIENT"
+    expression: "this.stages.exists(result, result.stage == 10)"
   };
 
   // One CLIENT stage and DERIVED exactly when the version has derived changes.
