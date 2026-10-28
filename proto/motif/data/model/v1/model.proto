@@ -1285,8 +1285,9 @@ message CutGeometryBehavior {
     }
   ];
 
-  // World-space extrusion vector for the cutter prism. Thickness is
-  // `|extrusion|`.
+  // Legacy cut depth encoded as a world-space vector. Its magnitude is
+  // the depth when `depth` is unset; the host-surface frame supplies the
+  // cutter direction.
   motif.extension.v1.DataReference extrusion = 3 [
     (buf.validate.field).required = true,
     (motif.extension.v1.field).data_reference_expected_type = {
@@ -1306,6 +1307,11 @@ message CutGeometryBehavior {
     (buf.validate.field).required = true,
     (motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}
   ];
+
+  // The scalar cut depth. When set, this value replaces the magnitude of
+  // `extrusion`, allowing the cutter to follow an independently resolved host
+  // thickness. Unset preserves the extrusion-based depth of existing cuts.
+  motif.extension.v1.DataReference depth = 6 [(motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}];
 }
 
 // Extrudes a closed boundary profile perpendicular to a workplane.
