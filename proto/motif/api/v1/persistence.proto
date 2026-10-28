@@ -289,8 +289,7 @@ message ListChangesetRequest {
   optional uint32 page_size = 4;
 
   // Include complete stored results; default false. Unavailable or unreadable
-  // results are omitted without failing metadata. Retry ordinary pages with
-  // stable anchors. No semantic paging or truncation; transport limits apply.
+  // results are omitted without failing metadata.
   bool include_semantic_history = 5;
 }
 
