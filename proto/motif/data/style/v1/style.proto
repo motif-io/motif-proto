@@ -59,7 +59,7 @@ message LineStyle {
   option (motif.extension.v1.message).component = 57;
 
   // On-paper line width, in millimeters.
-  float width = 1;
+  float width = 1 [(motif.extension.v1.field).unit = UNIT_MILLIMETER];
 
   // Optional integer pen index (Revit-style). When set, the renderer resolves
   // the on-paper width in mm from the project's pen-width table for the
@@ -121,9 +121,15 @@ message LinePatternElement {
     option (buf.validate.oneof).required = true;
 
     // A drawn (on) segment; printed-paper length in millimeters.
-    float dash = 1 [(buf.validate.field).float = {gt: 0}];
+    float dash = 1 [
+      (buf.validate.field).float = {gt: 0},
+      (motif.extension.v1.field).unit = UNIT_MILLIMETER
+    ];
     // An undrawn (off) segment; printed-paper length in millimeters.
-    float space = 2 [(buf.validate.field).float = {gt: 0}];
+    float space = 2 [
+      (buf.validate.field).float = {gt: 0},
+      (motif.extension.v1.field).unit = UNIT_MILLIMETER
+    ];
     // A dot marker. Carries no length; drawn at the line's width.
     Dot dot = 3;
   }

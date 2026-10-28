@@ -24,7 +24,7 @@ message TextAnnotation {
 
   // Text inset from every box edge, meters. 0 (the proto3 scalar default)
   // means no padding, matching the runtime default.
-  float padding = 4;
+  float padding = 4 [(motif.extension.v1.field).unit = UNIT_METER];
   // Background fill behind the text, out to the border. Unset means no fill
   // (the box background stays transparent).
   motif.data.style.v1.Color fill = 5;
@@ -321,11 +321,11 @@ message Dimension {
     // Signed offset h from the measured line to the dimension line, meters.
     // For ANGULAR dimensions this is the arc radius: 0 = auto radius (derived
     // client-side; all v1 records), nonzero = an explicit user-set radius.
-    double offset = 2;
+    double offset = 2 [(motif.extension.v1.field).unit = UNIT_METER];
     // Reserved label slide along the dimension line, meters. 0 until used.
     // Applies to the whole dimension; for a multi-segment run see
     // `text_slides`.
-    double text_slide = 3;
+    double text_slide = 3 [(motif.extension.v1.field).unit = UNIT_METER];
     // Per-segment label slide along the dimension line, meters, index-aligned
     // with the derived segments of a dimension string (segment i measures
     // witness i to witness i+1 in station order). Empty means every label sits
@@ -336,7 +336,7 @@ message Dimension {
     // Reserved alongside `text_slide` and 0 until used. Crowded strings are the
     // motivating case: a run of short segments cannot place every label at its
     // own midpoint without collisions, and sliding is per-label by nature.
-    repeated double text_slides = 4;
+    repeated double text_slides = 4 [(motif.extension.v1.field).unit = UNIT_METER];
     // Label side for every segment. Explicit sides use
     // `DimensionStyle.text_offset` as the clearance magnitude, without moving
     // the dimension line or witnesses. Unset (0) preserves automatic placement
@@ -412,7 +412,7 @@ message DimensionStyle {
     motif.data.style.v1.Color color = 1;
     // Em size, millimeters on paper — the ordinary meaning of a "12 pt" text
     // size, not the cap height.
-    optional float size = 2;
+    optional float size = 2 [(motif.extension.v1.field).unit = UNIT_MILLIMETER];
     // 3 reserved: font (motif.data.style.v1.Font), once more than one family
     // is available to choose from.
     // 4 reserved: width factor (horizontal glyph scale), once the text stack
@@ -438,16 +438,16 @@ message DimensionStyle {
   // Text and Line so that it too can gain a shared-style reference.
 
   // Gap between the dimension line and the label.
-  optional float text_offset = 4;
+  optional float text_offset = 4 [(motif.extension.v1.field).unit = UNIT_MILLIMETER];
   // Gap between the measured geometry and the start of an extension line
   // (a.k.a. witness line).
-  optional float extension_line_offset = 5;
+  optional float extension_line_offset = 5 [(motif.extension.v1.field).unit = UNIT_MILLIMETER];
   // How far an extension line continues past the dimension line.
-  optional float extension_line_extension = 6;
+  optional float extension_line_extension = 6 [(motif.extension.v1.field).unit = UNIT_MILLIMETER];
   // How far the dimension line continues past the extension lines. Linear
   // dimensions only — an angular dimension's arc has no such overrun, while
   // the offsets above apply to both.
-  optional float dimension_line_extension = 7;
+  optional float dimension_line_extension = 7 [(motif.extension.v1.field).unit = UNIT_MILLIMETER];
 
   // Length unit, notation, and precision for a linear dimension's value.
   // Unset inherits the model's unit settings.
@@ -562,7 +562,10 @@ message TextStyleAsset {
   optional bool italic = 3;
   // Printed (paper) glyph height in millimeters, held constant across drawing
   // scales. Where the host has no drawing scale it is read as a model height.
-  optional float printed_height_mm = 4 [(buf.validate.field).float = {gt: 0}];
+  optional float printed_height_mm = 4 [
+    (buf.validate.field).float = {gt: 0},
+    (motif.extension.v1.field).unit = UNIT_MILLIMETER
+  ];
   // Text color: set directly, or taken from a color style asset. Neither set
   // leaves the color unset.
   oneof color_source {

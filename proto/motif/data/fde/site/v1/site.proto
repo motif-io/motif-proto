@@ -22,10 +22,10 @@ message SiteContextRoot {
   optional string snapshot_id = 2;
 
   // Query/cull bounding box in project shared meters (east, north).
-  double bbox_min_x = 3;
-  double bbox_min_y = 4;
-  double bbox_max_x = 5;
-  double bbox_max_y = 6;
+  double bbox_min_x = 3 [(motif.extension.v1.field).unit = UNIT_METER];
+  double bbox_min_y = 4 [(motif.extension.v1.field).unit = UNIT_METER];
+  double bbox_max_x = 5 [(motif.extension.v1.field).unit = UNIT_METER];
+  double bbox_max_y = 6 [(motif.extension.v1.field).unit = UNIT_METER];
 }
 
 // An OSM highway way — metadata only.
@@ -55,7 +55,7 @@ message SiteBuilding {
   // The OSM way id.
   uint64 osm_way_id = 1;
   // The building height, in meters, when known.
-  optional double height_m = 2;
+  optional double height_m = 2 [(motif.extension.v1.field).unit = UNIT_METER];
   // The OSM `name` tag, when present.
   optional string name = 3;
 }
@@ -68,14 +68,14 @@ message SiteRasterGround {
   option (motif.extension.v1.message).component = 85;
 
   // Corner coordinates of the ground quad, in shared meters.
-  double corner_0_x = 1;
-  double corner_0_y = 2;
-  double corner_1_x = 3;
-  double corner_1_y = 4;
-  double corner_2_x = 5;
-  double corner_2_y = 6;
-  double corner_3_x = 7;
-  double corner_3_y = 8;
+  double corner_0_x = 1 [(motif.extension.v1.field).unit = UNIT_METER];
+  double corner_0_y = 2 [(motif.extension.v1.field).unit = UNIT_METER];
+  double corner_1_x = 3 [(motif.extension.v1.field).unit = UNIT_METER];
+  double corner_1_y = 4 [(motif.extension.v1.field).unit = UNIT_METER];
+  double corner_2_x = 5 [(motif.extension.v1.field).unit = UNIT_METER];
+  double corner_2_y = 6 [(motif.extension.v1.field).unit = UNIT_METER];
+  double corner_3_x = 7 [(motif.extension.v1.field).unit = UNIT_METER];
+  double corner_3_y = 8 [(motif.extension.v1.field).unit = UNIT_METER];
   // Identifier of the baked texture asset.
   optional bytes texture_asset_id = 9;
   // The slippy-map zoom level the mosaic was baked at.

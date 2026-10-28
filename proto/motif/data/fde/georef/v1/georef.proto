@@ -23,7 +23,7 @@ message ProjectGeolocation {
     lte: 180
   }];
   // Elevation above sea level, in meters.
-  double elevation_meters = 3;
+  double elevation_meters = 3 [(motif.extension.v1.field).unit = UNIT_METER];
 }
 
 // The origin and orientation of the project's shared coordinate system, used to
@@ -32,9 +32,9 @@ message SharedCoordinateOrigin {
   option (motif.extension.v1.message).component = 79;
 
   // East offset of the shared origin, in meters.
-  double origin_east_meters = 1;
+  double origin_east_meters = 1 [(motif.extension.v1.field).unit = UNIT_METER];
   // North offset of the shared origin, in meters.
-  double origin_north_meters = 2;
+  double origin_north_meters = 2 [(motif.extension.v1.field).unit = UNIT_METER];
   // Optional EPSG code identifying the projected coordinate reference system.
   optional string epsg = 3;
   // Rotation from the shared grid's north to true north, in degrees.

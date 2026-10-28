@@ -37,13 +37,13 @@ message WallOpeningHostPlacement {
   // End parameter along the wall centerline.
   double t_end = 3;
   // Minimum perpendicular offset from the wall centerline, in meters.
-  double perp_min_m = 4;
+  double perp_min_m = 4 [(motif.extension.v1.field).unit = UNIT_METER];
   // Maximum perpendicular offset from the wall centerline, in meters.
-  double perp_max_m = 5;
+  double perp_max_m = 5 [(motif.extension.v1.field).unit = UNIT_METER];
   // Sill height above the wall base, in meters.
-  double sill_m = 6;
+  double sill_m = 6 [(motif.extension.v1.field).unit = UNIT_METER];
   // Opening height, in meters.
-  double height_m = 7;
+  double height_m = 7 [(motif.extension.v1.field).unit = UNIT_METER];
 }
 
 // Ordered sketch curve entities plus extrusion parameters for a closed-loop
@@ -54,9 +54,9 @@ message SketchLoopExtrusion {
   // Ordered sketch-element entities that form the closed loop.
   repeated motif.extension.v1.EntityReference sketch_elements = 1;
   // Extrusion depth, in meters.
-  double depth = 2;
+  double depth = 2 [(motif.extension.v1.field).unit = UNIT_METER];
   // Offset along the extrusion direction before the solid starts, in meters.
-  double start_offset = 3;
+  double start_offset = 3 [(motif.extension.v1.field).unit = UNIT_METER];
   // Extrusion direction (typically the workplane normal).
   motif.data.geometry.v1.Vector3 direction = 4;
 }
@@ -90,7 +90,7 @@ message OpeningVoidBinding {
   // rather than live sketch elements.
   repeated motif.data.geometry.v1.Point2 boundary_uv = 3;
   // Void depth, in meters.
-  double depth_m = 4;
+  double depth_m = 4 [(motif.extension.v1.field).unit = UNIT_METER];
   // Optional wall-host placement when the void is wall-embedded.
   WallOpeningHostPlacement wall_host_placement = 5;
   // Plane the void is interpreted in.
@@ -107,11 +107,11 @@ message WallOpeningPlacement {
   option (motif.extension.v1.message).component = 150;
 
   // Position along the wall centerline, in meters from the wall start.
-  double position_along_wall = 1;
+  double position_along_wall = 1 [(motif.extension.v1.field).unit = UNIT_METER];
   // Sill height above the wall base, in meters.
-  double sill_height_m = 2;
+  double sill_height_m = 2 [(motif.extension.v1.field).unit = UNIT_METER];
   // Opening width, in meters.
-  double width_m = 3;
+  double width_m = 3 [(motif.extension.v1.field).unit = UNIT_METER];
   // Opening height, in meters.
-  double height_m = 4;
+  double height_m = 4 [(motif.extension.v1.field).unit = UNIT_METER];
 }

@@ -112,7 +112,7 @@ message Portal {
   // The level the portal belongs to, if any.
   motif.extension.v1.EntityReference level = 6;
   // Opening start position along the host wall, in meters.
-  optional double host_start_m = 7;
+  optional double host_start_m = 7 [(motif.extension.v1.field).unit = UNIT_METER];
   // Opening end position along the host wall, in meters.
-  optional double host_end_m = 8;
+  optional double host_end_m = 8 [(motif.extension.v1.field).unit = UNIT_METER];
 }

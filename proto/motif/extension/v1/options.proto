@@ -32,4 +32,20 @@ message MotifFieldOptions {
   // Declares the expected type for a DataReference field. Should be set on all
   // DataReference fields.
   TypeSpec data_reference_expected_type = 1;
+
+  // The unit a numeric field's value is stored in. Unset means the field
+  // carries no unit.
+  Unit unit = 2;
+}
+
+// A unit of measurement for a stored numeric value.
+enum Unit {
+  // No unit declared.
+  UNIT_UNSPECIFIED = 0;
+
+  // Meters.
+  UNIT_METER = 1;
+
+  // Millimeters.
+  UNIT_MILLIMETER = 2;
 }

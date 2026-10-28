@@ -107,7 +107,7 @@ message Projection {
   // Parameters for an orthographic projection.
   message OrthographicParams {
     // Height of the visible area, in model units.
-    double scale = 1;
+    double scale = 1 [(motif.extension.v1.field).unit = UNIT_METER];
   }
 }
 
@@ -215,7 +215,7 @@ message LevelOffset {
   motif.extension.v1.EntityReference level = 1 [(buf.validate.field).required = true];
 
   // Offset from the level's elevation, in model units.
-  double offset = 2;
+  double offset = 2 [(motif.extension.v1.field).unit = UNIT_METER];
 }
 
 // The drawing scale for a view. Defines the ratio between paper-space and
@@ -251,10 +251,16 @@ message SectionLineBreak {
 
   // Length from the head end toward the middle, in meters on paper. The host
   // view's tag-size multiplier does not change the cut line or its stubs.
-  double head_stub_paper_length = 1 [(buf.validate.field).double.gt = 0];
+  double head_stub_paper_length = 1 [
+    (buf.validate.field).double.gt = 0,
+    (motif.extension.v1.field).unit = UNIT_METER
+  ];
 
   // Length from the tail end toward the middle, with the same units.
-  double tail_stub_paper_length = 2 [(buf.validate.field).double.gt = 0];
+  double tail_stub_paper_length = 2 [
+    (buf.validate.field).double.gt = 0,
+    (motif.extension.v1.field).unit = UNIT_METER
+  ];
 }
 
 // Appearance overrides for level datums drawn in this elevation or section view.

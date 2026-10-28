@@ -63,7 +63,7 @@ message RelativeElevation {
   option (motif.extension.v1.message).component = 14;
 
   // The elevation, relative to the model's zero, in meters.
-  double elevation = 1;
+  double elevation = 1 [(motif.extension.v1.field).unit = UNIT_METER];
 }
 
 // The bounding rectangle of a level — center position plus axis spans, all in
@@ -76,13 +76,13 @@ message LevelExtent {
   option (motif.extension.v1.message).component = 62;
 
   // East-west span, in meters.
-  double width = 1;
+  double width = 1 [(motif.extension.v1.field).unit = UNIT_METER];
   // North-south span, in meters.
-  double depth = 2;
+  double depth = 2 [(motif.extension.v1.field).unit = UNIT_METER];
   // X coordinate of the level's center, in world meters.
-  double center_x = 3;
+  double center_x = 3 [(motif.extension.v1.field).unit = UNIT_METER];
   // Y coordinate of the level's center, in world meters.
-  double center_y = 4;
+  double center_y = 4 [(motif.extension.v1.field).unit = UNIT_METER];
 }
 
 // A marker component identifying a default workplane.
@@ -295,7 +295,7 @@ message ResolvedWallSweepInputs {
   // - In `levelAbove` mode:
   //   `top_level_elev - base_level_elev - base_offset + top_offset`.
   // - In `unattachedUp` mode: `top_offset`.
-  double height = 2;
+  double height = 2 [(motif.extension.v1.field).unit = UNIT_METER];
 }
 
 // A component which defines a set of exposed parameters.
