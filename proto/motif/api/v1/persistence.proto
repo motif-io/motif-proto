@@ -289,8 +289,9 @@ message ListChangesetRequest {
   optional uint32 page_size = 4;
 
   // Include complete stored results; default false. Unavailable or unreadable
-  // results are omitted without failing metadata. If an enriched response 
-  exceeds the configured message-size limit, retry with `include_semantic_history=false`.
+  // results are omitted without failing metadata. If an enriched response
+  // exceeds the configured message-size limit, retry with
+  // `include_semantic_history=false`.
   bool include_semantic_history = 5;
 }
 
