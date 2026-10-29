@@ -98,7 +98,8 @@ message AnnotationLeaderStyle {
   optional float arrowhead_angle_rad = 5;
 }
 
-// The shape a text annotation's leaders end in.
+// The shape a leader or a dimension line ends in: a text annotation's leaders
+// (AnnotationLeaderStyle) and anything styled by an ArrowheadStyleAsset.
 enum ArrowheadType {
   ARROWHEAD_TYPE_UNSPECIFIED = 0;
   // A filled triangle with its point on the end point.
