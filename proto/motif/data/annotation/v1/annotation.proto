@@ -111,6 +111,33 @@ enum ArrowheadType {
   ARROWHEAD_TYPE_DIAGONAL = 4;
 }
 
+// A named, reusable arrowhead: an arrowhead style asset. Lives on an asset
+// entity (core.v1.Asset + a name) in any library a model can reach. Leaders and
+// dimension lines end in one. The style has no color: the head draws in its
+// host line's.
+//
+// Every field is optional; an unset field leaves that property to whatever
+// applies beneath this style (ultimately the application default).
+message ArrowheadStyleAsset {
+  option (motif.extension.v1.message).component = 225;
+
+  // The head shape. UNSPECIFIED leaves it unset.
+  ArrowheadType arrowhead_type = 1;
+  // The head's printed size in metres, measured to the stroke centreline: the
+  // length along the host line for the two arrows, the diameter for the filled
+  // circle, the tick's length for the diagonal.
+  optional float size = 2 [(buf.validate.field).float.gt = 0];
+  // The included tip angle of the two arrow shapes in radians, 0 < angle <= pi/2.
+  // The other shapes keep it unused.
+  optional float angle_rad = 3 [(buf.validate.field).float = {
+    gt: 0
+    lte: 1.5707964
+  }];
+  // Stroke weight: a pen index into the project's pen-width table, whose
+  // on-paper width resolves per view scale.
+  optional uint32 pen_size = 4 [(buf.validate.field).uint32.gte = 1];
+}
+
 // A persisted dimension annotation.
 //
 // Only the source grain persists: definition anchors and the placement rule
