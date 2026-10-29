@@ -693,3 +693,54 @@ message TextStyleAsset {
   reserved 7;
   reserved "list_kind";
 }
+
+// The shape of a text annotation's leaders.
+enum TextAnnotationLeaderType {
+  TEXT_ANNOTATION_LEADER_TYPE_UNSPECIFIED = 0;
+  // A short horizontal segment off the box, then a segment to the point.
+  TEXT_ANNOTATION_LEADER_TYPE_SHOULDER = 1;
+}
+
+// A named, reusable look for a whole text annotation: a text annotation style
+// asset. Lives on an asset entity (core.v1.Asset + a name) in any library a
+// model can reach. It sets the leader type, padding and box visibility, and
+// takes its text, shape and arrowhead from a style asset of each kind, or from
+// those properties set on this style itself.
+//
+// Every field is optional; an unset field leaves that property to whatever
+// applies beneath this style (ultimately the application default).
+message TextAnnotationStyleAsset {
+  option (motif.extension.v1.message).component = 226;
+
+  // The leaders' shape. UNSPECIFIED leaves it unset.
+  TextAnnotationLeaderType leader_type = 1;
+  // Whether the shape style's fill is drawn. Hiding it leaves the shape's
+  // boundary where it is.
+  optional bool show_shape_fill = 2;
+  // Whether the shape style's border is drawn. Hiding it leaves the shape's
+  // boundary where it is, and the leaders keep the border's line style.
+  optional bool show_shape_border = 3;
+  // The gap between the text and the shape's boundary on every side, in
+  // millimetres on paper, held constant across view scales.
+  optional float padding_mm = 4 [(buf.validate.field).float.gte = 0];
+  // The text: a text style asset (TextStyleAsset), or text properties set on
+  // this style itself. Neither set leaves the text unset.
+  oneof text {
+    motif.data.style.v1.StyleAssetReference text_style = 5;
+    TextStyleAsset text_properties = 6;
+  }
+  // The box's fill and border: a shape style asset
+  // (style.v1.ShapeStyleAsset), or shape properties set on this style itself.
+  // Neither set leaves the shape unset. The leaders draw with its border.
+  oneof shape {
+    motif.data.style.v1.StyleAssetReference shape_style = 7;
+    motif.data.style.v1.ShapeStyleAsset shape_properties = 8;
+  }
+  // The leaders' heads: an arrowhead style asset (ArrowheadStyleAsset), or
+  // arrowhead properties set on this style itself. Neither set leaves the
+  // arrowhead unset.
+  oneof arrowhead {
+    motif.data.style.v1.StyleAssetReference arrowhead_style = 9;
+    ArrowheadStyleAsset arrowhead_properties = 10;
+  }
+}
