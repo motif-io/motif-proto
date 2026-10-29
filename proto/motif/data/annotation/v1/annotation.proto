@@ -123,10 +123,16 @@ message ArrowheadStyleAsset {
 
   // The head shape. UNSPECIFIED leaves it unset.
   ArrowheadType arrowhead_type = 1;
-  // The head's printed size in metres, measured to the stroke centreline: the
-  // length along the host line for the two arrows, the diameter for the filled
-  // circle, the tick's length for the diagonal.
-  optional float size = 2 [(buf.validate.field).float.gt = 0];
+  // The head's printed size in millimetres on paper, measured to the stroke
+  // centreline: the length along the host line for the two arrows, the
+  // diameter for the filled circle, the tick's length for the diagonal.
+  //
+  // Millimetres on paper for every host, matching DimensionStyle and
+  // TextStyleAsset.printed_height_mm, so the head holds its printed size across
+  // view scales. A dimension reads it as is. A leader stores its head size in
+  // metres (AnnotationLeaderStyle.arrowhead_size), so a leader taking this
+  // style divides it by 1000.
+  optional float size_mm = 2 [(buf.validate.field).float.gt = 0];
   // The included tip angle of the two arrow shapes in radians, 0 < angle <= pi/2.
   // The other shapes keep it unused.
   optional float angle_rad = 3 [(buf.validate.field).float = {
