@@ -188,6 +188,7 @@ message Dimension {
   // A zero-based position in an entity's authored boundary. All indices follow
   // stored region, interior-loop, and curve order. This is not topological
   // identity: reordering or replacing the boundary can change its meaning.
+  // Out-of-range indices are unresolved; consumers must not clamp to another segment.
   message BoundarySegmentIndex {
     // Region in MultiClosedRegion2D.regions. A lone ClosedRegion2D or legacy
     // Curve2List has one region at index 0.
@@ -214,12 +215,13 @@ message Dimension {
     }
   }
 
-  // A structured feature reference on a synced entity. References authored
-  // curves and parameters rather than a mesh buffer.
+  // A structured feature reference on a synced entity. References a curve or
+  // a stored boundary position, not a mesh buffer.
   message EntityFeature {
     option (buf.validate.message).cel = {
       id: "boundary_segment_matches_curve"
       message: "boundary_segment must be set exactly when curve is BOUNDARY_SEGMENT"
+      // CURVE_REF_BOUNDARY_SEGMENT = 5. Use its value for CEL runtime compatibility.
       expression: "(this.curve == 5) == has(this.boundary_segment)"
     };
 
