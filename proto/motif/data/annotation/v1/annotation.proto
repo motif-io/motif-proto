@@ -139,9 +139,24 @@ message ArrowheadStyleAsset {
     gt: 0
     lte: 1.5707964
   }];
-  // Stroke weight: a pen index into the project's pen-width table, whose
-  // on-paper width resolves per view scale.
-  optional uint32 pen_size = 4 [(buf.validate.field).uint32.gte = 1];
+  // The head's stroke weight: a pen index into the project's pen-width table,
+  // whose on-paper width resolves per view scale.
+  //
+  // Unset, the head draws at its host line's weight, whatever that is: a
+  // leader's pen, or a dimension's DimensionStyle.Line weight, including the
+  // screen-constant hairline a dimension draws at pen 0. A hairline head is
+  // expressed that way, so a style saved from a hairline dimension leaves this
+  // unset rather than writing 0.
+  //
+  // Set, it overrides the host line's weight for the head alone, the way a
+  // diagonal tick is drawn heavier than the line it ends. For a dimension this
+  // is the one exception to its line, extension lines and terminators sharing
+  // one look: they keep DimensionStyle.Line's weight, and only the head takes
+  // this pen.
+  optional uint32 pen_size = 4 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 16
+  }];
 }
 
 // A persisted dimension annotation.
