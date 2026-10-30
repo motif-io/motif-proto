@@ -718,7 +718,8 @@ message TextAnnotationStyleAsset {
   // boundary where it is.
   optional bool show_shape_fill = 2;
   // Whether the shape style's border is drawn. Hiding it leaves the shape's
-  // boundary where it is, and the leaders keep the border's line style.
+  // boundary where it is, and the leaders keep the border's line style unless
+  // leader_line_style is set.
   optional bool show_shape_border = 3;
   // The gap between the text and the shape's boundary on every side, in
   // millimetres on paper, held constant across view scales.
@@ -731,7 +732,8 @@ message TextAnnotationStyleAsset {
   }
   // The box's fill and border: a shape style asset
   // (style.v1.ShapeStyleAsset), or shape properties set on this style itself.
-  // Neither set leaves the shape unset. The leaders draw with its border.
+  // Neither set leaves the shape unset. The leaders draw with its border
+  // unless leader_line_style is set.
   oneof shape {
     motif.data.style.v1.StyleAssetReference shape_style = 7;
     motif.data.style.v1.ShapeStyleAsset shape_properties = 8;
@@ -743,4 +745,8 @@ message TextAnnotationStyleAsset {
     motif.data.style.v1.StyleAssetReference arrowhead_style = 9;
     ArrowheadStyleAsset arrowhead_properties = 10;
   }
+  // The leaders' own line. Unset, the leaders draw with the shape's border.
+  // A text annotation style sets only its line; its arrowhead fields stay
+  // unset, the arrowhead part above setting the heads.
+  AnnotationLeaderStyle leader_line_style = 11;
 }
