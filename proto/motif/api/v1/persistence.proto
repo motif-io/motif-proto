@@ -661,13 +661,13 @@ message ApplyAuxiliaryRequest {
 
 // Result of storing auxiliary components without committing a changeset.
 message ApplyAuxiliaryResponse {
-  // Model id.
+  // Model id.  This echoes the request model id.
   bytes model_id = 1;
 
   // Either the updated auxiliary snapshot or an application-level rejection.
   oneof result {
     // Model version whose auxiliary components were updated. This echoes the
-    // requested version and is not a newly allocated changeset version.
+    // request version and is not a newly allocated changeset version.
     int32 version = 2;
 
     // Reason the auxiliary components were not stored.
