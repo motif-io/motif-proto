@@ -60,8 +60,7 @@ service Persistence {
   // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
   rpc ListChangesets(ListChangesetRequest) returns (ListChangesetsResponse);
 
-  // Streams the diff between two model-history cursor positions. Auxiliary
-  // components are excluded.
+  // Streams the diff between two model-history cursor positions.
   //
   // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
   // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
