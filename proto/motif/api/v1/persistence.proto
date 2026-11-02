@@ -591,7 +591,7 @@ message ChangesetResponse {
     // changed after max_known_version. ConflictDetails provides more details.
     ERROR_CONCURRENT_ENTITY_UPDATE = 1;
 
-    // The payload contains an auxiliary data component.  Auxiliary data must use 
+    // The payload contains an auxiliary data component.  Auxiliary data must use
     // ApplyAuxiliary.
     ERROR_AUXILIARY_COMPONENT_IN_PAYLOAD = 2;
   }
