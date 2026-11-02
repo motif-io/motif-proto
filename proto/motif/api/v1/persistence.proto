@@ -55,6 +55,23 @@ service Persistence {
   // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
   rpc ApplyChangeset(Changeset) returns (ChangesetResponse);
 
+  // Applies auxiliary components at an existing model version.
+  //
+  // This is to be used to apply data which is auxiliary to the primary changeset
+  // data and must never be used to capture source data authored by or on behalf of
+  // a user.  Auxiliary data are entirely reproducible from existing history
+  // bounded entities’ components.
+  //
+  // This is to append additional, supplmentary data to an existing model version.
+  // This write does not allocate a changeset version and is not to capture
+  // model semantics.
+  //
+  // A test for whether to use this or ApplyChangeset is to consider if the
+  // data is able to be entire regenerated without input from the author
+  // (e.g. view thumbnails, mesh rendered from source definitions,
+  // derived artifacts of uploaded documents, etc.).
+  rpc ApplyAuxiliary(ApplyAuxiliaryRequest) returns (ApplyAuxiliaryResponse);
+
   // Lists changeset metadata for a model.
   //
   // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
@@ -65,13 +82,6 @@ service Persistence {
   // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
   // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
   rpc GetChanges(GetChangesRequest) returns (stream VersionedEntityResponse);
-
-  // Streams auxiliary component changes between two model versions. Changeset
-  // components are excluded, and a changeset commit does not wake this stream.
-  //
-  // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
-  // buf:lint:ignore RPC_REQUEST_RESPONSE_UNIQUE
-  rpc GetAuxiliary(GetAuxiliaryRequest) returns (stream VersionedEntityResponse);
 
   // Applies a streamed changeset atomically.
   //
@@ -99,10 +109,6 @@ service Persistence {
   // references: EntityReference, DataReference, and ModelReference fields
   // (motif/extension/v1/reference.proto). See TraverseReferencesRequest.
   rpc TraverseReferences(TraverseReferencesRequest) returns (stream TraverseReferencesResponse);
-
-  // Stores auxiliary components at an existing model version. This write does
-  // not allocate a changeset version.
-  rpc ApplyAuxiliary(ApplyAuxiliaryRequest) returns (ApplyAuxiliaryResponse);
 }
 
 // A single component value attached to an entity.
@@ -502,43 +508,6 @@ message GetChangesRequest {
 
   // Entity-id filter, combined with the component filter (set intersection). Empty matches all entities.
   repeated bytes where_entity_ids = 8;
-}
-
-// Requests auxiliary component changes between two model versions.
-//
-// Auxiliary components are stored at an existing model version. This request
-// has no stage cursor, and an auxiliary write does not allocate a changeset
-// version.
-//
-// Both from and to are exclusive. The response contains the latest auxiliary
-// value, including a tombstone, for each entity component whose stored version
-// is strictly between the two positions. Changeset components are excluded.
-//
-// If wait is true and the client is already at the current model version, the
-// server long-polls for an auxiliary update stored at that version. Timeout
-// returns an OK empty stream.
-message GetAuxiliaryRequest {
-  // Target model id.
-  bytes model_id = 1;
-
-  // Exclusive start version.
-  int32 from_version = 2;
-
-  // Exclusive end version. Omit to use the current model version, or to
-  // long-poll when wait is true.
-  optional int32 to_version = 3;
-
-  // When true and to_version is unset, wait for an auxiliary update at the
-  // current model version. Timeout returns an empty stream.
-  bool wait = 4;
-
-  // Only return changes to these auxiliary components. Empty matches all
-  // auxiliary components.
-  repeated int32 where_any_components = 5;
-
-  // Entity-id filter, combined with the component filter (set intersection).
-  // Empty matches all entities.
-  repeated bytes where_entity_ids = 6;
 }
 
 // Stream item containing either an entity or a changeset version.
