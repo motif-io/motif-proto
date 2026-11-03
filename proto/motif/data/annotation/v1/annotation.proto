@@ -600,17 +600,23 @@ message TextBlock {
 // A run of uniformly-styled text. Message-typed fields carry presence in
 // proto3; the scalar `size` field uses 0 to mean "unset" instead.
 message TextSpan {
-  // <add>Literal text or a property read. An absent content arm represents an
-  // empty literal for compatibility with previously stored empty spans.</add>
-  oneof content {
-    // "\n" encodes hard line breaks (matches the runtime text model).
-    string text = 1;
+  // "\n" encodes hard line breaks (matches the runtime text model).
+  // <add>Legacy literal text. Read only when content is absent; new writers
+  // use content and leave this field unset.</add>
+  string text = 1 [deprecated = true];
 
-    // <add>Read a property in its authored source or placement context.</add>
-    TextPropertyRead property = 3;
-  }
   // Unset — or unset inner fields — inherit the TextBlock defaults.
   TextStyle style = 2;
+
+  // <add>Authored content. When present, this takes precedence over legacy
+  // text, including an explicitly empty literal. When absent, use text.</add>
+  oneof content {
+    // <add>Literal text; "\n" encodes hard line breaks.</add>
+    string literal = 3;
+
+    // <add>Read a property in its authored source or placement context.</add>
+    TextPropertyRead property = 4;
+  }
 }
 
 message TextStyle {
