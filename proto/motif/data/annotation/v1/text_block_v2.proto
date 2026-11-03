@@ -1,0 +1,131 @@
+syntax = "proto3";
+
+package motif.data.annotation.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/empty.proto";
+import "motif/data/annotation/v1/annotation.proto";
+import "motif/extension/v1/options.proto";
+import "motif/extension/v1/reference.proto";
+
+// <add>A complete authored text block with literal and property spans. Owns its</add>
+// <add>content, default style, layout, and paragraph lists; it does not require a</add>
+// <add>TextBlock component. Property values are derived per placement, not persisted.</add>
+//
+// <add>Readers continue to support TextBlock in existing data and history. On the</add>
+// <add>first persisted content or formatting change (not a no-op),</add>
+// <add>writers convert its spans to literals here, preserving style, layout, and</add>
+// <add>lists, and remove TextBlock in the same change. New writes must not retain both</add>
+// <add>components on one entity. If both are encountered, TextBlockV2 is authoritative;</add>
+// <add>readers must not concatenate their contents or rewrite data merely on load.</add>
+message TextBlockV2 {
+  option (motif.extension.v1.message).component = 226;
+
+  // <add>Default font, size, and color; spans inherit unset values as in TextBlock.</add>
+  TextStyle default_style = 1;
+
+  // <add>Text alignment, wrapping, and line-height settings.</add>
+  TextLayout layout = 2;
+
+  // <add>Spans in display order, concatenated without implicit separators.</add>
+  // <add>An empty list produces empty text.</add>
+  repeated TextSpanV2 spans = 3;
+
+  // <add>Per-paragraph list styling in the resolved text, with TextBlock semantics:</add>
+  // <add>missing entries mean no list, extra entries are ignored, and numbering is</add>
+  // <add>derived. A property value containing newlines contributes paragraph breaks.</add>
+  repeated ListKind paragraph_lists = 4;
+}
+
+// <add>A literal or property read with optional style overrides.</add>
+message TextSpanV2 {
+  // <add>Exactly one content source, including an explicitly empty literal.</add>
+  oneof content {
+    option (buf.validate.oneof).required = true;
+
+    // <add>Authored text; newline characters represent hard line breaks.</add>
+    string literal = 1;
+
+    // <add>A property resolved in the specified source context.</add>
+    TextPropertyRead property = 2;
+  }
+
+  // <add>Unset style values inherit TextBlockV2 defaults, as for TextSpan.</add>
+  TextStyle style = 3;
+}
+
+// <add>A property selector and the entity or placement context to read it from.</add>
+// <add>Readers must not substitute a previous host's or model version's value when</add>
+// <add>a read is unresolved. Unsupported selectors must not overwrite authored data.</add>
+// <add>Value formatting and presentation of unresolved reads belong to the reader.</add>
+message TextPropertyRead {
+  // <add>The property to read.</add>
+  TextProperty property = 1 [(buf.validate.field).required = true];
+
+  // <add>The source of the property value.</add>
+  oneof source {
+    option (buf.validate.oneof).required = true;
+
+    // <add>An entity in the containing model or an explicitly pinned snapshot.</add>
+    TextEntitySource entity = 2;
+
+    // <add>The sheet hosting this annotation's evaluated placement. A reusable</add>
+    // <add>definition resolves separately for each placement. Without a unique</add>
+    // <add>hosting sheet, the read is unresolved; no sheet ID is stored here.</add>
+    google.protobuf.Empty hosting_sheet = 3;
+  }
+}
+
+// <add>An entity reference with an optional model-version scope.</add>
+message TextEntitySource {
+  // <add>The source entity.</add>
+  motif.extension.v1.EntityReference entity = 1 [(buf.validate.field).required = true];
+
+  // <add>When set, read exactly this version until an authoring operation changes</add>
+  // <add>the reference. When unset, read the model containing this text block,</add>
+  // <add>including its snapshot version when the block is loaded from one.</add>
+  motif.extension.v1.ModelReference model = 2;
+}
+
+// <add>Identifies a property independently of the entity supplying its value.</add>
+// <add>Registered properties may compute values from other data; their results are</add>
+// <add>not stored in this component.</add>
+message TextProperty {
+  // <add>Exactly one property selector.</add>
+  oneof selector {
+    option (buf.validate.oneof).required = true;
+
+    // <add>A stable key in the reader's property registry.</add>
+    string registered = 1 [(buf.validate.field).string.min_len = 1];
+
+    // <add>A named foreign property exposed by the reader.</add>
+    string foreign = 2 [(buf.validate.field).string.min_len = 1];
+
+    // <add>A field of a component on the source entity.</add>
+    TextFieldProperty field = 3;
+
+    // <add>Reserved for asset parameter reads. Consumers must report this selector</add>
+    // <add>as unsupported until version-aware declaration and default lookup exist.</add>
+    TextParameterProperty parameter = 4;
+  }
+}
+
+// <add>A component field exposed by the property reader.</add>
+message TextFieldProperty {
+  // <add>The fully qualified protobuf message name of the component.</add>
+  string component = 1 [(buf.validate.field).string.min_len = 1];
+
+  // <add>The field path understood by the component's property reader.</add>
+  string field = 2 [(buf.validate.field).string.min_len = 1];
+}
+
+// <add>A parameter declared by an asset. The declaration reference is scoped</add>
+// <add>independently of the entity whose parameter value is being read.</add>
+message TextParameterProperty {
+  // <add>The declared parameter name.</add>
+  string name = 1 [(buf.validate.field).string.min_len = 1];
+
+  // <add>The declaring asset and, for a linked asset, its pinned model version.</add>
+  // <add>An unset model selects the model containing the text block.</add>
+  TextEntitySource asset = 2 [(buf.validate.field).required = true];
+}
