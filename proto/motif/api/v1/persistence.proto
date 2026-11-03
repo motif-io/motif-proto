@@ -761,16 +761,31 @@ message ReferencedModelVersion {
 // other models, each of which must be viewable by the caller, unless the step
 // sets `host_model_only`.
 //
-// Errors: NOT_FOUND when the host model does not exist. A deleted (archived)
-// host model is traversed like any other.
+// There is no fixed limit on how many entities or models a traversal reaches,
+// and results are never truncated: a traversal returns every entity it
+// reaches, or fails. The server reads the graph in pieces of bounded size,
+// however many entities a traversal reaches or edges any one of them has, so
+// no request is refused for its size. The server limits how long the graph
+// walk runs (see WALK_TOO_LONG below).
+//
+// Errors returned instead of a stream: NOT_FOUND when the host model does not
+// exist. A deleted (archived) host model is traversed like any other.
 // FAILED_PRECONDITION, with ErrorInfo reason MODEL_NOT_INDEXED (domain
 // persistence.motif.io), when the host model has no reference index at the
 // requested version: the model predates reference indexing, or a version at or
 // before the requested one was written without maintaining the index. This does
-// not change on its own; read the model with Query instead. RESOURCE_EXHAUSTED
-// when the traversal would reach more than `max_nodes` entities or touch too
-// many models; results are never truncated.
-// INVALID_ARGUMENT when the request is malformed.
+// not change on its own; read the model with Query instead. INVALID_ARGUMENT
+// when the request is malformed.
+//
+// Errors that end the stream after the version header: UNAVAILABLE when a
+// graph read exceeds the server's time limit for one read; retry with backoff.
+// RESOURCE_EXHAUSTED, with ErrorInfo reason WALK_TOO_LONG (domain persistence.motif.io), when the
+// graph walk runs past the server's time limit for a whole walk, from its
+// start until its entities are ready to send. How long a walk takes depends on
+// how busy the server is as well as on the graph, so a retry can succeed; a
+// traversal that keeps failing this way must be narrowed. Other failures, such
+// as an access check on another model that cannot be completed, also end the
+// stream with their status.
 message TraverseReferencesRequest {
   // An entity the traversal starts from.
   message Root {
@@ -893,10 +908,8 @@ message TraverseReferencesRequest {
   // Traversal steps, run in order. With no steps, only the roots are returned.
   repeated Step steps = 5 [(buf.validate.field).repeated.max_items = 4];
 
-  // Maximum number of entities the traversal may reach, roots included. Zero
-  // selects the server default. Values above the server's cap are lowered to
-  // the cap.
-  uint32 max_nodes = 6;
+  // Deprecated: ignored. A traversal has no limit on the entities it reaches.
+  uint32 max_nodes = 6 [deprecated = true];
 }
 
 // Which components to return for traversed entities.
@@ -930,7 +943,14 @@ message ComponentProjection {
 }
 
 // One message of a TraverseReferences stream: the version header first, then
-// the traversed entities in any order, then the summary last.
+// the traversed entities in any order, then the summary last. Progress
+// messages can arrive anywhere between the header and the summary. Entities
+// are sent once the graph walk is complete, so every field of a
+// TraversedEntity is final when it arrives; they stream as the caller reads
+// them.
+//
+// Callers must ignore payloads they do not recognize, so that new kinds of
+// message can be added to the stream without breaking them.
 message TraverseReferencesResponse {
   // An entity reached by a traversal.
   message TraversedEntity {
@@ -991,6 +1011,37 @@ message TraverseReferencesResponse {
     repeated OmittedModel omitted_models = 1;
   }
 
+  // Reports that the traversal is still running. A walk over a large graph
+  // can take a long time before any entity is ready. While the traversal is
+  // queued or walking the graph, the server sends one of these at least every
+  // 30 seconds; this also keeps the connection active through proxies that
+  // close idle connections. Progress messages can arrive anywhere between the
+  // header and the summary. Callers must tolerate them, and may otherwise
+  // ignore them.
+  message Progress {
+    // What the traversal is doing.
+    enum Phase {
+      // Invalid.
+      PHASE_UNSPECIFIED = 0;
+      // Waiting to start while the server runs other traversals.
+      PHASE_QUEUED = 1;
+      // Walking the graph.
+      PHASE_WALKING = 2;
+    }
+
+    // Entities the walk has reached so far, roots included. It never
+    // decreases, and consecutive messages can repeat it: it is zero while the
+    // traversal is queued, and it holds steady through a long graph read. It
+    // counts entities that will not be returned, such as roots in a model the
+    // caller cannot view, so it can exceed the number of entities returned.
+    uint64 entities_reached = 1;
+
+    // What the traversal is doing. A queued traversal has not started its
+    // walk, so the walk's time limit has not started either. Callers must
+    // tolerate phases they do not recognize.
+    Phase phase = 2;
+  }
+
   // The message payload.
   oneof payload {
     // Host model version the traversal read.
@@ -1006,5 +1057,8 @@ message TraverseReferencesResponse {
 
     // Traversal summary.
     Summary summary = 3;
+
+    // Progress of the graph walk.
+    Progress progress = 4;
   }
 }
