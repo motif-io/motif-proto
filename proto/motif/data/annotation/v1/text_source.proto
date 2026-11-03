@@ -16,8 +16,12 @@ import "motif/extension/v1/reference.proto";
 // as static text or overwritten merely because a reader cannot resolve it.
 // Changing source is an authoring operation: converting resolved text to static
 // text requires writing that text into TextBlock in the same update.
+// <add>Deprecated: use TextComposition for new authored compositions. Existing
+// TextSource data remains readable; this marker does not migrate stored values.
+// Readers must retain support until those values have been migrated.</add>
 message TextSource {
   option (motif.extension.v1.message).component = 193;
+  option deprecated = true;
 
   // Exactly one source supplies the annotation's text.
   oneof source {
