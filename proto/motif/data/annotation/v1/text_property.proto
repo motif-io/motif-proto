@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package motif.data.annotation.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/empty.proto";
+import "motif/extension/v1/reference.proto";
+
+// <add>A property selector and the entity or placement context to read it from.
+// Values are runtime output, not authored text. An unresolved read must not use
+// a previous placement's or model version's value.</add>
+message TextPropertyRead {
+  TextProperty property = 1 [(buf.validate.field).required = true];
+
+  oneof source {
+    option (buf.validate.oneof).required = true;
+
+    TextEntitySource entity = 2;
+    // <add>The sheet hosting the evaluated placement. Resolve each placement
+    // independently; without a unique hosting sheet, the read is unresolved.</add>
+    google.protobuf.Empty hosting_sheet = 3;
+  }
+}
+
+// <add>An entity with an optional pinned model-version scope.</add>
+message TextEntitySource {
+  motif.extension.v1.EntityReference entity = 1 [(buf.validate.field).required = true];
+  // <add>Read exactly this version until explicitly updated. When absent, use
+  // the containing model, including its snapshot context.</add>
+  motif.extension.v1.ModelReference model = 2;
+}
+
+// <add>A property selector independent of its source entity.</add>
+message TextProperty {
+  oneof selector {
+    option (buf.validate.oneof).required = true;
+
+    string registered = 1 [(buf.validate.field).string.min_len = 1];
+    string foreign = 2 [(buf.validate.field).string.min_len = 1];
+    TextFieldProperty field = 3;
+    // <add>Consumers must honor pinned versions throughout declaration,
+    // default, and lineage lookup before supporting parameter reads.</add>
+    TextParameterProperty parameter = 4;
+  }
+}
+
+// <add>A component field exposed by a property reader.</add>
+message TextFieldProperty {
+  string component = 1 [(buf.validate.field).string.min_len = 1];
+  string field = 2 [(buf.validate.field).string.min_len = 1];
+}
+
+// <add>A parameter declared by an independently scoped asset.</add>
+message TextParameterProperty {
+  string name = 1 [(buf.validate.field).string.min_len = 1];
+  TextEntitySource asset = 2 [(buf.validate.field).required = true];
+}

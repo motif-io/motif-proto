@@ -5,6 +5,7 @@ package motif.data.annotation.v1;
 
 import "buf/validate/validate.proto";
 import "google/protobuf/empty.proto";
+import "motif/data/annotation/v1/text_property.proto";
 import "motif/data/geometry/v1/geometry.proto";
 import "motif/data/model/v1/model.proto";
 import "motif/data/style/v1/style.proto";
@@ -599,8 +600,15 @@ message TextBlock {
 // A run of uniformly-styled text. Message-typed fields carry presence in
 // proto3; the scalar `size` field uses 0 to mean "unset" instead.
 message TextSpan {
-  // "\n" encodes hard line breaks (matches the runtime text model).
-  string text = 1;
+  // <add>Literal text or a property read. An absent content arm represents an
+  // empty literal for compatibility with previously stored empty spans.</add>
+  oneof content {
+    // "\n" encodes hard line breaks (matches the runtime text model).
+    string text = 1;
+
+    // <add>Read a property in its authored source or placement context.</add>
+    TextPropertyRead property = 3;
+  }
   // Unset — or unset inner fields — inherit the TextBlock defaults.
   TextStyle style = 2;
 }
