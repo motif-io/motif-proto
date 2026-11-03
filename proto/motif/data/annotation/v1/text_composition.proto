@@ -8,108 +8,108 @@ import "motif/data/annotation/v1/annotation.proto";
 import "motif/extension/v1/options.proto";
 import "motif/extension/v1/reference.proto";
 
-// <add>Authored text composed from ordered literals and property reads. Lives
+// Authored text composed from ordered literals and property reads. Lives
 // alongside TextBlock, which supplies default style, layout, and paragraph lists.
 // When present, these spans supply the displayed content instead of TextBlock's
 // authored spans. Resolved content is derived per placement and is not persisted
-// here. Removing this component restores the authored TextBlock content.</add>
+// here. Removing this component restores the authored TextBlock content.
 message TextComposition {
   option (motif.extension.v1.message).component = 226;
 
-  // <add>Spans in display order, concatenated without implicit separators.
-  // An empty list produces empty text.</add>
+  // Spans in display order, concatenated without implicit separators.
+  // An empty list produces empty text.
   repeated TextCompositionSpan spans = 1;
 }
 
-// <add>A literal or property read with optional style overrides.</add>
+// A literal or property read with optional style overrides.
 message TextCompositionSpan {
-  // <add>Exactly one content source, including an explicitly empty literal.</add>
+  // Exactly one content source, including an explicitly empty literal.
   oneof content {
     option (buf.validate.oneof).required = true;
 
-    // <add>Authored text; newline characters represent hard line breaks.</add>
+    // Authored text; newline characters represent hard line breaks.
     string literal = 1;
 
-    // <add>A property resolved in the specified source context.</add>
+    // A property resolved in the specified source context.
     TextCompositionPropertyRead property = 2;
   }
 
-  // <add>Unset style values inherit TextBlock defaults, as for TextSpan.</add>
+  // Unset style values inherit TextBlock defaults, as for TextSpan.
   TextStyle style = 3;
 }
 
-// <add>A property selector and the entity or placement context to read it from.
+// A property selector and the entity or placement context to read it from.
 // Readers must not substitute a previous host's or model version's value when
 // a read is unresolved. Unsupported selectors must not overwrite authored data.
-// Value formatting and presentation of unresolved reads belong to the reader.</add>
+// Value formatting and presentation of unresolved reads belong to the reader.
 message TextCompositionPropertyRead {
-  // <add>The property to read.</add>
+  // The property to read.
   TextCompositionProperty property = 1 [(buf.validate.field).required = true];
 
-  // <add>The source of the property value.</add>
+  // The source of the property value.
   oneof source {
     option (buf.validate.oneof).required = true;
 
-    // <add>An entity in the containing model or an explicitly pinned snapshot.</add>
+    // An entity in the containing model or an explicitly pinned snapshot.
     TextCompositionEntitySource entity = 2;
 
-    // <add>The sheet hosting this annotation's evaluated placement. A reusable
+    // The sheet hosting this annotation's evaluated placement. A reusable
     // definition resolves separately for each placement. Without a unique
-    // hosting sheet, the read is unresolved; no sheet ID is stored here.</add>
+    // hosting sheet, the read is unresolved; no sheet ID is stored here.
     google.protobuf.Empty hosting_sheet = 3;
   }
 }
 
-// <add>An entity reference with an optional model-version scope.</add>
+// An entity reference with an optional model-version scope.
 message TextCompositionEntitySource {
-  // <add>The source entity.</add>
+  // The source entity.
   motif.extension.v1.EntityReference entity = 1 [(buf.validate.field).required = true];
 
-  // <add>When set, read exactly this version until an authoring operation changes
+  // When set, read exactly this version until an authoring operation changes
   // the reference. When unset, read the model containing this composition,
-  // including its snapshot version when the composition is loaded from one.</add>
+  // including its snapshot version when the composition is loaded from one.
   motif.extension.v1.ModelReference model = 2;
 }
 
-// <add>Identifies a property independently of the entity supplying its value.
+// Identifies a property independently of the entity supplying its value.
 // Registered properties may compute values from other data; their results are
-// not stored in this component.</add>
+// not stored in this component.
 message TextCompositionProperty {
-  // <add>Exactly one property selector.</add>
+  // Exactly one property selector.
   oneof selector {
     option (buf.validate.oneof).required = true;
 
-    // <add>A stable key in the reader's property registry.</add>
+    // A stable key in the reader's property registry.
     string registered = 1 [(buf.validate.field).string.min_len = 1];
 
-    // <add>A named foreign property exposed by the reader.</add>
+    // A named foreign property exposed by the reader.
     string foreign = 2 [(buf.validate.field).string.min_len = 1];
 
-    // <add>A field of a component on the source entity.</add>
+    // A field of a component on the source entity.
     TextCompositionFieldProperty field = 3;
 
-    // <add>An asset parameter. Readers supporting this selector must honor
-    // the selected asset version throughout declaration and default lookup.</add>
+    // An asset parameter. Readers supporting this selector must honor
+    // the selected asset version throughout declaration and default lookup.
     TextCompositionParameterProperty parameter = 4;
   }
 }
 
-// <add>A component field exposed by the property reader.</add>
+// A component field exposed by the property reader.
 message TextCompositionFieldProperty {
-  // <add>The fully qualified protobuf message name of the component.</add>
+  // The fully qualified protobuf message name of the component.
   string component = 1 [(buf.validate.field).string.min_len = 1];
 
-  // <add>The field path understood by the component's property reader.</add>
+  // The field path understood by the component's property reader.
   string field = 2 [(buf.validate.field).string.min_len = 1];
 }
 
-// <add>A parameter declared by an asset. The declaration reference is scoped
-// independently of the entity whose parameter value is being read.</add>
+// A parameter declared by an asset. The declaration reference is scoped
+// independently of the entity whose parameter value is being read.
 message TextCompositionParameterProperty {
-  // <add>The declared parameter name.</add>
+  // The declared parameter name.
   string name = 1 [(buf.validate.field).string.min_len = 1];
 
-  // <add>The declaring asset and, for a linked asset, its pinned model version.
-  // An unset model selects the model containing the composition.</add>
+  // The declaring asset and, for a linked asset, its pinned model version.
+  // An unset model selects the model containing the composition.
   TextCompositionEntitySource asset = 2 [(buf.validate.field).required = true];
 }
