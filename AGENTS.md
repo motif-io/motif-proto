@@ -102,8 +102,9 @@ messages).
 
 Keep IDs dense: prefer the value from `mise run next-id` over assigning IDs far
 from the sequence. `mise run check-id-gaps` (part of `mise run lint`, and run in
-CI) fails if more than 15 consecutive IDs are left unused between two assigned
-IDs — a guard against typos like `600` for `60`.
+CI) fails when too many consecutive IDs are left unused between two assigned
+IDs — a guard against typos like `600` for `60`. The threshold is set in
+`.config/mise.toml`.
 
 ## After making changes
 

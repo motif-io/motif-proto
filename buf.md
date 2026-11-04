@@ -32,6 +32,12 @@ import "motif/extension/v1/options.proto";
 import "motif/extension/v1/reference.proto";
 ```
 
+## Contributing
+
+See
+[CONTRIBUTING.md](https://github.com/motif-io/motif-proto/blob/main/CONTRIBUTING.md)
+for information about contributing to the Motif platform.
+
 ## License
 
 These schemas are licensed under the MIT License. The license covers the schemas
