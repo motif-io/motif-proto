@@ -391,6 +391,15 @@ message Dimension {
     motif.data.geometry.v1.UnitVector3 offset_direction = 2;
   }
 
+  // A visual displacement of a linear dimension's witness-line origin.
+  message WitnessOriginOffset {
+    // Signed distance from the resolved anchor along the dimension's live
+    // signed in-plane offset direction, meters. Unset leaves the origin at
+    // the anchor; zero is an explicit authored offset. This moves only the
+    // witness-line origin, never the measured anchor or dimension value.
+    optional double offset = 1 [(buf.validate.field).double.finite = true];
+  }
+
   // Per-dimension placement. Never a world-space point: the placement point is
   // converted to basis + offset at commit and the plane re-derives on load.
   message OwnPlacement {
@@ -491,10 +500,16 @@ message Dimension {
   // last-writer-wins rather than merging.
   DimensionStyle style = 5;
 
+  // Per-witness origin displacements, valid only for linear dimensions, with
+  // at most one entry per witness. Entries align with `LinearGeometry.anchors`
+  // in insertion order, or `a`, `b` when that list is empty. Empty entries and
+  // omitted trailing entries leave origins at their resolved anchors.
+  repeated WitnessOriginOffset witness_origin_offsets = 6;
+
   // Field-number allocation (kind/placement oneofs and top-level fields share
   // this message's number space): 1-2 kind arms; 3-4 placement arms (4
-  // unallocated, see the oneof); 5 = style; future kind arms (radial) and other
-  // extensions take 6+.
+  // unallocated, see the oneof); 5 = style; 6 = witness_origin_offsets; future
+  // kind arms (radial) and other extensions take 7+.
   //
   // A projected linear dimension does not take a kind arm of its own: aligned
   // and axis-projected differ only in which direction is measured, which is
