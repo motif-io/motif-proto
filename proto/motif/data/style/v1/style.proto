@@ -176,14 +176,22 @@ message LineStyleAsset {
   optional bool pin_color_style = 5;
 }
 
-// A named, reusable color: a color style asset. Lives on an asset entity
-// (core.v1.Asset + a name) in any library a model can reach. Line and text
-// style assets can take their color from one instead of setting it directly.
+// A named, reusable color and opacity: a color style asset. Lives on an asset
+// entity (core.v1.Asset + a name) in any library a model can reach. Line, text
+// and shape style assets can take their color from one instead of setting it
+// directly.
 message ColorStyleAsset {
   option (motif.extension.v1.message).component = 191;
 
   // The color. Unset leaves the color unset for every style that uses this one.
   Color color = 1;
+  // Opacity, 0 (transparent) to 1 (opaque). Unset reads as opaque. A shape
+  // fill that takes its color from this style and sets no fill opacity of its
+  // own draws at this opacity; lines, arrowheads and text ignore it.
+  optional float opacity = 2 [(buf.validate.field).float = {
+    gte: 0
+    lte: 1
+  }];
 }
 
 // A named, reusable look for a closed 2D shape: its fill and its border. A
