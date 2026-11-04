@@ -242,6 +242,19 @@ message ViewTagGraphics {
   double scale = 1 [(buf.validate.field).double.gt = 0];
 }
 
+// Model-space dimensions of a section tag's displayed extent. The tag's
+// transform supplies its center; its target view supplies the cut direction.
+// Shared by every view displaying the tag, independently of the view crop.
+message SectionTagExtent {
+  option (motif.extension.v1.message).component = 227;
+
+  // Length of the section line in plan views, in model units.
+  double width = 1 [(buf.validate.field).double.gt = 0];
+
+  // Length of the section line in elevation views, in model units.
+  double height = 2 [(buf.validate.field).double.gt = 0];
+}
+
 // Graphic break in a section view's cut-line marker. Lives on the section view
 // whose marker is broken, so the cut and crop remain unchanged. Absent means a
 // continuous line. The two visible runs start at the head and tail and extend
