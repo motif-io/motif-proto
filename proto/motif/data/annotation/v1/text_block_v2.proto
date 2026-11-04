@@ -19,7 +19,7 @@ import "motif/extension/v1/reference.proto";
 // components on one entity. If both are encountered, TextBlockV2 is authoritative;
 // readers must not concatenate their contents or rewrite data merely on load.
 message TextBlockV2 {
-  option (motif.extension.v1.message).component = 226;
+  option (motif.extension.v1.message).component = 227;
 
   // Default font, size, and color; spans inherit unset values as in TextBlock.
   TextStyle default_style = 1;
