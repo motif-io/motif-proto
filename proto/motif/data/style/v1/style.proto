@@ -220,6 +220,9 @@ message ShapeStyleAsset {
     StyleAssetReference fill_color_style = 2;
   }
   // Fill opacity, 0 (no fill) to 1 (opaque). Applies to either fill source.
+  // Unset with fill_color_style set, the fill draws at that color style's
+  // opacity when it has one; unset otherwise, the fill opacity falls through to
+  // whatever applies beneath this style.
   optional float fill_opacity = 3 [(buf.validate.field).float = {
     gte: 0
     lte: 1
@@ -320,6 +323,9 @@ message FillStyle {
     PinnedStyleAssetReference color_style = 2;
   }
   // Fill opacity, 0 (no fill) to 1 (opaque). Applies to either color source.
+  // Unset with color_style set, the fill draws at that color style's opacity
+  // when it has one; unset otherwise, the opacity falls through to whatever
+  // applies beneath this fill.
   optional float opacity = 3 [(buf.validate.field).float = {
     gte: 0
     lte: 1
