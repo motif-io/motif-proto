@@ -769,5 +769,8 @@ message TextAnnotationStyleAsset {
   }
   // The distance between tab stops, in millimetres on paper, held constant
   // across view scales.
-  optional float tab_size_mm = 13 [(buf.validate.field).float.gte = 0];
+  optional float tab_size_mm = 13 [(buf.validate.field).float = {
+    gt: 0
+    finite: true
+  }];
 }
