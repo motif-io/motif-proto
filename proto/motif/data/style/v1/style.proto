@@ -186,9 +186,7 @@ message ColorStyleAsset {
   // The color. Unset leaves the color unset for every style that uses this one.
   Color color = 1;
   // Opacity, 0 (transparent) to 1 (opaque). Unset contributes no opacity, so
-  // a fill that uses this style falls through to whatever applies beneath. A
-  // shape fill that takes its color from this style and sets no fill opacity
-  // of its own draws at this opacity; lines, arrowheads and text ignore it.
+  // a fill that uses this style falls through to whatever applies beneath.
   optional float opacity = 2 [(buf.validate.field).float = {
     gte: 0
     lte: 1
