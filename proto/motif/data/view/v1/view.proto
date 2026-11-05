@@ -246,7 +246,7 @@ message ViewTagGraphics {
 // transform supplies its center; its target view supplies the cut direction.
 // Shared by every view displaying the tag, independently of the view crop.
 message SectionTagExtent {
-  option (motif.extension.v1.message).component = 227;
+  option (motif.extension.v1.message).component = 228;
 
   // Length of the section line in plan views, in model units.
   double width = 1 [(buf.validate.field).double.gt = 0];
