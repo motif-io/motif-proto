@@ -10,9 +10,8 @@ syntax = "proto3";
 //
 // Length and angle operands use SI units. Text equality, inequality,
 // membership, containment, and prefix tests ignore case using Unicode simple
-// case folding.
-// Numeric comparisons use the applying model's display precision for lengths
-// and angles, so results can vary between models. Every test except
+// case folding. Numeric comparisons use the applying model's display precision
+// for lengths and angles, so results can vary between models. Every test except
 // `not_exists` fails for an entity with no value.
 //
 // Readers accept at least 32 levels of nesting, 2000 nodes, 5000 targets, and
