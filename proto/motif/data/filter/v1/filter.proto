@@ -1,21 +1,17 @@
 syntax = "proto3";
 
-// Saved filters are named expressions that select model entities.
+// Filter expressions select model entities.
 //
-// Readers must understand the entire filter. An unknown field, required oneof
-// arm, enum value, value source, component ID, or field path makes it
-// unreadable: it cannot be applied or edited, and must be preserved
-// byte-for-byte when saved. Consumers report an unreadable filter rather than
-// treating it as matching nothing.
+// An unknown field, required oneof arm, enum value, component ID, or field
+// path makes the entire filter unreadable; it does not mean the filter matches
+// nothing.
 //
 // Length and angle operands use SI units. Text equality, inequality,
 // membership, containment, and prefix tests ignore case using Unicode simple
 // case folding. Numeric comparisons use the applying model's display precision
 // for lengths and angles, so results can vary between models. Every test except
 // `not_exists` fails for an entity with no value.
-//
-// Readers accept at least 32 levels of nesting, 2000 nodes, 5000 targets, and
-// 1000 operands per `any_of`.
+
 package motif.data.filter.v1;
 
 import "buf/validate/validate.proto";
@@ -30,8 +26,7 @@ message SavedFilter {
   FilterExpression expression = 1 [(buf.validate.field).required = true];
 }
 
-// A filter expression and the entities it names. Nodes name entities by index
-// into `targets`, so new nodes never add references to the component.
+// A filter expression. Target indexes in the expression refer to `targets`.
 message FilterExpression {
   FilterNode root = 1 [(buf.validate.field).required = true];
 
@@ -136,8 +131,7 @@ message FilterProperty {
   oneof property {
     option (buf.validate.oneof).required = true;
 
-    // A client-derived property key, such as `name` or `level`. Its
-    // derivation may improve, but its kind never changes.
+    // A client-derived property key, such as `name` or `level`.
     string registered = 1 [(buf.validate.field).string.min_len = 1];
     FilterStoredField field = 2;
     FilterParameter parameter = 3;
