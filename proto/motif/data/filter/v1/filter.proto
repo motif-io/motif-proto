@@ -8,8 +8,9 @@ syntax = "proto3";
 // byte-for-byte when saved. Consumers report an unreadable filter rather than
 // treating it as matching nothing.
 //
-// Quantities use SI units. Text equality, inequality, membership,
-// containment, and prefix tests ignore case using Unicode simple case folding.
+// Length and angle operands use SI units. Text equality, inequality,
+// membership, containment, and prefix tests ignore case using Unicode simple
+// case folding.
 // Numeric comparisons use the applying model's display precision for lengths
 // and angles, so results can vary between models. Every test except
 // `not_exists` fails for an entity with no value.
@@ -113,7 +114,6 @@ message FilterOperand {
     option (buf.validate.oneof).required = true;
 
     string text = 1;
-    // A number without a dimension.
     double number = 2 [(buf.validate.field).double.finite = true];
     bool boolean = 3;
     // A target index, for a property whose value is a reference, such as a
@@ -121,27 +121,7 @@ message FilterOperand {
     uint32 target = 4;
     // An enum value by number, such as a Revit category or IFC class.
     int32 enum_number = 5;
-    FilterQuantity quantity = 6;
   }
-}
-
-// A measured value in SI units. It stores a dimension rather than a unit, so
-// any unit, including a custom one, converts to it.
-message FilterQuantity {
-  double value = 1 [(buf.validate.field).double.finite = true];
-  FilterDimension dimension = 2 [(buf.validate.field).required = true];
-}
-
-// Exponents of the base dimensions.
-message FilterDimension {
-  sint32 length = 1;
-  sint32 mass = 2;
-  sint32 time = 3;
-  sint32 electric_current = 4;
-  sint32 temperature = 5;
-  sint32 amount_of_substance = 6;
-  sint32 luminous_intensity = 7;
-  sint32 angle = 8;
 }
 
 // A property and which of its values to read.
