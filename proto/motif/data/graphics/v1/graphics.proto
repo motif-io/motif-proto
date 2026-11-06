@@ -22,7 +22,8 @@ package motif.data.graphics.v1;
 //
 // The editor supports the subset described below. In particular, Draco encoding
 // and triangle strips are currently unsupported, and the `normalize` flag is
-// ignored for every attribute.
+// ignored for every attribute. RGBA vertex colors and vertex colors for lines
+// and line strips are not yet supported.
 //
 // # Terminology
 //
@@ -58,7 +59,7 @@ package motif.data.graphics.v1;
 // - Split vertices at UV seams and abrupt color boundaries, copying all
 //   attributes into each duplicate. Equal positions with different indices
 //   remain separate; the importer does not weld them.
-// - Use linear RGB or unpremultiplied RGBA `FLOAT32` vertex colors, ordinarily
+// - Use linear RGB `FLOAT32` vertex colors with three channels, ordinarily
 //   in [0,1]. Convert sRGB source colors before packing. On triangle surfaces,
 //   vertex colors multiply the base color; use a white base color for their
 //   original tint.
@@ -203,30 +204,29 @@ package motif.data.graphics.v1;
 //
 // - **Identifier**: `ATTRIBUTE_ID_COLOR`.
 // - **Presence**: Optional.
-// - **Dimension**: 3 (RGB, with alpha = 1) or 4 (unpremultiplied RGBA).
+// - **Dimension**: 3 (RGB, with alpha = 1). RGBA (dimension 4) is not yet
+//   supported.
 // - **Component types**: `INT8`, `UINT8`, `INT16`, `UINT16`, or `FLOAT32`.
 //   `INT32` and `UINT32` are unsupported.
 //
 // ## Color representation
 //
-// RGB channels are linear, and alpha is not gamma-encoded. No color-space
-// conversion or channel clamping is performed during import. Use `FLOAT32`
-// values, ordinarily in [0,1], and convert source sRGB colors before packing.
-// RGBA uses unpremultiplied alpha: store the original RGB channels without
-// multiplying them by alpha.
+// RGB channels are linear. No color-space conversion or channel clamping is
+// performed during import. Use `FLOAT32` values, ordinarily in [0,1], and
+// convert source sRGB colors before packing.
 //
 // ## Interaction with styling
 //
 // Use a white base color to preserve the vertex tint. This attribute does not
-// select textures, roughness, entity-level opacity, or a blending mode. An
-// RGBA attribute alone does not guarantee translucent rendering; the enclosing
-// styling must select the appropriate behavior.
+// select textures, roughness, entity-level opacity, or a blending mode. The
+// enclosing styling must select the appropriate behavior.
 //
 // Different colors within one triangle produce a gradient. Split vertices at their
 // boundary and give every corner of a face its intended color if gradients are not
 // desirable.
 //
-// Points support vertex colors. Lines do not respect vertex colors today.
+// Points support vertex colors. Vertex colors are not yet supported for lines
+// or line strips.
 //
 // # Primitive assembly
 //
@@ -269,7 +269,7 @@ package motif.data.graphics.v1;
 // - Positions: [(0,0,0), (1,0,0), (0,1,0)].
 // - Normals: [(0,0,1), (0,0,1), (0,0,1)].
 // - UVs: [(0,0), (1,0), (0,1)].
-// - Linear RGBA colors: [(1,0,0,1), (0,1,0,1), (0,0,1,1)].
+// - Linear RGB colors: [(1,0,0), (0,1,0), (0,0,1)].
 // - Indices: [0,1,2].
 //
 // ## Separate attribute blocks
@@ -280,14 +280,14 @@ package motif.data.graphics.v1;
 //     [0,36)      POSITION   FLOAT32  3          12      0
 //     [36,72)     NORMAL     FLOAT32  3          12      36
 //     [72,96)     UV         FLOAT32  2           8      72
-//     [96,144)    COLOR      FLOAT32  4          16      96
-//     [144,150)   indices    UINT16   (scalar)   (2)     144
+//     [96,132)    COLOR      FLOAT32  3          12      96
+//     [132,138)   indices    UINT16   (scalar)   (2)     132
 //
 // Set each attribute's `id`, `data_type`, `dimension`, `stride`, and `offset`
-// from the table. Set `index_metadata` to `offset = 144`, `num_indices = 3`,
+// from the table. Set `index_metadata` to `offset = 132`, `num_indices = 3`,
 // and `data_type = INDEX_DATA_TYPE_UINT16`.
 //
-// The buffer is 150 bytes. The triangle faces +Z and interpolates red, green,
+// The buffer is 138 bytes. The triangle faces +Z and interpolates red, green,
 // and blue. Its normals can be omitted to request generated shading, adjusting
 // subsequent offsets when removing their block. The index block can also be
 // omitted because the vertices are already in triangle order.
@@ -295,14 +295,14 @@ package motif.data.graphics.v1;
 // ## Interleaved attributes
 //
 // The same data can use indices first and one record per vertex. Place the
-// three `UINT16` indices in [0,6) and three 48-byte vertex records in [6,150).
-// Each record contains XYZ, normal XYZ, UV, then RGBA:
+// three `UINT16` indices in [0,6) and three 44-byte vertex records in [6,138).
+// Each record contains XYZ, normal XYZ, UV, then RGB:
 //
 //     Attribute  Type     Dimension  Stride  Absolute offset
-//     POSITION   FLOAT32  3          48       6
-//     NORMAL     FLOAT32  3          48      16
-//     UV         FLOAT32  2          48      28
-//     COLOR      FLOAT32  4          48      36
+//     POSITION   FLOAT32  3          44       6
+//     NORMAL     FLOAT32  3          44      18
+//     UV         FLOAT32  2          44      30
+//     COLOR      FLOAT32  3          44      38
 //
 // Set `index_metadata.offset = 0` and retain `num_indices = 3`. The index block
 // remains packed independently of the attribute strides.
@@ -399,7 +399,7 @@ enum AttributeDataType {
   // Four-byte unsigned integer. Currently unsupported for vertex attributes.
   ATTRIBUTE_DATA_TYPE_UINT32 = 6;
   // Four-byte floating point. Recommended for positions, normals, fractional
-  // UVs, and linear RGB/RGBA colors.
+  // UVs, and linear RGB colors.
   ATTRIBUTE_DATA_TYPE_FLOAT32 = 7;
 }
 
@@ -417,7 +417,8 @@ enum AttributeId {
   ATTRIBUTE_ID_UV = 3;
   // Secondary UV set. Currently unsupported and skipped by the editor.
   ATTRIBUTE_ID_UV_1 = 4;
-  // Linear RGB (dimension 3) or unpremultiplied RGBA (dimension 4). Optional.
+  // Linear RGB (dimension 3). Optional. RGBA (dimension 4) and vertex colors
+  // for lines and line strips are not yet supported.
   ATTRIBUTE_ID_COLOR = 5;
 }
 
