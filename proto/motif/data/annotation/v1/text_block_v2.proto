@@ -72,10 +72,9 @@ message TextPropertyRead {
     // The sheet hosting this annotation's evaluated placement. A reusable
     // definition resolves separately for each placement. Without a unique
     // hosting sheet, the read is unresolved; no sheet ID is stored here.
-    // <add>Retained for existing reads. New authoring should use host.</add>
+    // Retained for existing reads. New authoring should use host.
     google.protobuf.Empty hosting_sheet = 3 [deprecated = true];
 
-    // <add>
     // Resolve the source from this text's evaluated placement context using
     // the selected property's scope. Sheet-scoped properties use the enclosing
     // sheet; asset parameters use the nearest enclosing instance of the
@@ -84,7 +83,6 @@ message TextPropertyRead {
     // scope or a missing or ambiguous host is unresolved. Do not select a host
     // by searching for a nonempty value or fall back to an unrelated ancestor.
     // No host entity ID is stored here.
-    // </add>
     google.protobuf.Empty host = 4;
   }
 }
