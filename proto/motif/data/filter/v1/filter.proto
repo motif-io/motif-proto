@@ -219,8 +219,10 @@ message FilterStoredField {
 message FilterParameter {
   string name = 1 [(buf.validate.field).string.min_len = 1];
   // The index of the asset among the expression's targets. Matches entities
-  // of that asset, or of any copy whose source chain contains it.
-  uint32 asset = 2;
+  // of that asset, or of any copy whose source chain contains it. Unset reads
+  // the parameter of this name on whichever asset each entity places, as a
+  // template or a schedule column across several door types does.
+  optional uint32 asset = 2;
 }
 
 // An imported property, identified by the exact key written by the import.
