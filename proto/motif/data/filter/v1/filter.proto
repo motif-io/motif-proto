@@ -1,24 +1,21 @@
 syntax = "proto3";
 
-// Filters are expressions that select model entities. A saved filter is a
-// filter stored on its own entity; other components embed FilterExpression.
+// Saved filters are named expressions that select model entities.
 //
-// Readers must understand the entire expression. An unknown field, oneof
-// arm, enum value, component ID, or field path makes it unreadable: it cannot
-// be applied and cannot be edited. A consumer reports an unreadable filter and
-// never treats it as matching nothing or everything. A client writes it back
-// unchanged; schema-aware tools may still rewrite its references.
+// Readers must understand the entire filter. An unknown field, required oneof
+// arm, enum value, value source, component ID, or field path makes it
+// unreadable: it cannot be applied or edited, and must be preserved
+// byte-for-byte when saved. Consumers report an unreadable filter rather than
+// treating it as matching nothing.
 //
-// Fields, arms, and enum values are only ever added, and an existing one never
-// changes meaning. Data that an older reader could safely ignore belongs in its
-// own component, not here.
+// Quantities use SI units. Text equality, inequality, membership,
+// containment, and prefix tests ignore case using Unicode simple case folding.
+// Numeric comparisons use the applying model's display precision for lengths
+// and angles, so results can vary between models. Every test except
+// `not_exists` fails for an entity with no value.
 //
-// Every reader accepts expressions up to 32 nodes deep, 2000 nodes, 5000
-// targets, and 1000 operands per `any_of`. These limits may only grow.
-//
-// Every test except `not_exists` fails for an entity with no value, so `ne`
-// never matches one. Text tests ignore case using Unicode simple case folding
-// per character, without locale, normalization, or trimming.
+// Readers accept at least 32 levels of nesting, 2000 nodes, 5000 targets, and
+// 1000 operands per `any_of`.
 package motif.data.filter.v1;
 
 import "buf/validate/validate.proto";
@@ -26,34 +23,29 @@ import "google/protobuf/empty.proto";
 import "motif/extension/v1/options.proto";
 import "motif/extension/v1/reference.proto";
 
-// A saved filter.
+// A saved filter expression.
 message SavedFilter {
   option (motif.extension.v1.message).component = 229;
 
   FilterExpression expression = 1 [(buf.validate.field).required = true];
 }
 
-// A filter expression and the entities it names.
-//
-// Nodes and operands name an entity by its index in `targets`, so the tree
-// never holds a reference and can grow without a new component type. An index
-// out of range makes the expression unreadable.
+// A filter expression and the entities it names. Nodes name entities by index
+// into `targets`, so new nodes never add references to the component.
 message FilterExpression {
   FilterNode root = 1 [(buf.validate.field).required = true];
 
   repeated FilterTarget targets = 2 [(buf.validate.field).repeated.max_items = 5000];
 }
 
-// An entity, or a whole model, named by an expression. The model reference
-// scopes only this target.
+// An entity named by a filter. The model reference scopes only this target.
 message FilterTarget {
-  // Unset names the model in `model` itself.
+  // Unset to name the model itself.
   motif.extension.v1.EntityReference entity = 1;
 
-  // Unset for the expression's own model, and never set to it. For a linked
-  // model, the version seen by the author; every target of one model has the
-  // same version. Readers resolve the entity in each loaded version, so the
-  // filter follows library upgrades.
+  // Unset for the filter's own model. For a linked model, set to the version
+  // seen by the author; readers resolve the entity in each loaded version so
+  // the filter follows library upgrades.
   motif.extension.v1.ModelReference model = 2;
 }
 
@@ -66,19 +58,15 @@ message FilterNode {
     FilterNodeList all = 1;
     // Matches entities matched by any node; an empty list matches none.
     FilterNodeList any = 2;
-    // Matches entities the node does not match.
     FilterNode not = 3;
-    // Matches the definition (see FILTER_VALUE_SOURCE_DEFINITION) of each
-    // entity matched by the node.
+    // Matches the definitions of entities matched by the node.
     FilterNode definitions_of = 4;
     FilterCondition condition = 5;
     // Matches entities holding the persisted component with this ID.
     int32 has_component = 6 [(buf.validate.field).int32.gt = 0];
-    // Matches the targets at these indexes.
     FilterTargetIndexes entities = 7;
-    // Matches entities whose placement path (Instance, else Presents links)
-    // reaches the target at this index, or whose source asset is that target.
-    // The target itself does not match.
+    // Matches entities whose placement path or source asset reaches the
+    // target at this index.
     uint32 instances_of = 8;
   }
 }
@@ -88,36 +76,28 @@ message FilterNodeList {
   repeated FilterNode nodes = 1 [(buf.validate.field).repeated.max_items = 2000];
 }
 
-// Indexes into the expression's targets.
+// The targets of an `entities` node.
 message FilterTargetIndexes {
   repeated uint32 indexes = 1 [(buf.validate.field).repeated.max_items = 5000];
 }
 
-// A test of one value of an entity.
+// A test of an entity property.
 message FilterCondition {
   FilterPropertyRead read = 1 [(buf.validate.field).required = true];
 
   oneof op {
     option (buf.validate.oneof).required = true;
 
-    // The entity has a value.
     google.protobuf.Empty exists = 2;
-    // The entity has no value.
     google.protobuf.Empty not_exists = 3;
-    // Numbers and quantities compare against a band of values equal to the
-    // operand: `lt` is below the band, `gt` above it, and `le` and `ge`
-    // include it. See FilterOperand for each band.
     FilterOperand eq = 4;
     FilterOperand ne = 5;
     FilterOperand lt = 6;
     FilterOperand le = 7;
     FilterOperand gt = 8;
     FilterOperand ge = 9;
-    // Text containing this text. Empty matches all text.
     string contains = 10;
-    // Text starting with this text. Empty matches all text.
     string starts_with = 11;
-    // Equal to any operand.
     FilterOperandList any_of = 12;
   }
 }
@@ -127,49 +107,32 @@ message FilterOperandList {
   repeated FilterOperand operands = 1 [(buf.validate.field).repeated.max_items = 1000];
 }
 
-// A value that a condition compares with. An operand that does not fit the
-// property's kind, such as a quantity whose dimension differs from the
-// property's, fails to apply and is reported.
+// A value that a condition compares with.
 message FilterOperand {
   oneof value {
     option (buf.validate.oneof).required = true;
 
-    // Text. A color is `#rrggbb`, compared without alpha.
     string text = 1;
-    // A number with no dimension, compared as the property holds it: integers
-    // and pen indexes exactly, 32-bit floats after rounding the operand to
-    // one, ratios within 1e-6, and other floats within 4 units in the last
-    // place.
+    // A number without a dimension.
     double number = 2 [(buf.validate.field).double.finite = true];
     bool boolean = 3;
-    // The target at this index, for a property whose value is a reference,
-    // such as a level.
+    // A target index, for a property whose value is a reference, such as a
+    // level.
     uint32 target = 4;
-    // An enum value by number. The only operand for an enum property, such as
-    // a Revit category or IFC class.
+    // An enum value by number, such as a Revit category or IFC class.
     int32 enum_number = 5;
-    // A measured value, for a property with a dimension.
     FilterQuantity quantity = 6;
   }
 }
 
-// A measured value in SI units: meters, radians, square meters, and so on.
-//
-// The quantity stores a dimension, never a unit. Any unit, including one a
-// customer defines, is a scale of a dimension, so writers convert to SI and
-// readers show the value in whatever unit they like.
-//
-// Model lengths, angles, and other measures that the applying model displays
-// compare at that model's display step for the measure, so one filter can
-// match differently in two models. Paper lengths compare at 0.01 mm. Other
-// quantities compare within 4 units in the last place.
+// A measured value in SI units. It stores a dimension rather than a unit, so
+// any unit, including a custom one, converts to it.
 message FilterQuantity {
   double value = 1 [(buf.validate.field).double.finite = true];
   FilterDimension dimension = 2 [(buf.validate.field).required = true];
 }
 
-// A physical dimension, as exponents of base dimensions. All zero is
-// dimensionless; use FilterOperand.number instead.
+// Exponents of the base dimensions.
 message FilterDimension {
   sint32 length = 1;
   sint32 mass = 2;
@@ -185,20 +148,17 @@ message FilterDimension {
 message FilterPropertyRead {
   FilterProperty property = 1 [(buf.validate.field).required = true];
 
-  // Registered properties only read the effective value, and foreign
-  // properties never read the own value.
+  // Defaults to the effective value.
   FilterValueSource source = 2 [(buf.validate.field).enum.defined_only = true];
 }
 
-// A property of an entity.
+// The property that a condition reads.
 message FilterProperty {
   oneof property {
     option (buf.validate.oneof).required = true;
 
-    // A value the client derives and shows, by key: `name` (text), `level`
-    // (reference), or `revit_category` (enum). A key's derivation may improve,
-    // but its kind never changes. A key a reader does not know fails to apply
-    // and is reported; the expression stays readable and keeps the key.
+    // A client-derived property key, such as `name` or `level`. Its
+    // derivation may improve, but its kind never changes.
     string registered = 1 [(buf.validate.field).string.min_len = 1];
     FilterStoredField field = 2;
     FilterParameter parameter = 3;
@@ -207,44 +167,36 @@ message FilterProperty {
 }
 
 // A persisted component field, identified by component ID and field-number
-// path so schema renames do not affect it. Compares the value as the schema
-// stores it, in the field's own unit, with enums by number.
+// path so schema renames do not affect it.
 message FilterStoredField {
   int32 component_id = 1 [(buf.validate.field).int32.gt = 0];
   motif.extension.v1.FieldPath path = 2 [(buf.validate.field).required = true];
 }
 
-// An asset parameter. Parameter names are scoped to the asset that declares
-// them.
+// Parameter names are scoped to the asset that declares them.
 message FilterParameter {
   string name = 1 [(buf.validate.field).string.min_len = 1];
-  // The index of the asset among the expression's targets. Matches entities
-  // of that asset, or of any copy whose source chain contains it. Unset reads
-  // the parameter of this name on whichever asset each entity places, as a
-  // template or a schedule column across several door types does.
+  // A target index. Unset reads the parameter on whichever asset each entity
+  // places.
   optional uint32 asset = 2;
 }
 
 // An imported property, identified by the exact key written by the import.
-// Numbers compare as imported.
 message FilterForeignProperty {
   string key = 1 [(buf.validate.field).string.min_len = 1];
 }
 
 // Which value of an entity a condition reads.
 //
-// An own value is set on the element itself: a literal, an expression, or a
-// reference to another entity's value. A binding to a value of an asset
-// variant (motif.data.model.v1.AssetVariantGroup) is not an own value.
+// An own value is set on the element itself, including expressions and
+// references, but not asset variant bindings. The effective value is the
+// first available of the own value, the asset variant value, and the values
+// along the placement path.
 enum FilterValueSource {
-  // The effective value: the own value, else the asset variant value, else
-  // the effective value of the next entity on the placement path, stopping
-  // at a linked model's root.
   FILTER_VALUE_SOURCE_UNSPECIFIED = 0;
   FILTER_VALUE_SOURCE_OWN = 1;
-  // The value of the definition: the root of the first source asset on the
-  // entity's placement path, else the entity at the end of that path. A copy
-  // is never a definition, and an entity that places nothing and has no
-  // source asset has no definition.
+  // The value of the definition: the root of the entity's first source asset,
+  // else the asset at the end of its placement path. An entity with no
+  // definition has no value.
   FILTER_VALUE_SOURCE_DEFINITION = 2;
 }
