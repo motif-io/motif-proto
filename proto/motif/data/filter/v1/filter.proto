@@ -2,15 +2,17 @@ syntax = "proto3";
 
 // Filter expressions select model entities.
 //
-// An unknown field, required oneof arm, enum value, component ID, or field
-// path makes the entire filter unreadable; it does not mean the filter matches
-// nothing.
+// An unknown field, required oneof arm, enum value, registered key, component
+// ID, or field path, or a target index past the end of `targets`, makes the
+// entire filter unreadable; it does not mean the filter matches nothing.
 //
 // Length and angle operands use SI units. Text equality, inequality,
 // membership, containment, and prefix tests ignore case using Unicode simple
-// case folding. Numeric comparisons use the applying model's display precision
-// for lengths and angles, so results can vary between models. Every test except
-// `not_exists` fails for an entity with no value.
+// case folding. Numeric comparisons use the display precision of the filter's
+// model for lengths and angles, so results can vary between models. Every test
+// except `not_exists` fails for an entity with no value.
+//
+// Readers accept at least 32 levels of nesting.
 
 package motif.data.filter.v1;
 
