@@ -1,0 +1,224 @@
+syntax = "proto3";
+
+// Saved filters: named expressions that select entities of a model. A saved
+// filter holds no visibility concept; selectors, schedules, and other
+// features apply one by its entity.
+//
+// Evolution rules: a reader understands a saved filter in full or not at
+// all.
+//
+// - Anything a reader does not know makes the whole filter unreadable: a
+//   field, an unset required oneof (an arm it does not know), an enum value,
+//   a value source, a component id, or a field path.
+// - An unreadable filter matches nothing and cannot be edited. A client
+//   writes it back only as the exact bytes that it loaded, and every copy
+//   path keeps those bytes.
+// - Fields, arms, enum values, and registered keys are only ever added, a
+//   field, arm, or enum value at a new number. An existing one never
+//   changes meaning; a new meaning gets a new field or key.
+// - A registered property key that a reader does not know reads as an
+//   unknown property: the filter does not compile, and a re-save keeps the
+//   key.
+// - Optional data that an older reader could safely ignore, such as a
+//   description, a color, or tags, does not go in SavedFilter. It goes in
+//   its own component, as the name does.
+//
+// Meanings that depend on the reader, which every client must give:
+//
+// - A number operand is in SI units: meters for a length, radians for an
+//   angle.
+// - `eq`, `ne`, `in`, `contains`, and `starts_with` on text ignore case.
+// - `eq` and `ne` on a length or an angle compare at the display precision
+//   of the model that applies the filter, so one filter can match
+//   differently in two models.
+// - An entity of a linked model is named in each loaded version of that
+//   model.
+package motif.data.filter.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/empty.proto";
+import "motif/extension/v1/options.proto";
+import "motif/extension/v1/reference.proto";
+
+// A named filter of a model. The name is the entity's AssignedName, unique in
+// the model ignoring case. Lives on its own entity, a member of the model.
+message SavedFilter {
+  option (motif.extension.v1.message).component = 229;
+
+  // The expression. Required.
+  FilterNode root = 1 [(buf.validate.field).required = true];
+}
+
+// An entity that a filter names, stored inline where the filter names it.
+//
+// The ModelReference scopes the EntityReference of this message only.
+message FilterTarget {
+  // The entity. Required.
+  motif.extension.v1.EntityReference entity = 1 [(buf.validate.field).required = true];
+
+  // Unset for an entity of the filter's own model, in whichever version of
+  // that model loads the filter. Set for an entity of a linked model, at the
+  // version that the author saw. A reader names the entity in each loaded
+  // version of that model, so the filter follows a library upgrade.
+  motif.extension.v1.ModelReference model = 2;
+}
+
+// A node of a filter expression.
+message FilterNode {
+  // Required. A reader that does not know the arm reads the whole filter as
+  // unreadable, never only the node.
+  oneof node {
+    option (buf.validate.oneof).required = true;
+
+    // Matches what each node matches. No nodes matches every entity.
+    FilterNodeList all = 1;
+    // Matches what any node matches. No nodes matches nothing.
+    FilterNodeList any = 2;
+    // Matches what the node does not match.
+    FilterNode not = 3;
+    // Matches the definition of each entity that the node matches: the
+    // asset at the end of its placement path.
+    FilterNode definitions_of = 4;
+    // Matches each entity whose value of a property passes a test.
+    FilterCondition condition = 5;
+    // Matches each entity that holds the persisted component with this id.
+    int32 has_component = 6 [(buf.validate.field).int32.gt = 0];
+    // Matches the listed entities.
+    FilterTargetList entities = 7;
+    // Matches each placement whose definition is the entity.
+    FilterTarget instances_of = 8;
+  }
+}
+
+// The nodes of an `all` or an `any`.
+message FilterNodeList {
+  repeated FilterNode nodes = 1 [(buf.validate.field).repeated.max_items = 2000];
+}
+
+// The entities of an `entities` node.
+message FilterTargetList {
+  repeated FilterTarget targets = 1 [(buf.validate.field).repeated.max_items = 5000];
+}
+
+// A test of the value of one property of an entity.
+//
+// A number operand is in SI units: meters for a length, radians for an
+// angle. `eq` and `ne` on a length or an angle compare at the display
+// precision of the model that applies the filter. `eq`, `ne`, `in`,
+// `contains`, and `starts_with` on text ignore case.
+message FilterCondition {
+  // The property. Required.
+  FilterProperty property = 1 [(buf.validate.field).required = true];
+
+  // Which value of the entity the condition reads. Unspecified reads the
+  // effective value. A value that a reader does not know makes the filter
+  // unreadable.
+  FilterValueSource from = 2 [(buf.validate.field).enum.defined_only = true];
+
+  // The test. Required.
+  oneof op {
+    option (buf.validate.oneof).required = true;
+
+    // The entity has a value.
+    google.protobuf.Empty exists = 3;
+    // The entity has no value.
+    google.protobuf.Empty not_exists = 4;
+    FilterOperand eq = 5;
+    FilterOperand ne = 6;
+    FilterOperand lt = 7;
+    FilterOperand le = 8;
+    FilterOperand gt = 9;
+    FilterOperand ge = 10;
+    // Text that holds this text, ignoring case.
+    string contains = 11;
+    // Text that starts with this text, ignoring case.
+    string starts_with = 12;
+    // The value equals one of the operands.
+    FilterOperandList in = 13;
+  }
+}
+
+// The operands of an `in`.
+message FilterOperandList {
+  repeated FilterOperand operands = 1 [(buf.validate.field).repeated.max_items = 1000];
+}
+
+// A value that a condition compares with.
+message FilterOperand {
+  // Required.
+  oneof value {
+    option (buf.validate.oneof).required = true;
+
+    string text = 1;
+    // In SI units: meters for a length, radians for an angle.
+    double number = 2 [(buf.validate.field).double.finite = true];
+    bool bool = 3;
+    // An entity, for a property whose value is a reference, such as a level.
+    FilterTarget target = 4;
+    // A value of the enum that the property holds, by its number, such as a
+    // Revit category or an IFC class. A number that a reader does not know
+    // makes the filter unreadable.
+    int32 enum_number = 5;
+  }
+}
+
+// The property that a condition reads.
+message FilterProperty {
+  // Required.
+  oneof property {
+    option (buf.validate.oneof).required = true;
+
+    // A property that a client derives from other data, by its key, such as
+    // `name`, `level`, or `revit_category`. A key never changes meaning; a
+    // new meaning gets a new key.
+    string registered = 1 [(buf.validate.field).string.min_len = 1];
+    // A field of a persisted component.
+    FilterStoredField field = 2;
+    // A parameter that an asset declares.
+    FilterParameter parameter = 3;
+    // A property that an import brought.
+    FilterForeignProperty foreign = 4;
+  }
+}
+
+// A field of a persisted component, by the component's id and the path of
+// field numbers. Neither changes when the schema renames the message, its
+// package, or the field.
+message FilterStoredField {
+  int32 component_id = 1 [(buf.validate.field).int32.gt = 0];
+  // Required. A reader that cannot read the path, such as one with a
+  // subscript that it does not support, reads the filter as unreadable.
+  motif.extension.v1.FieldPath path = 2 [(buf.validate.field).required = true];
+}
+
+// A parameter that an asset declares, by its name. One name can mean a
+// different thing on each asset, so the asset is part of the property.
+message FilterParameter {
+  string name = 1 [(buf.validate.field).string.min_len = 1];
+  // The asset that declares the parameter. Required.
+  FilterTarget asset = 2 [(buf.validate.field).required = true];
+}
+
+// A property that an import brought, by the exact key that the import
+// wrote. A message, so that a later field can name the property by its
+// definition.
+message FilterForeignProperty {
+  string key = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+// Which value of an entity a condition reads.
+//
+// The own value of an element is a value set on the element itself: a
+// literal, an expression, or a reference to the value of another entity. A
+// value that the element takes from a variant of its asset is not its own.
+// The effective value is the first of the own value, the value from a
+// variant, and the value of the definition.
+enum FilterValueSource {
+  // The effective value.
+  FILTER_VALUE_SOURCE_UNSPECIFIED = 0;
+  // The own value.
+  FILTER_VALUE_SOURCE_OWN = 1;
+  // The value of the definition: the asset at the end of the entity's
+  // placement path. An entity with no definition has no value.
+  FILTER_VALUE_SOURCE_DEFINITION = 2;
+}
