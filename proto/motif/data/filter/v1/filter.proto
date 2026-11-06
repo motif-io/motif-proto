@@ -8,9 +8,9 @@ syntax = "proto3";
 //
 // Length and angle operands use SI units. Text equality, inequality,
 // membership, containment, and prefix tests ignore case using Unicode simple
-// case folding. Numeric comparisons use the display precision of where the
-// filter is applied for lengths and angles, so results can vary between models
-// and views. Every test except `not_exists` fails for an entity with no value.
+// case folding. Numeric comparisons use the display precision of the model
+// that applies the filter for lengths and angles, so results can vary between
+// models. Every test except `not_exists` fails for an entity with no value.
 //
 // Readers accept at least 32 levels of nesting.
 
