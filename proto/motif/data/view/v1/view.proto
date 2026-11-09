@@ -67,8 +67,12 @@ message View {
 
 // A type definition for views. Carries the `ViewKind` and default parameter
 // values that serve as starting values when a new view is created from this type.
+//
+// Deprecated: view definitions are constructed at runtime, not copied from persisted
+// data, do not use.
 message ViewType {
   option (motif.extension.v1.message).component = 42;
+  option deprecated = true;
 
   // The kind of view this type produces.
   ViewKind kind = 1;
@@ -233,8 +237,11 @@ message ViewScale {
 //
 // Lives on the view the tags are drawn in. Absent means scale 1, matching tags
 // authored before this component existed.
+//
+// Deprecated: this functionality covered by other components, do not use.
 message ViewTagGraphics {
   option (motif.extension.v1.message).component = 186;
+  option deprecated = true;
 
   // Multiplier on the tags' paper size, including labels. Must be positive.
   // 1 is today's size; 0.6 draws heads, marks, arrows, tails, and numbers at
