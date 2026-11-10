@@ -382,7 +382,8 @@ message GeometryStyle {
 // Bindings may select sources by filters; a Color/LineStyle component on a
 // source is a fallback, not by itself an explicit override. An authored override
 // must be represented in the higher-priority override layer to win over a bound
-// graphic style. This asset does not define binding or override storage.
+// graphic style. GraphicStyleBindings stores model bindings; override storage
+// is separate.
 // Before enabling filter-based bindings on existing models, binding writers
 // must preserve user-authored entity styling in the higher-priority override
 // resolution, so a new matching filter does not replace that styling.
@@ -413,6 +414,41 @@ message GraphicStyleAsset {
   // Annotations use the line properties and skip ViewStyle and ModelEdges
   // defaults. Unset leaves each property unset.
   GeometryStyle projection = 3;
+}
+
+// An ordered filter-to-style binding on a model. Not a component by itself.
+message GraphicStyleBinding {
+  // The lowest reader version that understands every field in this binding.
+  // Writers raise it when using a field or variant introduced by a later
+  // version. A reader below it must not apply the binding or rewrite its list.
+  // Version 0 covers the fields defined here.
+  uint32 min_reader_version = 1;
+
+  // A SavedFilter entity in the model containing this binding list. The
+  // reference follows edits to that filter and does not name a live selection.
+  motif.extension.v1.EntityReference filter = 2 [(buf.validate.field).required = true];
+
+  // One GraphicStyleAsset. An external style is pinned to its model version;
+  // an unset model means the model containing this binding list.
+  PinnedStyleAssetReference style = 3 [(buf.validate.field).required = true];
+}
+
+// The model's ordered graphic-style bindings, stored on its model entity.
+// The first matching filter selects one style; later bindings do not fill gaps
+// in that style. Each unset property falls through to the next resolution layer.
+// Replacing the list is one edit. This component does not store view overrides
+// or change visibility rules.
+message GraphicStyleBindings {
+  option (motif.extension.v1.message).component = 230;
+
+  // The lowest reader version that understands every field in this component.
+  // Writers raise it when using a field introduced by a later version. Readers
+  // below it must not apply or rewrite the list. Version 0 covers this schema.
+  uint32 min_reader_version = 1;
+
+  // Lowest index has highest priority. An unreadable binding makes the list
+  // unavailable rather than allowing a later binding to win incorrectly.
+  repeated GraphicStyleBinding bindings = 2;
 }
 
 // Font identity that survives reload (family name, not an unstable runtime
