@@ -20,10 +20,11 @@ package motif.data.graphics.v1;
 // the values themselves. Attributes and indices can occupy separate blocks,
 // or attributes can be interleaved into vertex records.
 //
-// The editor supports the subset described below. In particular, Draco encoding
-// and triangle strips are currently unsupported, and the `normalize` flag is
-// ignored for every attribute. RGBA vertex colors and vertex colors for lines
-// and line strips are not yet supported.
+// The editor supports the subset described below. In particular, Draco encoding,
+// triangle strips, and `normalize = true` are currently unsupported. Colors and
+// UVs require `FLOAT32` components; integer components are unsupported for these
+// attributes. RGBA vertex colors and vertex colors for lines and line strips are
+// not yet supported.
 //
 // # Terminology
 //
@@ -49,8 +50,7 @@ package motif.data.graphics.v1;
 // - Export single-sided triangles, counterclockwise when viewed from outside.
 //   Back faces are normally culled. Normals affect shading; winding determines
 //   which side faces outward.
-// - Supply normals for authored shading. Zero or otherwise unnormalizable vectors
-//   become +Z for the affected vertex.
+// - Supply finite unit normals for authored shading.
 // - Omit normals to have them auto-generated for triangles. Faces sharing a vertex
 //   index are smoothed together, without a crease-angle threshold. Hard edges
 //   require separate vertices on each side; a sharp cube commonly uses 24 vertices,
@@ -107,10 +107,15 @@ package motif.data.graphics.v1;
 //
 // ## Component conversion
 //
-// All four supported attribute semantics accept `INT8`, `UINT8`, `INT16`,
-// `UINT16`, and `FLOAT32`. Their component sizes are one, one, two, two, and
-// four bytes respectively. Values are stored little-endian and converted to
-// floating point during import.
+// Positions and normals accept `INT8`, `UINT8`, `INT16`, `UINT16`, and `FLOAT32`.
+// Their component sizes are one, one, two, two, and four bytes respectively.
+// Colors and UVs require `FLOAT32`; signed and unsigned integer components are
+// unsupported for these attributes. Values are stored little-endian and
+// converted to floating point during import.
+//
+// `normalize = true` is unsupported for every attribute; leave it false.
+// Convert integer colors and UVs to `FLOAT32` in the producer, including any
+// required normalization, before packing the buffer.
 //
 // `INT32` and `UINT32` attributes are rejected because their full value ranges
 // cannot be represented exactly as `FLOAT32`. Setting `normalize = true` does
@@ -130,6 +135,8 @@ package motif.data.graphics.v1;
 // - **Identifier**: `ATTRIBUTE_ID_POSITION`.
 // - **Presence**: Required for every topology.
 // - **Dimension**: 2 (XY in the local Z=0 plane) or 3 (XYZ).
+// - **Values**: Every component must be finite; NaN and positive or negative
+//   infinity are errors.
 // - **Component types**: `INT8`, `UINT8`, `INT16`, `UINT16`, or `FLOAT32`.
 //   `INT32` and `UINT32` are unsupported.
 //
@@ -153,14 +160,15 @@ package motif.data.graphics.v1;
 //
 // ## Supplied normals
 //
-// Components are converted to floats, then the vector is normalized to unit
-// length. For example, (0,0,10) becomes the direction (0,0,1). Use finite,
-// nonzero `FLOAT32` unit vectors, including signed components where needed.
+// Supplied normals must be finite unit vectors (length 1). Use `FLOAT32`
+// components, including signed components where needed.
 //
-// A vector that cannot be normalized, such as zero, NaN, or infinite input,
-// falls back to (0,0,1). This fallback applies to the vector value only;
-// invalid dimensions, unsupported types, and missing buffer bytes still fail
-// conversion.
+// The editor currently renormalizes non-unit vectors after converting their
+// components to floats. A vector that cannot be normalized, such as zero, NaN,
+// or infinite input, currently falls back to (0,0,1). These corrections are
+// implementation details and are not guaranteed to remain available; producers
+// must supply valid unit vectors. Invalid dimensions, unsupported types, and
+// missing buffer bytes still fail conversion.
 //
 // ## Generated normals
 //
@@ -186,8 +194,8 @@ package motif.data.graphics.v1;
 // - **Identifier**: `ATTRIBUTE_ID_UV`.
 // - **Presence**: Optional; positions and colors do not require UVs.
 // - **Dimension**: 2 (U,V).
-// - **Component types**: `INT8`, `UINT8`, `INT16`, `UINT16`, or `FLOAT32`.
-//   `INT32` and `UINT32` are unsupported.
+// - **Component types**: `FLOAT32` only. Signed and unsigned integer components
+//   are unsupported.
 //
 // Components pass through as floating-point values.
 //
@@ -206,8 +214,8 @@ package motif.data.graphics.v1;
 // - **Presence**: Optional.
 // - **Dimension**: 3 (RGB, with alpha = 1). RGBA (dimension 4) is not yet
 //   supported.
-// - **Component types**: `INT8`, `UINT8`, `INT16`, `UINT16`, or `FLOAT32`.
-//   `INT32` and `UINT32` are unsupported.
+// - **Component types**: `FLOAT32` only. Signed and unsigned integer components
+//   are unsupported.
 //
 // ## Color representation
 //
@@ -411,7 +419,7 @@ enum AttributeId {
   ATTRIBUTE_ID_UNSPECIFIED = 0;
   // Local position: XY (dimension 2) or XYZ (dimension 3). Required.
   ATTRIBUTE_ID_POSITION = 1;
-  // Shading direction: XYZ (dimension 3). Optional; converted to unit length.
+  // Shading direction: XYZ (dimension 3). Optional; must be a finite unit vector.
   ATTRIBUTE_ID_NORMAL = 2;
   // Primary texture coordinate: U,V (dimension 2). Optional.
   ATTRIBUTE_ID_UV = 3;
@@ -467,8 +475,9 @@ message AttributeMetadata {
   // UV = 2, COLOR = 3 or 4. Other dimensions for these semantics are rejected.
   uint32 dimension = 5;
 
-  // Storage type used by every component. INT8, UINT8, INT16, UINT16, and
-  // FLOAT32 are supported. INT32 and UINT32 are currently unsupported.
+  // Storage type used by every component. Positions and normals support INT8,
+  // UINT8, INT16, UINT16, and FLOAT32. Colors and UVs require FLOAT32.
+  // INT32 and UINT32 are currently unsupported for every attribute.
   AttributeDataType data_type = 6;
 
   // Byte distance between consecutive attribute values. Must be at least
@@ -476,9 +485,9 @@ message AttributeMetadata {
   uint32 stride = 7;
 
   // Normalized-integer interpretation: map signed components to [-1,1] and
-  // unsigned components to [0,1]. Currently unsupported and entirely ignored
-  // for all attributes. Supported integer values are instead converted directly
-  // to floats. Perform desired conversions in the producer.
+  // unsigned components to [0,1]. Currently unsupported for all attributes;
+  // leave false. Perform any required normalization in the producer and store
+  // the result as FLOAT32.
   bool normalize = 8;
 }
 
