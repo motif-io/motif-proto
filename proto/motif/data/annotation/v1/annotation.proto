@@ -767,4 +767,10 @@ message TextAnnotationStyleAsset {
     motif.data.style.v1.StyleAssetReference leader_line_style = 11;
     motif.data.style.v1.LineStyleAsset leader_line_properties = 12;
   }
+  // The distance between tab stops, in millimetres on paper, held constant
+  // across view scales.
+  optional float tab_size_mm = 13 [(buf.validate.field).float = {
+    gt: 0
+    finite: true
+  }];
 }

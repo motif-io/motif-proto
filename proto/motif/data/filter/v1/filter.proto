@@ -1,0 +1,177 @@
+syntax = "proto3";
+
+// Filter expressions select model entities.
+//
+// An unknown field, required oneof arm, enum value, component ID, or field
+// path, or a target index past the end of `targets`, makes the entire filter
+// unreadable; it does not mean the filter matches nothing.
+//
+// Length and angle operands use SI units. Text equality, inequality,
+// membership, containment, and prefix tests ignore case using Unicode simple
+// case folding. Numeric comparisons use the display precision of the model
+// that applies the filter for lengths and angles, so results can vary between
+// models. Every test except `not_exists` fails for an entity with no value.
+//
+// Readers accept at least 32 levels of nesting.
+
+package motif.data.filter.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/empty.proto";
+import "motif/extension/v1/options.proto";
+import "motif/extension/v1/reference.proto";
+
+// A saved filter expression.
+message SavedFilter {
+  option (motif.extension.v1.message).component = 229;
+
+  FilterExpression expression = 1 [(buf.validate.field).required = true];
+}
+
+// A filter expression. Target indexes in the expression refer to `targets`.
+message FilterExpression {
+  FilterNode root = 1 [(buf.validate.field).required = true];
+
+  repeated FilterTarget targets = 2 [(buf.validate.field).repeated.max_items = 5000];
+}
+
+// An entity named by a filter. The model reference scopes only this target.
+message FilterTarget {
+  // Unset to name the model itself.
+  motif.extension.v1.EntityReference entity = 1;
+
+  // Unset for the filter's own model. For a linked model, set to the version
+  // seen by the author; readers resolve the entity in each loaded version so
+  // the filter follows library upgrades.
+  motif.extension.v1.ModelReference model = 2;
+}
+
+// A node of a filter expression.
+message FilterNode {
+  oneof node {
+    option (buf.validate.oneof).required = true;
+
+    // Matches entities matched by every node; an empty list matches all.
+    FilterNodeList all = 1;
+    // Matches entities matched by any node; an empty list matches none.
+    FilterNodeList any = 2;
+    FilterNode not = 3;
+    // Matches the definitions of entities matched by the node.
+    FilterNode definitions_of = 4;
+    FilterCondition condition = 5;
+    // Matches entities holding the persisted component with this ID.
+    int32 has_component = 6 [(buf.validate.field).int32.gt = 0];
+    FilterTargetIndexes entities = 7;
+    // Matches entities whose placement path or source asset reaches the
+    // target at this index.
+    uint32 instances_of = 8;
+  }
+}
+
+// The nodes of an `all` or an `any`.
+message FilterNodeList {
+  repeated FilterNode nodes = 1 [(buf.validate.field).repeated.max_items = 2000];
+}
+
+// The targets of an `entities` node.
+message FilterTargetIndexes {
+  repeated uint32 indexes = 1 [(buf.validate.field).repeated.max_items = 5000];
+}
+
+// A test of an entity property.
+message FilterCondition {
+  FilterPropertyRead read = 1 [(buf.validate.field).required = true];
+
+  oneof op {
+    option (buf.validate.oneof).required = true;
+
+    google.protobuf.Empty exists = 2;
+    google.protobuf.Empty not_exists = 3;
+    FilterOperand eq = 4;
+    FilterOperand ne = 5;
+    FilterOperand lt = 6;
+    FilterOperand le = 7;
+    FilterOperand gt = 8;
+    FilterOperand ge = 9;
+    string contains = 10;
+    string starts_with = 11;
+    FilterOperandList any_of = 12;
+  }
+}
+
+// The operands of an `any_of`.
+message FilterOperandList {
+  repeated FilterOperand operands = 1 [(buf.validate.field).repeated.max_items = 1000];
+}
+
+// A value that a condition compares with.
+message FilterOperand {
+  oneof value {
+    option (buf.validate.oneof).required = true;
+
+    string text = 1;
+    double number = 2 [(buf.validate.field).double.finite = true];
+    bool boolean = 3;
+    // A target index, for a property whose value is a reference, such as a
+    // level.
+    uint32 target = 4;
+    // An enum value by number, such as a Revit category or IFC class.
+    int32 enum_number = 5;
+  }
+}
+
+// A property and which of its values to read.
+message FilterPropertyRead {
+  FilterProperty property = 1 [(buf.validate.field).required = true];
+
+  // Defaults to the effective value.
+  FilterValueSource source = 2 [(buf.validate.field).enum.defined_only = true];
+}
+
+// The property that a condition reads.
+message FilterProperty {
+  oneof property {
+    option (buf.validate.oneof).required = true;
+
+    // A client-derived property key, such as `name` or `level`.
+    string registered = 1 [(buf.validate.field).string.min_len = 1];
+    FilterStoredField field = 2;
+    FilterParameter parameter = 3;
+    FilterForeignProperty foreign = 4;
+  }
+}
+
+// A persisted component field, identified by component ID and field-number
+// path so schema renames do not affect it.
+message FilterStoredField {
+  int32 component_id = 1 [(buf.validate.field).int32.gt = 0];
+  motif.extension.v1.FieldPath path = 2 [(buf.validate.field).required = true];
+}
+
+// Parameter names are scoped to the asset that declares them.
+message FilterParameter {
+  string name = 1 [(buf.validate.field).string.min_len = 1];
+  // A target index. Unset reads the parameter on whichever asset each entity
+  // places.
+  optional uint32 asset = 2;
+}
+
+// An imported property, identified by the exact key written by the import.
+message FilterForeignProperty {
+  string key = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+// Which value of an entity a condition reads.
+//
+// An own value is set on the element itself, including expressions and
+// references, but not asset variant bindings. The effective value is the
+// first available of the own value, the asset variant value, and the values
+// along the placement path.
+enum FilterValueSource {
+  FILTER_VALUE_SOURCE_UNSPECIFIED = 0;
+  FILTER_VALUE_SOURCE_OWN = 1;
+  // The value of the definition: the root of the entity's first source asset,
+  // else the asset at the end of its placement path. An entity with no
+  // definition has no value.
+  FILTER_VALUE_SOURCE_DEFINITION = 2;
+}
