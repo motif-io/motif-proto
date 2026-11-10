@@ -63,7 +63,7 @@ message TextSpanV2 {
   //
   // Absent means no authored placeholder; present but empty means an
   // intentionally empty placeholder. Ignored for literal spans.
-  optional string placeholder_text = 4;
+  optional string placeholder = 4;
 }
 
 // A property selector and the entity or placement context to read it from.
