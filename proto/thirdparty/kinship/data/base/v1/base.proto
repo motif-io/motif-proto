@@ -5,7 +5,7 @@ package thirdparty.kinship.data.base.v1;
 
 import "motif/extension/v1/options.proto";
 
-// Source record for one Kinship library family.
+// Source record for one Kinship library family, or for one element part of that family.
 // Revit family and category names stay on RevitFamilyType and RevitCategoryValue.
 message KinshipObjectBase {
   option (motif.extension.v1.message).component = 232;
@@ -24,6 +24,12 @@ message KinshipObjectBase {
 
   // Family parameter values, keyed by parameter name.
   map<string, string> parameters = 5;
+
+  // Revit unique id of the source element, when this record is an element part.
+  string unique_id = 6;
+
+  // IFC GUID of the source element, when this record is an element part.
+  string ifc_guid = 7;
 }
 
 // One Kinship library connection, stored on the generated model's sentinel entity.
@@ -32,15 +38,4 @@ message KinshipContext {
 
   // Firm subdomain. The API host is `https://{subdomain}.kinship.io`.
   string subdomain = 1;
-}
-
-// Identity of one element part inside a Kinship family.
-message KinshipElement {
-  option (motif.extension.v1.message).component = 234;
-
-  // Revit unique id of the source element, when the family file has one.
-  string unique_id = 1;
-
-  // IFC GUID of the source element, when the family file has one.
-  string ifc_guid = 2;
 }
