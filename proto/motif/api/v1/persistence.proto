@@ -840,12 +840,7 @@ message ReferencedModelVersion {
 //
 // Errors returned instead of a stream: NOT_FOUND when the host model does not
 // exist. A deleted (archived) host model is traversed like any other.
-// FAILED_PRECONDITION, with ErrorInfo reason MODEL_NOT_INDEXED (domain
-// persistence.motif.io), when the host model has no reference index at the
-// requested version: the model predates reference indexing, or a version at or
-// before the requested one was written without maintaining the index. This does
-// not change on its own; read the model with Query instead. INVALID_ARGUMENT
-// when the request is malformed.
+// INVALID_ARGUMENT when the request is malformed.
 //
 // Errors that end the stream after the version header: UNAVAILABLE when a
 // graph read exceeds the server's time limit for one read; retry with backoff.
@@ -1060,9 +1055,9 @@ message TraverseReferencesResponse {
         // are deliberately not distinguished. A deleted model is not omitted:
         // deletion is soft, so other models can keep referencing it.
         REASON_UNAVAILABLE = 1;
-        // The model has no reference index at the pinned version. Entities in
-        // the model are still returned, but their references are not followed.
-        REASON_NOT_INDEXED = 2;
+        // Deprecated: never sent. Every version of every model has a
+        // reference index.
+        REASON_NOT_INDEXED = 2 [deprecated = true];
         // The reference pins a version the model has never reached. Writes do
         // not check pinned versions, so this indicates a reference written
         // with a wrong version.
