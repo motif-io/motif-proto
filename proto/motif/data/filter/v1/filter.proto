@@ -6,13 +6,16 @@ syntax = "proto3";
 // path, or a target index past the end of `targets`, makes the entire filter
 // unreadable; it does not mean the filter matches nothing.
 //
-// Length and angle operands use SI units. Text equality, inequality,
-// membership, containment, and prefix tests ignore case using Unicode simple
-// case folding. Numeric comparisons use the display precision of the model
-// that applies the filter for lengths and angles, so results can vary between
-// models. Every test except `not_exists` fails for an entity with no value.
+// Length, angle, and area operands and literals use SI units: meters,
+// radians, and square meters. Text equality, inequality, membership,
+// containment, and prefix tests ignore case using Unicode simple case
+// folding. Numeric comparisons use the display precision of the model that
+// applies the filter for lengths, angles, and areas, so results can vary
+// between models. Every test except `not_exists` fails for an entity with no
+// value.
 //
-// Readers accept at least 32 levels of nesting.
+// Readers accept at least 32 levels of nesting, in the expression and in each
+// computed value.
 
 package motif.data.filter.v1;
 
@@ -138,7 +141,92 @@ message FilterProperty {
     FilterStoredField field = 2;
     FilterParameter parameter = 3;
     FilterForeignProperty foreign = 4;
+    // A value computed from other properties. Its reads name their own
+    // sources, so a read of a computed value takes no source; one with a
+    // source makes the filter unreadable.
+    FilterComputedValue computed = 5;
   }
+}
+
+// A number computed from the values that an entity holds. It is not
+// stored; it changes when its inputs change.
+//
+// An entity has no value when a read in the computation has no value or
+// holds a value that is not a number, when a division divides by zero, or
+// when a result is not finite. Imported text has no value; an imported
+// number is a plain number.
+//
+// Measures must agree. Values that are added or subtracted have the same
+// measure. A product or a quotient has the measure that its parts make, so
+// a model length times a model length is an area, and an area divided by an
+// area is a plain number. Model length and paper length are separate
+// measures. A computation whose result is not a plain number, a length, an
+// angle, or an area, or that reads a property that is not a number, fails
+// to compile; the filter stays readable.
+message FilterComputedValue {
+  oneof value {
+    option (buf.validate.oneof).required = true;
+
+    // A property of the entity, read from its source.
+    FilterPropertyRead read = 1;
+    FilterQuantity literal = 2;
+    // The sum of the values.
+    FilterComputedValues add = 3;
+    // The first value minus the second.
+    FilterComputedPair subtract = 4;
+    // The product of the values.
+    FilterComputedValues multiply = 5;
+    // The first value divided by the second.
+    FilterComputedPair divide = 6;
+    // The least whole number at or above the value. Before rounding, a
+    // value within a relative 1e-9 of a whole number is that number, so
+    // float error does not move an exact whole number. Takes only a plain
+    // number: divide a quantity by a step first.
+    FilterComputedValue ceil = 7;
+    // The greatest whole number at or below the value, with the same
+    // snapping and the same plain number rule as `ceil`.
+    FilterComputedValue floor = 8;
+    // The nearest whole number. A value halfway between two whole numbers
+    // rounds away from zero, so 2.5 is 3 and -2.5 is -3. A value within a
+    // relative 1e-9 of a half rounds as the half. Takes only a plain
+    // number, as `ceil` does.
+    FilterComputedValue round = 9;
+  }
+}
+
+// The values of an `add` or a `multiply`.
+message FilterComputedValues {
+  repeated FilterComputedValue values = 1 [(buf.validate.field).repeated = {
+    min_items: 2
+    max_items: 100
+  }];
+}
+
+// The values of a `subtract` or a `divide`, in order.
+message FilterComputedPair {
+  FilterComputedValue left = 1 [(buf.validate.field).required = true];
+  FilterComputedValue right = 2 [(buf.validate.field).required = true];
+}
+
+// A literal number of a computed value, in the SI unit of its measure.
+message FilterQuantity {
+  double value = 1 [(buf.validate.field).double.finite = true];
+  // Unset for a plain number.
+  FilterMeasure measure = 2 [(buf.validate.field).enum.defined_only = true];
+}
+
+// What a literal quantity measures.
+enum FilterMeasure {
+  // A plain number, with no unit.
+  FILTER_MEASURE_UNSPECIFIED = 0;
+  // A length in model space, in meters.
+  FILTER_MEASURE_MODEL_LENGTH = 1;
+  // A length on paper, in meters.
+  FILTER_MEASURE_PAPER_LENGTH = 2;
+  // An angle, in radians.
+  FILTER_MEASURE_ANGLE = 3;
+  // An area in model space, in square meters.
+  FILTER_MEASURE_AREA = 4;
 }
 
 // A persisted component field, identified by component ID and field-number
