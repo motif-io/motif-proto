@@ -145,7 +145,8 @@ message FilterProperty {
     FilterForeignProperty foreign = 4;
     // A value computed from other properties. Its reads name their own
     // sources, so a read of a computed value takes no source; one with a
-    // source fails to compile, and the filter stays readable.
+    // source makes the filter unreadable, as a source that a property cannot
+    // take does.
     FilterComputedValue computed = 5;
   }
 }
