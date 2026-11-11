@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+// Provenance for geometry imported from Cityweft.
+package thirdparty.cityweft.data.base.v1;
+
+import "motif/extension/v1/options.proto";
+
+// Source record for one Cityweft feature.
+// Same role as RevitObjectBase, RhinoObjectBase, and BHoMSource.
+message CityweftObjectBase {
+  option (motif.extension.v1.message).component = 230;
+
+  // Stable feature id: `cw:<descriptor.id>` or `sha256:<hex>`.
+  string source_id = 1;
+
+  // Cityweft geometry group: buildings, surface, barriers, or topography.
+  string geometry_group = 2;
+
+  // Descriptor type, copied verbatim.
+  string feature_type = 3;
+
+  // Canonical descriptor JSON.
+  string source_payload_json = 4;
+
+  // Payload encoding identifier. `cityweft-json`.
+  string payload_format = 5;
+
+  // Version of the payload encoding contract.
+  string payload_format_version = 6;
+
+  // SHA-256 of `source_payload_json` bytes.
+  bytes payload_sha256 = 7;
+}
+
+// One Cityweft import, stored on the generated model's sentinel entity.
+message CityweftContext {
+  option (motif.extension.v1.message).component = 231;
+
+  // Cityweft API version. `v1`.
+  string api_version = 1;
+
+  // Canonical request body. Never includes the API key.
+  string request_json = 2;
+
+  // SHA-256 of `request_json` bytes.
+  bytes request_sha256 = 3;
+
+  // Attributions returned with the context.
+  repeated CityweftAttribution attributions = 4;
+
+  // Data-access notice returned with the context, when present.
+  optional CityweftDataAccess data_access = 5;
+}
+
+// One Cityweft attribution.
+message CityweftAttribution {
+  // Cityweft attribution id.
+  string id = 1;
+
+  // Attribution name.
+  string name = 2;
+
+  // Attribution text shown to the user.
+  string text = 3;
+
+  // License name.
+  string license = 4;
+
+  // License or source URL.
+  string url = 5;
+
+  // When true, the text is a license condition and must be shown.
+  bool required = 6;
+}
+
+// Cityweft data-access result for the request.
+message CityweftDataAccess {
+  // `full` or `global`.
+  string granted = 1;
+
+  // Countries whose data was withheld.
+  repeated string suppressed_countries = 2;
+
+  // Reason for a partial grant, when Cityweft sent one.
+  optional string reason = 3;
+}
