@@ -15,7 +15,7 @@ syntax = "proto3";
 // value.
 //
 // Readers accept at least 32 levels of nesting, in the expression and in each
-// computed value.
+// computed value, and computed values of at least 256 nodes.
 
 package motif.data.filter.v1;
 
@@ -151,6 +151,10 @@ message FilterProperty {
 // A number computed from the values that an entity holds. It is not
 // stored; it changes when its inputs change.
 //
+// A read names its own source. A parameter read names its asset; one with
+// no asset makes the filter unreadable. A parameter that its asset does not
+// declare has no value and takes any measure.
+//
 // An entity has no value when a read in the computation has no value or
 // holds a value that is not a number, when a division divides by zero, or
 // when a result is not finite. Imported text has no value; an imported
@@ -179,16 +183,16 @@ message FilterComputedValue {
     // The first value divided by the second.
     FilterComputedPair divide = 6;
     // The least whole number at or above the value. Before rounding, a
-    // value within a relative 1e-9 of a whole number is that number, so
-    // float error does not move an exact whole number. Takes only a plain
-    // number: divide a quantity by a step first.
+    // value v within 64 × 2^-52 × max(1, |v|) of a whole number is that
+    // number, so float error does not move an exact whole number. Takes only
+    // a plain number: divide a quantity by a step first.
     FilterComputedValue ceil = 7;
     // The greatest whole number at or below the value, with the same
     // snapping and the same plain number rule as `ceil`.
     FilterComputedValue floor = 8;
     // The nearest whole number. A value halfway between two whole numbers
-    // rounds away from zero, so 2.5 is 3 and -2.5 is -3. A value within a
-    // relative 1e-9 of a half rounds as the half. Takes only a plain
+    // rounds away from zero, so 2.5 is 3 and -2.5 is -3. A value within the
+    // tolerance of `ceil` of a half rounds as the half. Takes only a plain
     // number, as `ceil` does.
     FilterComputedValue round = 9;
   }
