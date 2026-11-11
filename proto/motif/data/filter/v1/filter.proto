@@ -14,8 +14,10 @@ syntax = "proto3";
 // between models. Every test except `not_exists` fails for an entity with no
 // value.
 //
-// Readers accept at least 32 levels of nesting, in the expression and in each
-// computed value, and computed values of at least 256 nodes.
+// Readers accept at least 32 levels of nesting in the expression, and
+// computed values of at least 8 levels and 256 nodes. Each operation, and
+// each read of another computed value, is a level, and the nodes of the
+// computed values that a computed value reads count toward its own.
 
 package motif.data.filter.v1;
 
@@ -143,7 +145,7 @@ message FilterProperty {
     FilterForeignProperty foreign = 4;
     // A value computed from other properties. Its reads name their own
     // sources, so a read of a computed value takes no source; one with a
-    // source makes the filter unreadable.
+    // source fails to compile, and the filter stays readable.
     FilterComputedValue computed = 5;
   }
 }
@@ -151,9 +153,9 @@ message FilterProperty {
 // A number computed from the values that an entity holds. It is not
 // stored; it changes when its inputs change.
 //
-// A read names its own source. A parameter read names its asset; one with
-// no asset makes the filter unreadable. A parameter that its asset does not
-// declare has no value and takes any measure.
+// A read names its own source, and a parameter read means what it means in
+// a condition. A parameter that its asset does not declare has no value and
+// takes any measure.
 //
 // An entity has no value when a read in the computation has no value or
 // holds a value that is not a number, when a division divides by zero, or
