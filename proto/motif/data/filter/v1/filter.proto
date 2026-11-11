@@ -162,6 +162,14 @@ message FilterProperty {
 // when a result is not finite. Imported text has no value; an imported
 // number is a plain number.
 //
+// A result that is a plain number snaps: a value v becomes the whole number
+// nearest v when it is within 64 × 2^-52 × max(1, |v|) of v; else the
+// decimal with the fewest digits after the point that is within
+// 64 × 2^-52 × |v| of v and has one digit after the point or at most 12
+// significant digits. A value with no such decimal stays as it is. So
+// 0.1 + 0.2 is 0.3, 7 / 3 keeps its digits, and float error does not split
+// values that are equal.
+//
 // Measures must agree. Values that are added or subtracted have the same
 // measure. A product or a quotient has the measure that its parts make, so
 // a model length times a model length is an area, and an area divided by an
@@ -184,18 +192,17 @@ message FilterComputedValue {
     FilterComputedValues multiply = 5;
     // The first value divided by the second.
     FilterComputedPair divide = 6;
-    // The least whole number at or above the value. Before rounding, a
-    // value v within 64 × 2^-52 × max(1, |v|) of a whole number is that
-    // number, so float error does not move an exact whole number. Takes only
-    // a plain number: divide a quantity by a step first.
+    // The least whole number at or above the value, after the value snaps
+    // as a plain result does (see above), so float error does not move an
+    // exact whole number. Takes only a plain number: divide a quantity by a
+    // step first.
     FilterComputedValue ceil = 7;
     // The greatest whole number at or below the value, with the same
     // snapping and the same plain number rule as `ceil`.
     FilterComputedValue floor = 8;
-    // The nearest whole number. A value halfway between two whole numbers
-    // rounds away from zero, so 2.5 is 3 and -2.5 is -3. A value within the
-    // tolerance of `ceil` of a half rounds as the half. Takes only a plain
-    // number, as `ceil` does.
+    // The nearest whole number, after the value snaps. A value halfway
+    // between two whole numbers rounds away from zero, so 2.5 is 3 and -2.5
+    // is -3. Takes only a plain number, as `ceil` does.
     FilterComputedValue round = 9;
   }
 }
