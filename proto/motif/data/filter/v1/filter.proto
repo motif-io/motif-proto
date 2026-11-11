@@ -3,8 +3,9 @@ syntax = "proto3";
 // Filter expressions select model entities.
 //
 // An unknown field, required oneof arm, enum value, component ID, or field
-// path, or a target index past the end of `targets`, makes the entire filter
-// unreadable; it does not mean the filter matches nothing.
+// path, a target index past the end of `targets`, or a source on the read of
+// a computed value, makes the entire filter unreadable; it does not mean the
+// filter matches nothing.
 //
 // Length, angle, and area operands and literals use SI units: meters,
 // radians, and square meters. Text equality, inequality, membership,
@@ -144,9 +145,7 @@ message FilterProperty {
     FilterParameter parameter = 3;
     FilterForeignProperty foreign = 4;
     // A value computed from other properties. Its reads name their own
-    // sources, so a read of a computed value takes no source; one with a
-    // source makes the filter unreadable, as a source that a property cannot
-    // take does.
+    // sources, so a read of a computed value takes no source.
     FilterComputedValue computed = 5;
   }
 }
