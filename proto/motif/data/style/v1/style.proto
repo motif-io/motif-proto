@@ -439,7 +439,7 @@ message GraphicStyleBinding {
 // Replacing the list is one edit. This component does not store view overrides
 // or change visibility rules.
 message GraphicStyleBindings {
-  option (motif.extension.v1.message).component = 230;
+  option (motif.extension.v1.message).component = 238;
 
   // The lowest reader version that understands every field in this component.
   // Writers raise it when using a field introduced by a later version. Readers
