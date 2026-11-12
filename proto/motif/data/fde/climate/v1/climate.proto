@@ -1,0 +1,189 @@
+syntax = "proto3";
+
+// FDE climate study components: the sun for one study, the sensor grid that
+// study samples, and the scalar results on that grid.
+//
+// Site location is not stored here. A study copies latitude, longitude,
+// elevation, and true north from `ProjectGeolocation` (78) and
+// `SharedCoordinateOrigin` (79) onto `SunPath` when it is created. Editing the
+// site later does not rewrite an existing study. `ModelPlacement` (80) places
+// the model on the site and is not part of the study.
+package motif.data.fde.climate.v1;
+
+import "buf/validate/validate.proto";
+import "motif/data/geometry/v1/geometry.proto";
+import "motif/extension/v1/options.proto";
+import "motif/extension/v1/reference.proto";
+
+// A civil date and time. This is wall-clock time at the study, not a UTC
+// instant. The UTC offset lives on `SunPath`.
+message CivilDateTime {
+  // Year, in the range [1900, 2200].
+  uint32 year = 1 [(buf.validate.field).uint32 = {
+    gte: 1900
+    lte: 2200
+  }];
+  // Month, in the range [1, 12].
+  uint32 month = 2 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 12
+  }];
+  // Day of the month, in the range [1, 31].
+  uint32 day = 3 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 31
+  }];
+  // Hour, in the range [0, 23].
+  uint32 hour = 4 [(buf.validate.field).uint32 = {lte: 23}];
+  // Minute, in the range [0, 59].
+  uint32 minute = 5 [(buf.validate.field).uint32 = {lte: 59}];
+  // Second, in the range [0, 59].
+  uint32 second = 6 [(buf.validate.field).uint32 = {lte: 59}];
+}
+
+// Where and when the sun is for one study.
+//
+// The geographic fields are a snapshot. They default from the site's
+// `ProjectGeolocation` and `SharedCoordinateOrigin` at creation and then stay
+// with this entity, so a saved study keeps the sky it was run under.
+message SunPath {
+  option (motif.extension.v1.message).component = 234;
+
+  // Latitude in degrees, in the range [-90, 90].
+  double latitude_degrees = 1 [(buf.validate.field).double = {
+    gte: -90
+    lte: 90
+  }];
+  // Longitude in degrees, in the range [-180, 180].
+  double longitude_degrees = 2 [(buf.validate.field).double = {
+    gte: -180
+    lte: 180
+  }];
+  // Clockwise angle, in degrees, from geographic north to model +Y, looking
+  // down +Z. Copied from `SharedCoordinateOrigin.angle_to_true_north_degrees`.
+  double true_north_degrees = 3;
+  // Minutes east of UTC, in the range [-840, 840].
+  int32 utc_offset_minutes = 4 [(buf.validate.field).int32 = {
+    gte: -840
+    lte: 840
+  }];
+  // Elevation above sea level, in meters. Copied from `ProjectGeolocation`
+  // when set.
+  optional double elevation_meters = 5;
+  // The civil moment this study is showing. Unset until a moment is chosen.
+  optional CivilDateTime active_moment = 6;
+  // Label of the weather file used for this study, such as an EPW name.
+  optional string weather_label = 7 [(buf.validate.field).string = {max_len: 256}];
+  // Radius, in meters, of the sun-path diagram drawn around the observer.
+  optional double celestial_radius_meters = 8 [(buf.validate.field).double = {
+    gt: 0
+    lte: 10000
+  }];
+}
+
+// How an analysis grid was generated.
+enum AnalysisGridKind {
+  // Unspecified. Treat as custom sensors.
+  ANALYSIS_GRID_KIND_UNSPECIFIED = 0;
+  // Uniform samples on a planar face.
+  ANALYSIS_GRID_KIND_FACE_UNIFORM = 1;
+  // A horizontal workplane in a room.
+  ANALYSIS_GRID_KIND_ROOM_WORKPLANE = 2;
+  // Sensors supplied directly, not generated from a face or room.
+  ANALYSIS_GRID_KIND_CUSTOM = 3;
+}
+
+// One sample point. `normal` points toward the hemisphere being measured.
+message AnalysisSensor {
+  // Sensor position, in model meters (Z-up).
+  motif.data.geometry.v1.Point3 position = 1;
+  // Unit normal at the sensor, in model space (Z-up).
+  motif.data.geometry.v1.UnitVector3 normal = 2;
+}
+
+// The sensor layout for one study.
+//
+// Sensors are the persisted contract. Index i in `sensors` is the join key for
+// `AnalysisGridValues.values[i]`. Spacing and the source entity record how the
+// sensors were generated; they are not a second definition of the grid.
+message AnalysisGrid {
+  option (motif.extension.v1.message).component = 235;
+
+  // Stable identifier for this grid. Letters, digits, underscore, and hyphen.
+  string identifier = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 100
+    pattern: "^[A-Za-z0-9_-]+$"
+  }];
+  // Name shown for this grid.
+  optional string display_name = 2 [(buf.validate.field).string = {max_len: 256}];
+  // How the sensors were produced.
+  AnalysisGridKind kind = 3;
+  // Ordered sensors. Required, and the order is the join key for results.
+  repeated AnalysisSensor sensors = 4 [(buf.validate.field).repeated.min_items = 1];
+  // The face or room entity this grid was subdivided from, when there is one.
+  motif.extension.v1.EntityReference source_entity = 5;
+  // A mesh entity whose faces or vertices line up with `sensors`, for display.
+  motif.extension.v1.EntityReference mesh_entity = 6;
+  // Sample spacing, in meters, when the sensors were generated on a regular grid.
+  optional double spacing_meters = 7 [(buf.validate.field).double = {gt: 0}];
+  // Distance, in meters, that sensors are lifted along their normal.
+  optional double offset_meters = 8;
+  // Domain outline as a little-endian WKB MultiPolygon, in sensor-local UV
+  // meters. The UV basis is the same one used by `cell_wkb`.
+  optional bytes domain_wkb = 9;
+  // One little-endian WKB MultiPolygon per sensor, in that sensor's local UV
+  // meters. When set, the length matches `sensors`. UV origin is the sensor
+  // position; U and V are a tangent basis derived from the sensor normal.
+  repeated bytes cell_wkb = 10;
+}
+
+// The quantity stored in `AnalysisGridValues`.
+enum AnalysisQuantity {
+  // Unspecified. Use `unit` to interpret the numbers.
+  ANALYSIS_QUANTITY_UNSPECIFIED = 0;
+  // Hours of direct sun.
+  ANALYSIS_QUANTITY_DIRECT_SUN_HOURS = 1;
+  // Irradiance, in W/m². Instant or a period mean; see `period_label`.
+  ANALYSIS_QUANTITY_IRRADIANCE = 2;
+  // Illuminance, in lux.
+  ANALYSIS_QUANTITY_ILLUMINANCE = 3;
+  // A quantity named by `unit`.
+  ANALYSIS_QUANTITY_CUSTOM = 15;
+}
+
+// Scalar results for one `AnalysisGrid`.
+//
+// Geometry stays on the grid so a re-run can replace these values without
+// rewriting sensors. `values` is parallel to `AnalysisGrid.sensors`; the
+// lengths match. One grid entity typically carries one active values payload.
+// A second quantity is a second `AnalysisGridValues` on its own entity, or a
+// replacement of this one.
+message AnalysisGridValues {
+  option (motif.extension.v1.message).component = 236;
+
+  // The `AnalysisGrid` these values apply to. Required.
+  motif.extension.v1.EntityReference grid = 1 [(buf.validate.field).required = true];
+  // What `values` measures.
+  AnalysisQuantity quantity = 2;
+  // Unit string, for example "hours", "W/m2", or "lux".
+  string unit = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 32
+  }];
+  // One value per sensor, in `sensors` order.
+  repeated double values = 4 [(buf.validate.field).repeated.min_items = 1];
+  // The `SunPath` this result was computed under, when the study has one.
+  motif.extension.v1.EntityReference sun_path = 5;
+  // The civil moment for a point-in-time result.
+  optional CivilDateTime moment = 6;
+  // Period the values summarize, for example "annual" or "21 Jun 12:00".
+  optional string period_label = 7 [(buf.validate.field).string = {max_len: 256}];
+  // Number of sun directions aggregated into each value, when the quantity is
+  // a sum or mean over directions.
+  optional uint32 vector_count = 8;
+  // Lower end of the legend range used to color these values.
+  optional double legend_min = 9;
+  // Upper end of the legend range used to color these values.
+  optional double legend_max = 10;
+}
