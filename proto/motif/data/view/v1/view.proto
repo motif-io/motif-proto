@@ -431,6 +431,89 @@ message VisibilityRules {
   }
 }
 
+// Sparse graphic exceptions owned by one view. This component does not change
+// model styles, source entities, visibility, or other views. A missing property
+// inherits from the next applicable resolution layer; resetting an exception
+// removes the property or entry instead of copying the inherited value.
+//
+// An explicitly authored entity property wins over these exceptions. An
+// element exception wins over a filter binding. The first matching filter
+// binding wins; later matching bindings do not fill its unset properties.
+// Unset properties then inherit from the model graphic style and the applicable
+// source, legacy view, and built-in fallbacks. Annotations skip legacy view
+// defaults. Cap fill remains in its existing view and element components.
+message ViewGraphicOverrides {
+  option (motif.extension.v1.message).component = 239;
+
+  // The lowest reader version that understands every field and variant in
+  // this component, including nested messages. Writers raise it when using a
+  // newer field or variant. A reader below it must not apply or rewrite this
+  // component, including when copying a view. Version 0 covers this schema.
+  uint32 min_reader_version = 1;
+
+  // Ordered by priority, highest first. Each saved filter may appear at most
+  // once. A missing, unreadable, or unevaluated filter must not be silently
+  // treated as a non-match. An empty delta is removed by writers.
+  repeated ViewGraphicFilterBinding bindings = 2;
+
+  // At most one entry per source entity. Writers remove empty deltas. Entries
+  // refer to stable entity IDs; replacing an entity with a new ID does not
+  // transfer its exception.
+  repeated ViewGraphicElementOverride elements = 3;
+}
+
+// One saved-filter binding and its view-local sparse graphic exception.
+message ViewGraphicFilterBinding {
+  // A SavedFilter in the model containing the view. The binding follows edits
+  // to that filter; it does not store a snapshot of its current matches.
+  motif.extension.v1.EntityReference filter = 1 [(buf.validate.field).required = true];
+
+  // Properties set for the first matching binding.
+  ViewGraphicDelta delta = 2 [(buf.validate.field).required = true];
+}
+
+// One source entity's view-local sparse graphic exception.
+message ViewGraphicElementOverride {
+  // Source entity in the model containing the view. Cross-model element
+  // references require a separate identity and versioning contract.
+  motif.extension.v1.EntityReference source = 1 [(buf.validate.field).required = true];
+
+  // Properties set for this source in the containing view.
+  ViewGraphicDelta delta = 2 [(buf.validate.field).required = true];
+}
+
+// Independent sparse stroke exceptions for cut and projection graphics.
+// Material application and fill properties are outside this component's scope.
+message ViewGraphicDelta {
+  // Cut stroke. Unset leaves all cut properties to the next layer.
+  ViewGraphicStroke cut = 1;
+
+  // Projection stroke. Unset leaves all projection properties to the next layer.
+  ViewGraphicStroke projection = 2;
+}
+
+// Independently optional stroke properties. An absent property inherits.
+message ViewGraphicStroke {
+  // Pen-table index; an unset pen inherits.
+  optional uint32 pen_size = 1 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 16
+  }];
+
+  // Explicit color. Black is a value and is distinct from an unset color.
+  motif.data.style.v1.Color color = 2;
+
+  // An unset pattern inherits. The named pattern "Solid" and an inline empty
+  // cycle both explicitly select a continuous stroke.
+  oneof pattern {
+    // Built-in or catalog-qualified line pattern name.
+    string pattern_ref = 3 [(buf.validate.field).string.min_len = 1];
+
+    // Inline line pattern, in printed-paper units.
+    motif.data.style.v1.LinePattern pattern_def = 4;
+  }
+}
+
 // The result of projecting a source entity's geometry through a view's
 // hidden-line-removal pipeline. Lives on per-(source, view) derived entities
 // created by change propagation.
