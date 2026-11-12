@@ -59,10 +59,11 @@ package motif.data.graphics.v1;
 // - Split vertices at UV seams and abrupt color boundaries, copying all
 //   attributes into each duplicate. Equal positions with different indices
 //   remain separate; the importer does not weld them.
-// - Use linear RGB `FLOAT32` vertex colors with three channels, ordinarily
-//   in [0,1]. Convert sRGB source colors before packing. On triangle surfaces,
-//   vertex colors multiply the base color; use a white base color for their
-//   original tint.
+// - Use linear RGB `FLOAT32` vertex colors with three channels. Convert sRGB
+//   source colors before packing. On triangle surfaces, vertex colors multiply
+//   the base color per channel; use a white base color for their original tint.
+//   Keep channels in [0,1] for physically lit surfaces. Unlit surfaces may use
+//   values > 1.0, for example to represent data scaled through the base color.
 // - Use primary `UV` with two channels for texture coordinates. UVs require
 //   appropriate texture/material styling to produce a textured surface.
 //   `UV_1`, named attributes, and indirect attribute accessors are unsupported.
@@ -220,8 +221,18 @@ package motif.data.graphics.v1;
 // ## Color representation
 //
 // RGB channels are linear. No color-space conversion or channel clamping is
-// performed during import. Use `FLOAT32` values, ordinarily in [0,1], and
-// convert source sRGB colors before packing.
+// performed during import. Use `FLOAT32` values and convert source sRGB colors
+// before packing.
+//
+// On physically lit surfaces, vertex colors are per-channel multipliers on the
+// base color. Keep each channel in [0,1]: values > 1.0 can make the surface
+// reflect more light than it receives, violating energy conservation in
+// physically based rendering (PBR).
+//
+// On unlit surfaces, values > 1.0 are acceptable. For example, a data visualization
+// can store data values directly as vertex colors and adjust the base color
+// programmatically to scale the output. Values > 1.0 would also be appropriate
+// for HDR display output, which is not yet supported.
 //
 // ## Interaction with styling
 //
