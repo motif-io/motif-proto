@@ -7,13 +7,12 @@ syntax = "proto3";
 // a computed value, makes the entire filter unreadable; it does not mean the
 // filter matches nothing.
 //
-// Length, angle, and area operands and literals use SI units: meters,
-// radians, and square meters. Text equality, inequality, membership,
-// containment, and prefix tests ignore case using Unicode simple case
-// folding. Numeric comparisons use the display precision of the model that
-// applies the filter for lengths, angles, and areas, so results can vary
-// between models. Every test except `not_exists` fails for an entity with no
-// value.
+// Length, angle, and area operands use SI units: meters, radians, and square
+// meters. Text equality, inequality, membership, containment, and prefix
+// tests ignore case using Unicode simple case folding. Numeric comparisons
+// use the display precision of the model that applies the filter for
+// lengths, angles, and areas, so results can vary between models. Every test
+// except `not_exists` fails for an entity with no value.
 //
 // Readers accept at least 32 levels of nesting in the expression, and
 // computed values of at least 8 levels and 256 nodes. Each operation, and
@@ -177,13 +176,21 @@ message FilterProperty {
 // measures. A computation whose result is not a plain number, a length, an
 // angle, or an area, or that reads a property that is not a number, fails
 // to compile; the filter stays readable.
+//
+// A literal is a number with no measure of its own; its measure comes from
+// where it is. In a sum or a difference it takes the measure of the values
+// that it meets, in the SI unit of that measure, so a width plus 0.5 adds
+// 0.5 meters. In a product or a quotient it is a plain factor, so an area
+// divided by 2 is an area and a width times 2 is a length. A computation of
+// literals alone is a plain number.
 message FilterComputedValue {
   oneof value {
     option (buf.validate.oneof).required = true;
 
     // A property of the entity, read from its source.
     FilterPropertyRead read = 1;
-    FilterQuantity literal = 2;
+    // A literal number. See above for its measure.
+    double literal = 2 [(buf.validate.field).double.finite = true];
     // The sum of the values.
     FilterComputedValues add = 3;
     // The first value minus the second.
@@ -192,17 +199,17 @@ message FilterComputedValue {
     FilterComputedValues multiply = 5;
     // The first value divided by the second.
     FilterComputedPair divide = 6;
-    // The least whole number at or above the value, after the value snaps
-    // as a plain result does (see above), so float error does not move an
-    // exact whole number. Takes only a plain number: divide a quantity by a
-    // step first.
+    // The least whole number at or above the value in its SI unit, after the
+    // value snaps as a plain result does (see above), so float error does
+    // not move an exact whole number. The result keeps the measure of the
+    // value: `ceil` of an area rounds up to whole square meters.
     FilterComputedValue ceil = 7;
-    // The greatest whole number at or below the value, with the same
-    // snapping and the same plain number rule as `ceil`.
+    // The greatest whole number at or below the value in its SI unit, with
+    // the same snapping and the same measure as `ceil`.
     FilterComputedValue floor = 8;
-    // The nearest whole number, after the value snaps. A value halfway
-    // between two whole numbers rounds away from zero, so 2.5 is 3 and -2.5
-    // is -3. Takes only a plain number, as `ceil` does.
+    // The nearest whole number to the value in its SI unit, after the value
+    // snaps, with the same measure as `ceil`. A value halfway between two
+    // whole numbers rounds away from zero, so 2.5 is 3 and -2.5 is -3.
     FilterComputedValue round = 9;
   }
 }
@@ -219,27 +226,6 @@ message FilterComputedValues {
 message FilterComputedPair {
   FilterComputedValue left = 1 [(buf.validate.field).required = true];
   FilterComputedValue right = 2 [(buf.validate.field).required = true];
-}
-
-// A literal number of a computed value, in the SI unit of its measure.
-message FilterQuantity {
-  double value = 1 [(buf.validate.field).double.finite = true];
-  // Unset for a plain number.
-  FilterMeasure measure = 2 [(buf.validate.field).enum.defined_only = true];
-}
-
-// What a literal quantity measures.
-enum FilterMeasure {
-  // A plain number, with no unit.
-  FILTER_MEASURE_UNSPECIFIED = 0;
-  // A length in model space, in meters.
-  FILTER_MEASURE_MODEL_LENGTH = 1;
-  // A length on paper, in meters.
-  FILTER_MEASURE_PAPER_LENGTH = 2;
-  // An angle, in radians.
-  FILTER_MEASURE_ANGLE = 3;
-  // An area in model space, in square meters.
-  FILTER_MEASURE_AREA = 4;
 }
 
 // A persisted component field, identified by component ID and field-number
