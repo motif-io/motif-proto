@@ -52,6 +52,18 @@ message TextSpanV2 {
 
   // Unset style values inherit TextBlockV2 defaults, as for TextSpan.
   TextStyle style = 3;
+
+  // Authored text that stands in for a property's resolved value during
+  // definition editing or explicit placeholder preview. Uses the span's
+  // style and block's layout.
+  //
+  // Does not supply a parameter default or instance value, and must not
+  // replace unresolved, invalid, or explicitly blank resolved values.
+  // Normal placed rendering and export use the actual resolved value.
+  //
+  // Absent means no authored placeholder; present but empty means an
+  // intentionally empty placeholder. Ignored for literal spans.
+  optional string placeholder = 4;
 }
 
 // A property selector and the entity or placement context to read it from.
