@@ -1,0 +1,30 @@
+// The messages in this file are unstable APIs. Motif makes no guarantees that
+// these messages will continue to be supported.
+
+syntax = "proto3";
+
+package motif.data.operation.v1;
+
+import "buf/validate/validate.proto";
+import "motif/extension/v1/reference.proto";
+
+// A reference to an input slot of the immediately enclosing graph definition.
+//
+// This explicit dependency lets an internal node consume the enclosing graph's
+// inputs. The target must match the enclosing definition in the Member hierarchy;
+// pointing at another definition is a graph validation error. Member expresses
+// containment and ownership; this reference expresses the data dependency.
+//
+// When the graph is invoked, the input resolves from that invocation's bindings,
+// with declaration defaults as fallback. Standalone evaluation uses declaration
+// defaults without requiring a caller. The reference selects a whole slot.
+message InputSlotReference {
+  // Required entity of the immediately enclosing graph definition, resolved
+  // using EntityReference model-scoping rules.
+  motif.extension.v1.EntityReference entity = 1 [(buf.validate.field).required = true];
+  // Key in the target definition's InputDeclarations.slots map.
+  string input_name = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 50
+  }];
+}

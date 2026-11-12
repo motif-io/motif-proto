@@ -1,0 +1,46 @@
+// The messages in this file are unstable APIs. Motif makes no guarantees that
+// these messages will continue to be supported.
+
+syntax = "proto3";
+
+package motif.data.operation.v1;
+
+import "buf/validate/validate.proto";
+import "motif/extension/v1/type.proto";
+
+// The element type and cardinality of an operation input or output slot.
+//
+// TypeSpec describes one protobuf message or scalar kind. Its cardinality is
+// REQUIRED for exactly one member (ONE), OPTIONAL for zero or one (ZERO_OR_ONE),
+// or REPEATED for any number (MANY). UNKNOWN, enum, and group kinds are invalid
+// as slot types; a message may still contain enum fields.
+//
+// REQUIRED may widen to OPTIONAL or REPEATED, and OPTIONAL to REPEATED.
+// Widening preserves member identity and order, with successful absence becoming
+// zero members. It does not flatten repeated fields inside a member's message.
+// Narrowing and extraction require explicit operations; failures remain failures.
+//
+// A message type_name is its exact, fully qualified protobuf name in the schema
+// registry, without a leading dot. Scalars have no type_name. A type URL's prefix
+// is transport metadata, not part of that logical message identity.
+message SlotType {
+  // Required message/scalar type and cardinality, constrained by the rules below.
+  motif.extension.v1.TypeSpec type_spec = 1 [(buf.validate.field).required = true];
+
+  // Validation is local to operation slots, without tightening shared TypeSpec.
+  option (buf.validate.message).cel = {
+    id: "slot_type.cardinality"
+    message: "operation slot cardinality must be REQUIRED, OPTIONAL, or REPEATED"
+    expression: "this.type_spec.cardinality in [1, 2, 3]"
+  };
+  option (buf.validate.message).cel = {
+    id: "slot_type.kind"
+    message: "operation slots require a protobuf message or supported scalar kind"
+    expression: "this.type_spec.kind in [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 15, 16, 17, 18]"
+  };
+  option (buf.validate.message).cel = {
+    id: "slot_type.type_name"
+    message: "messages require a fully qualified protobuf name; scalars have no type_name"
+    expression: "this.type_spec.kind == 11 ? this.type_spec.type_name.matches('^[A-Za-z_][A-Za-z0-9_]*([.][A-Za-z_][A-Za-z0-9_]*)+$') : this.type_spec.type_name == ''"
+  };
+}

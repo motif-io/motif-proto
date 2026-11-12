@@ -1,0 +1,25 @@
+// The messages in this file are unstable APIs. Motif makes no guarantees that
+// these messages will continue to be supported.
+
+syntax = "proto3";
+
+package motif.operations.geometry.v1;
+
+import "buf/validate/validate.proto";
+import "motif/operations/expressions/v1/vector3_expression.proto";
+
+// An expression-based definition of a plane's position and orientation.
+//
+// Evaluating origin and normal locates the plane and determines its perpendicular
+// direction. The optional axis_u supplies an in-plane orientation hint; when it
+// is omitted, the evaluator chooses that direction. All expressions use the
+// same variable environment and coordinate system. The recipe specifies no
+// finite extent.
+message PlaneRecipe {
+  // Required point on the plane, in the consuming operation's coordinate units.
+  motif.operations.expressions.v1.Vector3Expression origin = 1 [(buf.validate.field).required = true];
+  // Required perpendicular direction. Evaluation must produce a nonzero vector.
+  motif.operations.expressions.v1.Vector3Expression normal = 2 [(buf.validate.field).required = true];
+  // Optional direction hint for the plane's local U axis.
+  motif.operations.expressions.v1.Vector3Expression axis_u = 3;
+}

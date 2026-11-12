@@ -1,0 +1,19 @@
+// The messages in this file are unstable APIs. Motif makes no guarantees that
+// these messages will continue to be supported.
+
+syntax = "proto3";
+
+package motif.operations.reference_geometry.v1;
+
+import "motif/operations/reference_geometry/v1/reference_geometry_recipe.proto";
+
+// A collection of recipes for generating geometric references.
+//
+// Evaluate the recipes against one explicitly supplied variable environment.
+// Recipe IDs identify references within the collection and must be unique.
+// Keeping IDs stable across evaluations lets consumers identify the same
+// reference when its geometry changes.
+message ReferenceGeometryDefinition {
+  // Reference recipes in authored order, with distinct IDs. May be empty.
+  repeated ReferenceGeometryRecipe recipes = 1;
+}

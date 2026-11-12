@@ -1,0 +1,19 @@
+// The messages in this file are unstable APIs. Motif makes no guarantees that
+// these messages will continue to be supported.
+
+syntax = "proto3";
+
+package motif.operations.values.v1;
+
+import "buf/validate/validate.proto";
+import "motif/data/values/v1/value.proto";
+
+// A map from names to individual scalar or protobuf message values.
+//
+// Use it to pass an explicit set of named data to an operation, such as an
+// expression evaluator. Each consumer determines which names it needs and the
+// expected types of their values. Map iteration order has no meaning.
+message NamedValues {
+  // Values keyed by nonempty, case-sensitive name. The map may be empty.
+  map<string, motif.data.values.v1.Value> values = 1 [(buf.validate.field).map.keys.string.min_len = 1];
+}

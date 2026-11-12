@@ -1,0 +1,23 @@
+// The messages in this file are unstable APIs. Motif makes no guarantees that
+// these messages will continue to be supported.
+
+syntax = "proto3";
+
+package motif.operations.expressions.v1;
+
+import "buf/validate/validate.proto";
+import "motif/operations/expressions/v1/scalar_expression.proto";
+
+// A three-coordinate vector whose coordinates are scalar expressions.
+//
+// All three coordinates are required and evaluated with the same supplied
+// variable environment. The consuming operation defines the coordinate system
+// and units.
+message Vector3Expression {
+  // Expression for the X coordinate.
+  ScalarExpression x = 1 [(buf.validate.field).required = true];
+  // Expression for the Y coordinate.
+  ScalarExpression y = 2 [(buf.validate.field).required = true];
+  // Expression for the Z coordinate.
+  ScalarExpression z = 3 [(buf.validate.field).required = true];
+}

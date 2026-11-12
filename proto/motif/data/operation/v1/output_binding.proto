@@ -1,0 +1,36 @@
+// The messages in this file are unstable APIs. Motif makes no guarantees that
+// these messages will continue to be supported.
+
+syntax = "proto3";
+
+package motif.data.operation.v1;
+
+import "buf/validate/validate.proto";
+import "motif/data/operation/v1/input_slot_reference.proto";
+import "motif/data/operation/v1/output_slot_reference.proto";
+import "motif/data/operation/v1/slot_literal.proto";
+
+// One source of values for a named output slot.
+//
+// The destination name selects a declaration; the source supplies its entire
+// slot value or a literal. Multiple records may target a MANY slot, concatenated
+// in binding-list order while preserving each source's member order. ONE and
+// ZERO_OR_ONE slots accept at most one record.
+message OutputBinding {
+  // Destination key in the OutputDeclarations.slots map.
+  string output_name = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 50
+  }];
+
+  oneof source {
+    option (buf.validate.oneof).required = true;
+
+    // Concrete values stored in this binding, including an explicit empty list.
+    SlotLiteral literal = 1;
+    // Values produced by a named output of an invocation.
+    OutputSlotReference output = 2;
+    // Values supplied to an input of the immediately enclosing graph definition.
+    InputSlotReference input = 3;
+  }
+}

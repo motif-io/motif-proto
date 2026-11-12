@@ -1,0 +1,24 @@
+// The messages in this file are unstable APIs. Motif makes no guarantees that
+// these messages will continue to be supported.
+
+syntax = "proto3";
+
+package motif.data.operation.v1;
+
+import "motif/data/operation/v1/output_binding.proto";
+import "motif/extension/v1/options.proto";
+
+// Connections from internal values to a graph definition's declared outputs.
+//
+// Place these components on direct Member children of the graph definition.
+// Each output slot must have exactly one owning OutputBindings component, even
+// for MANY. One component may publish several slots and may supply multiple
+// ordered contributions to a MANY slot. Graph validation checks ownership,
+// destination names, source types, and permitted member counts.
+message OutputBindings {
+  option (motif.extension.v1.message).component = 242;
+
+  // Ordered contributions to outputs declared by the enclosing definition.
+  // MANY concatenates binding-list order and each source's member order.
+  repeated OutputBinding bindings = 1;
+}

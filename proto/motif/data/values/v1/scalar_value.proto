@@ -1,0 +1,35 @@
+// The messages in this file are unstable APIs. Motif makes no guarantees that
+// these messages will continue to be supported.
+
+syntax = "proto3";
+
+package motif.data.values.v1;
+
+import "buf/validate/validate.proto";
+
+// A protobuf scalar with explicit primitive kind and presence.
+//
+// Selecting a oneof member preserves zero, false, and empty values as supplied
+// data. Choose the member matching the consumer's declared protobuf scalar kind;
+// matching numeric magnitude does not imply conversion between kinds.
+message ScalarValue {
+  oneof value {
+    option (buf.validate.oneof).required = true;
+
+    double double_value = 1;
+    float float_value = 2;
+    int32 int32_value = 3;
+    int64 int64_value = 4;
+    uint32 uint32_value = 5;
+    uint64 uint64_value = 6;
+    sint32 sint32_value = 7;
+    sint64 sint64_value = 8;
+    fixed32 fixed32_value = 9;
+    fixed64 fixed64_value = 10;
+    sfixed32 sfixed32_value = 11;
+    sfixed64 sfixed64_value = 12;
+    bool bool_value = 13;
+    string string_value = 14;
+    bytes bytes_value = 15;
+  }
+}
