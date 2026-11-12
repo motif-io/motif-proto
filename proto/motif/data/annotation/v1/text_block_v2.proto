@@ -35,6 +35,10 @@ message TextBlockV2 {
   // missing entries mean no list, extra entries are ignored, and numbering is
   // derived. A property value containing newlines contributes paragraph breaks.
   repeated ListKind paragraph_lists = 4;
+
+  // Provenance of default_style.color. An absent color remains inherited
+  // regardless of this field.
+  TextColorProvenance default_color_provenance = 5;
 }
 
 // A literal or property read with optional style overrides.
@@ -64,6 +68,22 @@ message TextSpanV2 {
   // Absent means no authored placeholder; present but empty means an
   // intentionally empty placeholder. Ignored for literal spans.
   optional string placeholder = 4;
+
+  // Provenance of style.color. An absent color inherits regardless of this
+  // field.
+  TextColorProvenance color_provenance = 5;
+}
+
+// How a stored text color came to be set. Readers must not assume that an
+// unspecified or unrecognized value represents an authored override.
+enum TextColorProvenance {
+  // Records written without provenance remain ambiguous.
+  TEXT_COLOR_PROVENANCE_UNSPECIFIED = 0;
+  // A user or agent explicitly selected this color.
+  TEXT_COLOR_PROVENANCE_AUTHORED = 1;
+  // A writer stored the then-current creation default, without an explicit
+  // color choice; graphic-style resolution may inherit instead.
+  TEXT_COLOR_PROVENANCE_CREATION_DEFAULT = 2;
 }
 
 // A property selector and the entity or placement context to read it from.
