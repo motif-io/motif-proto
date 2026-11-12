@@ -161,16 +161,18 @@ message FilterProperty {
 // when a result is not finite. Imported text has no value; an imported
 // number is a plain number.
 //
-// A result that is a plain number snaps: a value v becomes the whole number
-// nearest v when it is within 64 × 2^-52 × max(1, |v|) of v; else the
-// decimal with the fewest digits after the point that is within
-// 64 × 2^-52 × |v| of v and has one digit after the point or at most 12
-// significant digits. A value with no such decimal stays as it is. So
-// 0.1 + 0.2 is 0.3, 7 / 3 keeps its digits, and float error does not split
-// values that are equal.
+// A result snaps, as a number in the SI unit of its measure: a value v
+// becomes the whole number nearest v when it is within
+// 64 × 2^-52 × max(1, |v|) of v; else the decimal with the fewest digits
+// after the point that is within 64 × 2^-52 × |v| of v and has one digit
+// after the point or at most 12 significant digits. A value with no such
+// decimal stays as it is. So 0.1 + 0.2 is 0.3, 0.9 m × 2.1 m is 1.89 m²,
+// 7 / 3 keeps its digits, and float error does not split values that are
+// equal. A computation that reads another computed value reads its snapped
+// result.
 //
-// Measures must agree. Values that are added or subtracted have the same
-// measure. A product or a quotient has the measure that its parts make, so
+// Measures must agree. Values that read a property and are added or
+// subtracted have the same measure. A product or a quotient has the measure that its parts make, so
 // a model length times a model length is an area, and an area divided by an
 // area is a plain number. Model length and paper length are separate
 // measures. A computation whose result is not a plain number, a length, an
@@ -181,7 +183,8 @@ message FilterProperty {
 // where it is. In a sum or a difference it takes the measure of the values
 // that it meets, in the SI unit of that measure, so a width plus 0.5 adds
 // 0.5 meters. In a product or a quotient it is a plain factor, so an area
-// divided by 2 is an area and a width times 2 is a length. A computation of
+// divided by 2 is an area and a width times 2 is a length. A part of
+// literals alone, such as 2 × 3, acts as one literal. A computation of
 // literals alone is a plain number.
 message FilterComputedValue {
   oneof value {
@@ -200,8 +203,8 @@ message FilterComputedValue {
     // The first value divided by the second.
     FilterComputedPair divide = 6;
     // The least whole number at or above the value in its SI unit, after the
-    // value snaps as a plain result does (see above), so float error does
-    // not move an exact whole number. The result keeps the measure of the
+    // value snaps as a result does (see above), so float error does not move
+    // an exact whole number. The result keeps the measure of the
     // value: `ceil` of an area rounds up to whole square meters.
     FilterComputedValue ceil = 7;
     // The greatest whole number at or below the value in its SI unit, with
