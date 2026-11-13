@@ -137,7 +137,8 @@ message FilterPathList {
   // The text that joins the segments of a value, such as "/".
   string separator = 1 [(buf.validate.field).string.min_len = 1];
 
-  // Each path is not empty and does not end with the separator.
+  // Each path is not empty, and split from the left, its last segment is
+  // not empty.
   repeated string paths = 2 [(buf.validate.field).repeated = {
     max_items: 1000
     items: {
