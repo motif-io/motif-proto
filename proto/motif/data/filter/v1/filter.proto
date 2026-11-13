@@ -190,9 +190,9 @@ message FilterProperty {
 //
 // `first_of` gives the first of its values that has a value, in order. A
 // value has none when it is missing, or when it is text that is empty or
-// holds only white space. Its values can be of any kind. When each is a read
-// of a property of one kind, such as text or a ratio, the result has that
-// kind. Else, when they all have one measure, the result has that measure,
+// holds only white space. Its values can be of any kind. When each is of one
+// kind, such as text or a ratio, and is a read of a property or a `first_of`
+// that keeps its kind, the result has that kind. Else, when they all have one measure, the result has that measure,
 // and a literal among them takes it as in a sum. Values of two or more
 // kinds, such as text and a literal, are plain values, as an imported
 // property holds them: text, a number, or a bool. A length, an angle, or an
