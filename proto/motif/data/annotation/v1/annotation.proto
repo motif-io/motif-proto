@@ -578,6 +578,8 @@ message DimensionSource {
   message PublishedDatum {
     // Durable owner-local ReferenceGeometry entry id. A circular consumer needs
     // a cylindrical datum and a compatible circular baseline on the same owner.
+    // Circular version 1 supports wall-face entries 4 and 5. Other identities
+    // require a reader version that declares their circular-source semantics.
     uint32 entry_id = 1 [(buf.validate.field).uint32.gt = 0];
   }
 
