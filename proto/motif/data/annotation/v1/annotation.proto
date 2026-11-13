@@ -412,11 +412,32 @@ message Dimension {
   // circle's fitted parameter frame. The direction runs through the current
   // resolved center. See DimensionSource for each selector's carrier plane.
   message CircularPlacement {
+    option (buf.validate.message).cel = {
+      id: "circular_text_offset_finite"
+      message: "circular text displacement must be finite"
+      expression: "!has(this.text_offset) || (!this.text_offset.x.isNan() && !this.text_offset.x.isInf() && !this.text_offset.y.isNan() && !this.text_offset.y.isInf())"
+    };
+
     // Counterclockwise angle from the carrier's positive U axis, radians.
     double owner_plane_angle_radians = 1 [(buf.validate.field).double.finite = true];
-    // Signed distance beyond the positive circular rim, meters. Negative
-    // values place the natural text anchor inside the supporting circle.
-    double rim_clearance = 2 [(buf.validate.field).double.finite = true];
+    // The natural text anchor on the ray through the current resolved center.
+    // Inside placement follows radius changes proportionally; outside placement
+    // preserves its distance beyond the rim.
+    oneof text_position {
+      option (buf.validate.oneof).required = true;
+      // Nonnegative distance beyond the positive circular rim, meters.
+      double outside_rim_clearance = 2 [(buf.validate.field).double = {
+        finite: true
+        gte: 0
+      }];
+      // Fraction of the current radius along the ray, from center (0) to rim (1).
+      // Zero keeps the natural text anchor centered through any radius edit.
+      double inside_radius_fraction = 4 [(buf.validate.field).double = {
+        finite: true
+        gte: 0
+        lte: 1
+      }];
+    }
     // Additional label displacement in model meters: X follows the attachment
     // ray and Y is its in-plane counterclockwise perpendicular. Unset is zero.
     OwnPlacement.TextOffset text_offset = 3;
@@ -565,22 +586,26 @@ message Dimension {
 // with Dimension; the two components are created, changed, and removed atomically.
 // Older readers must never rewrite an unsupported or incomplete pair.
 message DimensionSource {
-  option (motif.extension.v1.message).component = 239;
+  option (motif.extension.v1.message).component = 240;
 
   // Minimum version needed to interpret and rewrite BOTH components. Version 1
   // is the initial circular contract. Increase this whenever a change to either
   // component adds authored data or semantics an older writer cannot preserve.
+  // Writers must explicitly set 1 or higher. Unlike contracts that treat unset
+  // (0) as the initial version, zero is intentionally invalid for this pair.
   uint32 min_reader_version = 1 [(buf.validate.field).uint32.gte = 1];
   // The source owner in this model. Instance-backed sources name the instance,
   // never its materialized asset. All selectors use this single reference.
+  // An own_curve annotation source (DrawingContent) and its Dimension must
+  // belong to the same owning View through their Member chains.
   motif.extension.v1.EntityReference owner = 2 [(buf.validate.field).required = true];
 
   message PublishedDatum {
-    // Durable owner-local ReferenceGeometry entry id. A circular consumer needs
+    // Durable owner-local ReferenceGeometry reference id. A circular consumer needs
     // a cylindrical datum and a compatible circular baseline on the same owner.
     // Circular version 1 supports wall-face entries 4 and 5. Other identities
     // require a reader version that declares their circular-source semantics.
-    uint32 entry_id = 1 [(buf.validate.field).uint32.gt = 0];
+    uint32 reference_id = 1 [(buf.validate.field).uint32.gt = 0];
   }
 
   oneof selector {

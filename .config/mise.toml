@@ -32,4 +32,5 @@ run = [
   "buf breaking --against .git#ref=refs/remotes/origin/main",
   "taplo fmt --check",
   "mise run check-id-gaps",
+  "mise run test:dimension-source-evolution",
 ]
