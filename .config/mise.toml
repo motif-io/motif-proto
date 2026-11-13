@@ -20,6 +20,10 @@ description = "Fail if any gap between component type IDs exceeds the threshold"
 dir = "{{ config_root }}"
 run = "buf build -o -#format=json | jq -r --argjson max 15 -f tools/check-component-id-gaps.jq"
 
+[tasks."test:dimension-source-evolution"]
+description = "Exercise additive source metadata and forbidden reference additions against compiled descriptors"
+run = "bash tools/test-dimension-source-evolution.sh"
+
 [tasks.lint]
 description = "Run all linting checks locally (CI uses bufbuild/buf-action)"
 run = [

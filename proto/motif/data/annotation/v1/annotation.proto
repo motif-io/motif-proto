@@ -178,6 +178,11 @@ message ArrowheadStyleAsset {
 // enters changesets.
 message Dimension {
   option (motif.extension.v1.message).component = 120;
+  option (buf.validate.message).cel = {
+    id: "circular_placement_matches_kind"
+    message: "circular geometry and circular placement must appear together"
+    expression: "has(this.circular) == has(this.circular_placement)"
+  };
 
   // Which curve of the referenced entity a feature anchor evaluates: the
   // entity's own Curve2, an authored boundary segment, or a wall's symbolic
@@ -389,6 +394,34 @@ message Dimension {
     Ray b = 3;
   }
 
+  // The measured length of one circular source. The source identity is held
+  // by DimensionSource on the same entity, never in derived points or radii.
+  message CircularGeometry {
+    enum Measurement {
+      MEASUREMENT_UNSPECIFIED = 0;
+      MEASUREMENT_RADIUS = 1;
+      MEASUREMENT_DIAMETER = 2;
+    }
+    Measurement measurement = 1 [
+      (buf.validate.field).enum.defined_only = true,
+      (buf.validate.field).enum.not_in = 0
+    ];
+  }
+
+  // Placement in the source's stable carrier plane, independent of the
+  // circle's fitted parameter frame. The direction runs through the current
+  // resolved center. See DimensionSource for each selector's carrier plane.
+  message CircularPlacement {
+    // Counterclockwise angle from the carrier's positive U axis, radians.
+    double owner_plane_angle_radians = 1 [(buf.validate.field).double.finite = true];
+    // Signed distance beyond the positive circular rim, meters. Negative
+    // values place the natural text anchor inside the supporting circle.
+    double rim_clearance = 2 [(buf.validate.field).double.finite = true];
+    // Additional label displacement in model meters: X follows the attachment
+    // ray and Y is its in-plane counterclockwise perpendicular. Unset is zero.
+    OwnPlacement.TextOffset text_offset = 3;
+  }
+
   // The captured dimension plane: plane normal plus the signed in-plane offset
   // direction (which side of the measured line the dimension line sits on).
   // World-fixed in v1; the feature-relative frame is a reserved extension.
@@ -450,9 +483,9 @@ message Dimension {
     // For angular dimensions these are the label's tangent and radial axes.
     message TextOffset {
       // Displacement along the label axis, meters.
-      double x = 1;
+      double x = 1 [(buf.validate.field).double.finite = true];
       // Displacement perpendicular to the label axis, meters.
-      double y = 2;
+      double y = 2 [(buf.validate.field).double.finite = true];
     }
     // Per-span displacements in station order. Missing entries mean zero.
     // An angular dimension uses entry zero. Offsets are applied after legacy
@@ -481,6 +514,8 @@ message Dimension {
     LinearGeometry linear = 1;
     // Angular dimension.
     AngularGeometry angular = 2;
+    // Radius or diameter of the companion's associated circular source.
+    CircularGeometry circular = 7;
   }
 
   // How the dimension line is placed.
@@ -490,6 +525,8 @@ message Dimension {
     // placement, which is what puts every derived segment on one line by
     // construction rather than by keeping separate placements agreeing.
     OwnPlacement own = 3;
+    // Source-relative placement for circular geometry only.
+    CircularPlacement circular_placement = 8;
     // 4 unallocated. Previously earmarked for a `shared` arm referencing a
     // separate chain record, on the assumption a run would be many
     // two-witness dimensions. `LinearGeometry.anchors` makes a run one
@@ -516,12 +553,46 @@ message Dimension {
 
   // Field-number allocation (kind/placement oneofs and top-level fields share
   // this message's number space): 1-2 kind arms; 3-4 placement arms (4
-  // unallocated, see the oneof); 5 = style; 6 = witness_origin_offsets; future
-  // kind arms (radial) and other extensions take 7+.
+  // unallocated, see the oneof); 5 = style; 6 = witness_origin_offsets;
+  // 7 = circular geometry; 8 = circular placement; future extensions take 9+.
   //
   // A projected linear dimension does not take a kind arm of its own: aligned
   // and axis-projected differ only in which direction is measured, which is
   // `LinearGeometry.direction`. One kind, one resolver, one set of parts.
+}
+
+// One associated source for source-based dimension kinds. It shares an entity
+// with Dimension; the two components are created, changed, and removed atomically.
+// Older readers must never rewrite an unsupported or incomplete pair.
+message DimensionSource {
+  option (motif.extension.v1.message).component = 239;
+
+  // Minimum version needed to interpret and rewrite BOTH components. Version 1
+  // is the initial circular contract. Increase this whenever a change to either
+  // component adds authored data or semantics an older writer cannot preserve.
+  uint32 min_reader_version = 1 [(buf.validate.field).uint32.gte = 1];
+  // The source owner in this model. Instance-backed sources name the instance,
+  // never its materialized asset. All selectors use this single reference.
+  motif.extension.v1.EntityReference owner = 2 [(buf.validate.field).required = true];
+
+  message PublishedDatum {
+    // Durable owner-local ReferenceGeometry entry id. A circular consumer needs
+    // a cylindrical datum and a compatible circular baseline on the same owner.
+    uint32 entry_id = 1 [(buf.validate.field).uint32.gt = 0];
+  }
+
+  oneof selector {
+    option (buf.validate.oneof).required = true;
+    // The owner's Curve2. Its stable carrier is the owner's CoordinateSystem3
+    // or its owning sketch/workplane frame, independent of the circle's LCS.
+    google.protobuf.Empty own_curve = 3;
+    // The owner's circular wall baseline. The baseline's resolved drawing-plane
+    // U/V axes carry placement, independently of its circle's fitted LCS.
+    google.protobuf.Empty wall_baseline = 4;
+    // A published cylindrical wall face. It uses the same owner's circular
+    // baseline carrier and signed sweep; the cylinder supplies its axis/radius.
+    PublishedDatum published_datum = 5;
+  }
 }
 
 // A dimension's look: label text, the linework, the sizes that position the
