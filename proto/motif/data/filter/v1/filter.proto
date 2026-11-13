@@ -125,8 +125,10 @@ message FilterOperandList {
 
 // The paths of an `under` test, for values that name a place in a
 // hierarchy, such as a layer or a folder. A value and each path split into
-// segments at `separator`, and a value is under a path when it equals the
-// path or starts with the path's segments. Segments compare whole: with
+// segments at each `separator` from the left, and a value is under a path
+// when it equals the path or starts with the path's segments. So with
+// separator "::", "A:::B" splits into "A" and ":B", and nothing is under
+// "A:". Segments compare whole: with
 // separator "/", "A/B" and "A/B/C" are under "A/B", and "A/BC" is not. An
 // empty segment, as in "A//B", is a segment. Case is ignored as in the other
 // text tests. A value that is not text never matches, and an empty list of
