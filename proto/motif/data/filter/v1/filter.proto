@@ -149,17 +149,17 @@ message FilterProperty {
   }
 }
 
-// A number computed from the values that an entity holds. It is not
+// A value computed from the values that an entity holds. It is not
 // stored; it changes when its inputs change.
 //
 // A read names its own source, and a parameter read means what it means in
 // a condition. A parameter that its asset does not declare has no value and
 // takes any measure.
 //
-// An entity has no value when a read in the computation has no value or
+// An entity has no value when a read that arithmetic uses has no value or
 // holds a value that is not a number, when a division divides by zero, or
-// when a result is not finite. Imported text has no value; an imported
-// number is a plain number.
+// when a result is not finite. To arithmetic, imported text has no value
+// and an imported number is a plain number.
 //
 // A result snaps, as a number in the SI unit of its measure: a value v
 // becomes the whole number nearest v when it is within
@@ -175,7 +175,7 @@ message FilterProperty {
 // subtracted have the same measure. A product or a quotient has the measure that its parts make, so
 // a model length times a model length is an area, and an area divided by an
 // area is a plain number. Model length and paper length are separate
-// measures. A computation whose result is not a plain number, a length, an
+// measures. Arithmetic whose result is not a plain number, a length, an
 // angle, or an area, or that reads a property that is not a number, fails
 // to compile; the filter stays readable.
 //
@@ -186,6 +186,18 @@ message FilterProperty {
 // divided by 2 is an area and a width times 2 is a length. A part of
 // literals alone, such as 2 × 3, acts as one literal. A computation of
 // literals alone is a plain number.
+//
+// `first_of` gives the first of its values that has a value, in order. A
+// value has none when it is missing, or when it is text that is empty or
+// holds only white space. Its values can be of any kind. When they all have
+// one measure, the result has that measure, and a literal among them takes
+// it as in a sum. When they all have one other kind, such as text, the
+// result has that kind. Values of two or more kinds are plain values, as an
+// imported property holds them: text, a number, or a bool. A length, an
+// angle, or an area is then its number in SI units, a color its `#rrggbb`
+// text, and an enum value its name; a reference has no value. Arithmetic
+// reads the number of a `first_of`, and arithmetic over a `first_of` of text
+// fails to compile.
 message FilterComputedValue {
   oneof value {
     option (buf.validate.oneof).required = true;
@@ -214,10 +226,12 @@ message FilterComputedValue {
     // snaps, with the same measure as `ceil`. A value halfway between two
     // whole numbers rounds away from zero, so 2.5 is 3 and -2.5 is -3.
     FilterComputedValue round = 9;
+    // The first of the values that has a value. See above.
+    FilterComputedValues first_of = 10;
   }
 }
 
-// The values of an `add` or a `multiply`.
+// The values of an `add`, a `multiply`, or a `first_of`.
 message FilterComputedValues {
   repeated FilterComputedValue values = 1 [(buf.validate.field).repeated = {
     min_items: 2
