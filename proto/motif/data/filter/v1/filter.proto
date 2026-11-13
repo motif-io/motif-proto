@@ -113,12 +113,35 @@ message FilterCondition {
     string contains = 10;
     string starts_with = 11;
     FilterOperandList any_of = 12;
+    // Matches text that is one of the paths or below one.
+    FilterPathList under = 13;
   }
 }
 
 // The operands of an `any_of`.
 message FilterOperandList {
   repeated FilterOperand operands = 1 [(buf.validate.field).repeated.max_items = 1000];
+}
+
+// The paths of an `under` test, for values that name a place in a
+// hierarchy, such as a layer or a folder. A value and each path split into
+// segments at `separator`, and a value is under a path when it equals the
+// path or starts with the path's segments. Segments compare whole: with
+// separator "/", "A/B" and "A/B/C" are under "A/B", and "A/BC" is not. An
+// empty segment, as in "A//B", is a segment. Case is ignored as in the other
+// text tests. A value that is not text never matches, and an empty list of
+// paths matches nothing.
+message FilterPathList {
+  // The text that joins the segments of a value, such as "/".
+  string separator = 1 [(buf.validate.field).string.min_len = 1];
+
+  // Each path is not empty and does not end with the separator.
+  repeated string paths = 2 [(buf.validate.field).repeated = {
+    max_items: 1000
+    items: {
+      string: {min_len: 1}
+    }
+  }];
 }
 
 // A value that a condition compares with.
