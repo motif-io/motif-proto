@@ -48,6 +48,14 @@ message TextAnnotation {
   // through the entity's own style components. Unset reads as the application
   // default: pen 1, continuous stroke, black.
   AnnotationLeaderStyle leader_style = 8;
+  // Opacity of `fill`, 0 (transparent) to 1 (opaque). Meaningful only while
+  // `fill` is set. Unset draws the fill opaque where the annotation is viewed
+  // head-on; a reader may lower it where the annotation can be viewed at a
+  // skew, so the text stays legible. A set value renders as given everywhere.
+  optional float fill_opacity = 9 [(buf.validate.field).float = {
+    gte: 0
+    lte: 1
+  }];
 }
 
 // One shoulder from the annotation to an elbow, branching to one or more heads.
