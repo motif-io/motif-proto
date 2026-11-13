@@ -483,9 +483,9 @@ message Dimension {
     // For angular dimensions these are the label's tangent and radial axes.
     message TextOffset {
       // Displacement along the label axis, meters.
-      double x = 1 [(buf.validate.field).double.finite = true];
+      double x = 1;
       // Displacement perpendicular to the label axis, meters.
-      double y = 2 [(buf.validate.field).double.finite = true];
+      double y = 2;
     }
     // Per-span displacements in station order. Missing entries mean zero.
     // An angular dimension uses entry zero. Offsets are applied after legacy
