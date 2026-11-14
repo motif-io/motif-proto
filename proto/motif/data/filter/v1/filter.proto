@@ -8,10 +8,11 @@ syntax = "proto3";
 // filter matches nothing.
 //
 // Length, angle, and area operands use SI units: meters, radians, and square
-// meters. Text equality, inequality, membership, containment, and prefix
-// tests ignore case. Numeric comparisons use the display precision of the
-// model that applies the filter for lengths, angles, and areas, so results
-// can vary between models. Every test except `not_exists` fails for an entity
+// meters. Text equality, inequality, membership, containment, prefix, and
+// `under` tests ignore case using Unicode simple case folding. Numeric
+// comparisons use the display precision of the model that applies the filter
+// for lengths, angles, and areas, so results can vary between models. Every
+// test except `not_exists` fails for an entity
 // with no value.
 //
 // Readers accept at least 32 levels of nesting in the expression, and
@@ -127,18 +128,18 @@ message FilterOperandList {
 // hierarchy, such as a layer or a folder. A value and each path split into
 // segments at each `separator` from the left, and a value is under a path
 // when it equals the path or starts with the path's segments. So with
-// separator "::", "A:::B" splits into "A" and ":B", and nothing is under
-// "A:". Segments compare whole: with
-// separator "/", "A/B" and "A/B/C" are under "A/B", and "A/BC" is not. An
-// empty segment, as in "A//B", is a segment. Case is ignored as in the other
-// text tests. A value that is not text never matches, and an empty list of
+// separator "::", "A:::B" splits into "A" and ":B", and nothing is below
+// "A:". Segments compare whole: with separator "/", "A/B" and "A/B/C" are
+// under "A/B", and "A/BC" is not. An empty segment, as in "A//B", is a
+// segment. A value that is not text never matches, and an empty list of
 // paths matches nothing.
 message FilterPathList {
   // The text that joins the segments of a value, such as "/".
   string separator = 1 [(buf.validate.field).string.min_len = 1];
 
   // Each path is not empty, and split from the left, its last segment is
-  // not empty.
+  // not empty. A path that breaks this fails to compile; the filter stays
+  // readable.
   repeated string paths = 2 [(buf.validate.field).repeated = {
     max_items: 1000
     items: {
