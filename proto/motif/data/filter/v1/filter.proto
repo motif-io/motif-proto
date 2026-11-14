@@ -15,9 +15,10 @@ syntax = "proto3";
 // except `not_exists` fails for an entity with no value.
 //
 // Readers accept at least 32 levels of nesting in the expression, and
-// computed values of at least 8 levels and 256 nodes. Each operation, and
-// each read of another computed value, is a level, and the nodes of the
-// computed values that a computed value reads count toward its own.
+// computed values of at least 8 levels and 256 nodes. Each operation is a
+// level. A read of a computed value inside another is a level too, and the
+// nodes of the computed value that it reads count toward the one that reads
+// it, so nesting the operation instead, as writers do, takes one level less.
 
 package motif.data.filter.v1;
 
@@ -144,13 +145,17 @@ message FilterProperty {
     FilterParameter parameter = 3;
     FilterForeignProperty foreign = 4;
     // A value computed from other properties. Its reads name their own
-    // sources, so a read of a computed value takes no source.
+    // sources, so a read of a computed value takes no source. Inside a
+    // computed value, such a read is the same value as its operation nested
+    // in its place, and writers write the nested operation.
     FilterComputedValue computed = 5;
   }
 }
 
 // A value computed from the values that an entity holds. It is not
-// stored; it changes when its inputs change.
+// stored; it changes when its inputs change. It is read-only: a writer that
+// edits through one, such as a table cell, writes one of the properties that
+// it reads.
 //
 // A read names its own source, and a parameter read means what it means in
 // a condition. A parameter that its asset does not declare has no value and
@@ -159,8 +164,8 @@ message FilterProperty {
 // Arithmetic has no value when a read that it uses has no value or holds a
 // value that is not a number, when a division divides by zero, or when a
 // result is not finite. To arithmetic, imported text has no value and an
-// imported number is a plain number. Outside each `coalesce`, the entity
-// then has no value.
+// imported number with no measure is a plain number. Outside each
+// `coalesce`, the entity then has no value.
 //
 // A result snaps, as a number in the SI unit of its measure: a value v
 // becomes the whole number nearest v when it is within
@@ -169,16 +174,19 @@ message FilterProperty {
 // after the point or at most 12 significant digits. A value with no such
 // decimal stays as it is. So 0.1 + 0.2 is 0.3, 0.9 m × 2.1 m is 1.89 m²,
 // 7 / 3 keeps its digits, and float error does not split values that are
-// equal. A computation that reads another computed value reads its snapped
-// result.
+// equal.
+//
+// A read of a computed value inside another is the same value as its
+// operation nested in its place, and readers treat the two forms as one.
+// Writers write the nested operation.
 //
 // Measures must agree. Values that read a property and are added or
-// subtracted have the same measure. A product or a quotient has the measure that its parts make, so
-// a model length times a model length is an area, and an area divided by an
-// area is a plain number. Model length and paper length are separate
-// measures. Arithmetic whose result is not a plain number, a length, an
-// angle, or an area, or that reads a property that is not a number, fails
-// to compile; the filter stays readable.
+// subtracted have the same measure. A product or a quotient has the measure
+// that its parts make, so a model length times a model length is an area,
+// and an area divided by an area is a plain number. Model length and paper
+// length are separate measures. Arithmetic whose result is not a plain
+// number, a length, an angle, or an area, or that reads a property that is
+// not a number, fails to compile; the filter stays readable.
 //
 // A literal is a number with no measure of its own; its measure comes from
 // where it is. In a sum or a difference it takes the measure of the values
@@ -197,15 +205,17 @@ message FilterProperty {
 // in a sum. Values of two or more kinds, such as text and a literal, are
 // plain values, as an imported property holds them: text, a number, or a
 // bool. A length, an angle, or an area is then its number in SI units, a
-// color its `#rrggbb` text, and an enum value its name; a reference, or an
-// enum value that the reader does not know, has no value. Arithmetic reads
-// the number of a `coalesce`, and arithmetic over a `coalesce` of a kind that
-// holds no number, such as text, fails to compile.
+// color its `#rrggbb` text, and an enum value its name as the schema spells
+// it, such as `REVIT_CATEGORY_DOORS`; a reference, or an enum value that the
+// reader does not know, has no value. Arithmetic reads the number of a
+// `coalesce`, and arithmetic over a `coalesce` of a kind that holds no
+// number, such as text, fails to compile.
 message FilterComputedValue {
   oneof value {
     option (buf.validate.oneof).required = true;
 
-    // A property of the entity, read from its source.
+    // A property of the entity, read from its source. See above for a read
+    // of a computed value.
     FilterPropertyRead read = 1;
     // A literal number. See above for its measure.
     double literal = 2 [(buf.validate.field).double.finite = true];
@@ -255,7 +265,10 @@ message FilterStoredField {
   motif.extension.v1.FieldPath path = 2 [(buf.validate.field).required = true];
 }
 
-// Parameter names are scoped to the asset that declares them.
+// A parameter by name. With `asset`, the parameter of that one asset. With
+// none, the parameter of that name on whichever asset each entity places:
+// every asset that declares the name gives the same property, and
+// declarations of different kinds read as plain values.
 message FilterParameter {
   string name = 1 [(buf.validate.field).string.min_len = 1];
   // A target index. Unset reads the parameter on whichever asset each entity
