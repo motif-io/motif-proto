@@ -14,11 +14,9 @@ syntax = "proto3";
 // lengths, angles, and areas, so results can vary between models. Every test
 // except `not_exists` fails for an entity with no value.
 //
-// Readers accept at least 32 levels of nesting in the expression, and
-// computed values of at least 8 levels and 256 nodes. Each operation is a
-// level. A read of a computed value inside another is a level too, and the
-// nodes of the computed value that it reads count toward the one that reads
-// it, so nesting the operation instead, as writers do, takes one level less.
+// Readers accept at least 32 levels of nesting in the expression, and computed values of at least
+// 8 levels and 256 nodes, where each operation is a level. A read of a computed value inside
+// another is a level too, and the nodes of the one it reads count toward the one that reads it.
 
 package motif.data.filter.v1;
 
@@ -144,80 +142,48 @@ message FilterProperty {
     FilterStoredField field = 2;
     FilterParameter parameter = 3;
     FilterForeignProperty foreign = 4;
-    // A value computed from other properties. Its reads name their own
-    // sources, so a read of a computed value takes no source. Inside a
-    // computed value, such a read is the same value as its operation nested
-    // in its place, and writers write the nested operation.
+    // A value computed from other properties. A read of one takes no source; inside a computed
+    // value, it is the same value as its operation nested in its place, and writers write the
+    // nested operation.
     FilterComputedValue computed = 5;
   }
 }
 
-// A value computed from the values that an entity holds. It is not
-// stored; it changes when its inputs change. It is read-only: a writer that
-// edits through one, such as a table cell, writes one of the properties that
-// it reads.
+// A value computed, not stored, from an entity's properties. It is read-only: a writer that edits
+// through one, such as a table cell, writes a property that it reads. A parameter read means what
+// it does in a condition; one that its asset does not declare has no value and takes any measure
+// and kind.
 //
-// A read names its own source, and a parameter read means what it means in
-// a condition. A parameter that its asset does not declare has no value and
-// takes any measure and any kind.
+// Arithmetic has no value when a read that it uses has no value or a value that is not a number,
+// on division by zero, or when a result is not finite; to arithmetic, imported text has no value
+// and an imported number with no measure is a plain number. Outside each `coalesce`, the entity
+// then has no value.
 //
-// Arithmetic has no value when a read that it uses has no value or holds a
-// value that is not a number, when a division divides by zero, or when a
-// result is not finite. To arithmetic, imported text has no value and an
-// imported number with no measure is a plain number. Outside each
-// `coalesce`, the entity then has no value.
+// A result snaps, as a number in the SI unit of its measure: v becomes the whole number nearest v
+// when that is within 64 × 2^-52 × max(1, |v|) of v; else the decimal with the fewest digits after
+// the point that is within 64 × 2^-52 × |v| of v and has one digit after the point or at most 12
+// significant digits; else it stays v. So 0.1 + 0.2 is 0.3.
 //
-// A result snaps, as a number in the SI unit of its measure: a value v
-// becomes the whole number nearest v when it is within
-// 64 × 2^-52 × max(1, |v|) of v; else the decimal with the fewest digits
-// after the point that is within 64 × 2^-52 × |v| of v and has one digit
-// after the point or at most 12 significant digits. A value with no such
-// decimal stays as it is. So 0.1 + 0.2 is 0.3, 0.9 m × 2.1 m is 1.89 m²,
-// 7 / 3 keeps its digits, and float error does not split values that are
-// equal.
+// Measures must agree: values that read a property and are added or subtracted have one measure,
+// and a product or quotient has the measure its parts make (model length × model length is an
+// area; area / area is a plain number). Model length and paper length are separate measures.
+// Arithmetic that reads a property that is not a number, or whose result is not a plain number,
+// length, angle, or area, fails to compile; the filter stays readable.
 //
-// A read of a computed value inside another is the same value as its
-// operation nested in its place, and readers treat the two forms as one.
-// Writers write the nested operation.
-//
-// Measures must agree. Values that read a property and are added or
-// subtracted have the same measure. A product or a quotient has the measure
-// that its parts make, so a model length times a model length is an area,
-// and an area divided by an area is a plain number. Model length and paper
-// length are separate measures. Arithmetic whose result is not a plain
-// number, a length, an angle, or an area, or that reads a property that is
-// not a number, fails to compile; the filter stays readable.
-//
-// A literal is a number with no measure of its own; its measure comes from
-// where it is. In a sum or a difference it takes the measure of the values
-// that it meets, in the SI unit of that measure, so a width plus 0.5 adds
-// 0.5 meters. In a product or a quotient it is a plain factor, so an area
-// divided by 2 is an area and a width times 2 is a length. A part of
-// literals alone, such as 2 × 3, acts as one literal. A computation of
-// literals alone is a plain number.
-//
-// `coalesce` gives the first of its values that has a value, in order. A
-// value has none when it is missing, or when it is text that is empty or
-// holds only white space. Its values can be of any kind. When each is of one
-// kind, such as text or a ratio, and is a read of a property or a `coalesce`
-// that keeps its kind, the result has that kind. Else, when they all have one
-// measure, the result has that measure, and a literal among them takes it as
-// in a sum. Values of two or more kinds, such as text and a literal, are
-// plain values, as an imported property holds them: text, a number, or a
-// bool. A length, an angle, or an area is then its number in SI units, a
-// color its `#rrggbb` text, and an enum value its name as the schema spells
-// it, such as `REVIT_CATEGORY_DOORS`; a reference, or an enum value that the
-// reader does not know, has no value. Arithmetic reads the number of a
-// `coalesce`, and arithmetic over a `coalesce` of a kind that holds no
-// number, such as text, fails to compile.
+// A plain value is text, a number, or a bool, as an imported property holds it: a length, angle,
+// or area is its number in SI units, a color its `#rrggbb` text, and an enum value its name as the
+// schema spells it, such as `REVIT_CATEGORY_DOORS`. As a plain value, a reference, or an enum value
+// the reader does not know, has no value.
 message FilterComputedValue {
   oneof value {
     option (buf.validate.oneof).required = true;
 
-    // A property of the entity, read from its source. See above for a read
-    // of a computed value.
+    // A property of the entity, read from the source that it names.
     FilterPropertyRead read = 1;
-    // A literal number. See above for its measure.
+    // A number with no measure of its own: in a sum or difference it takes the measure of the
+    // values it meets, in SI units (a width + 0.5 adds 0.5 m); in a product or quotient it is a
+    // plain factor. A part of literals alone, such as 2 × 3, acts as one literal, and a
+    // computation of literals alone is a plain number.
     double literal = 2 [(buf.validate.field).double.finite = true];
     // The sum of the values.
     FilterComputedValues add = 3;
@@ -227,19 +193,21 @@ message FilterComputedValue {
     FilterComputedValues multiply = 5;
     // The first value divided by the second.
     FilterComputedPair divide = 6;
-    // The least whole number at or above the value in its SI unit, after the
-    // value snaps as a result does (see above), so float error does not move
-    // an exact whole number. The result keeps the measure of the
-    // value: `ceil` of an area rounds up to whole square meters.
+    // The least whole number at or above the value. Rounding is in the SI unit of the value, after
+    // it snaps, and keeps its measure: `ceil` of an area rounds up to whole square meters.
     FilterComputedValue ceil = 7;
-    // The greatest whole number at or below the value in its SI unit, with
-    // the same snapping and the same measure as `ceil`.
+    // The greatest whole number at or below the value, with the same unit, snapping, and measure as
+    // `ceil`.
     FilterComputedValue floor = 8;
-    // The nearest whole number to the value in its SI unit, after the value
-    // snaps, with the same measure as `ceil`. A value halfway between two
-    // whole numbers rounds away from zero, so 2.5 is 3 and -2.5 is -3.
+    // The nearest whole number, with the same unit, snapping, and measure as `ceil`; halfway rounds
+    // away from zero.
     FilterComputedValue round = 9;
-    // The first of the values that has a value. See above.
+    // The first value, in order, that has a value; text that is empty or only white space has
+    // none. When each value is a read of a property or a `coalesce` that keeps its kind, all of one
+    // kind such as text or a ratio, the result has that kind; else, when all have one measure, it
+    // has that measure, which a literal among them takes as in a sum. Values of two or more kinds,
+    // such as text and a literal, are plain values. Arithmetic reads the number of a `coalesce`,
+    // and fails to compile over one of a kind that holds no number, such as text.
     FilterComputedValues coalesce = 10;
   }
 }
@@ -265,10 +233,9 @@ message FilterStoredField {
   motif.extension.v1.FieldPath path = 2 [(buf.validate.field).required = true];
 }
 
-// A parameter by name. With `asset`, the parameter of that one asset. With
-// none, the parameter of that name on whichever asset each entity places:
-// every asset that declares the name gives the same property, and
-// declarations of different kinds read as plain values.
+// A parameter by name. With `asset`, that asset's parameter. With none, the parameter of that name
+// on whichever asset each entity places: every asset that declares the name gives the same
+// property, and declarations of different kinds read as plain values (see `FilterComputedValue`).
 message FilterParameter {
   string name = 1 [(buf.validate.field).string.min_len = 1];
   // A target index. Unset reads the parameter on whichever asset each entity
