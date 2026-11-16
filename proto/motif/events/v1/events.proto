@@ -30,6 +30,7 @@ message NotificationEnvelope {
 
     AccessControlNotification access_control = 10;
     ContentNotification content = 11;
+    JobNotification job = 12;
   }
 }
 
@@ -727,6 +728,67 @@ message ModelComponentsChanged {
     min_items: 1
     unique: true
   }];
+}
+
+// =============================================================================
+// Jobs
+// =============================================================================
+
+// The outcome of one asynchronous job that a user started, delivered on
+// `user/{user_id}`.
+//
+// Delivery is not guaranteed and one outcome can arrive more than once. Every
+// session of the user receives it, so readers ignore a job whose `request_id`
+// they did not start.
+message JobNotification {
+  option (buf.validate.message).cel = {
+    id: "job_notification.succeeded_ifc_import_has_model"
+    message: "a succeeded IFC import carries model_id"
+    // JOB_STATUS_SUCCEEDED = 1. Use its value for CEL runtime compatibility.
+    expression: "this.status != 1 || !has(this.ifc_import) || has(this.ifc_import.model_id)"
+  };
+
+  // The id returned to the requester when the job was started, a 16-byte UUID.
+  bytes request_id = 1 [(buf.validate.field).bytes.len = 16];
+
+  // The project the job runs in, a 16-byte UUID.
+  bytes project_id = 2 [(buf.validate.field).bytes.len = 16];
+
+  // The user who started the job and the recipient of this envelope, a 16-byte
+  // UUID.
+  bytes user_id = 3 [(buf.validate.field).bytes.len = 16];
+
+  // Where the job stands.
+  JobStatus status = 4 [(buf.validate.field).enum = {
+    not_in: [0]
+  }];
+
+  // Differentiates between job variants whose completion events are supported
+  // by this notification.
+  oneof kind {
+    IfcImportJob ifc_import = 10;
+  }
+}
+
+// An import of an IFC file into a new model, placed in the model the import
+// was started from.
+message IfcImportJob {
+  // The model the import created, a 16-byte UUID. Writers set it on a
+  // succeeded job, and on a failed job only when the model exists in the
+  // project but was not placed.
+  optional bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
+}
+
+// The state of a job. `JOB_STATUS_UNSPECIFIED` is never published on the wire.
+enum JobStatus {
+  JOB_STATUS_UNSPECIFIED = 0;
+  // The job finished and its result is in place.
+  JOB_STATUS_SUCCEEDED = 1;
+  // The job ended without its result. It does not resume under the same
+  // `request_id`.
+  JOB_STATUS_FAILED = 2;
+  // The job is in a state that no other value names. It is not an outcome.
+  JOB_STATUS_OTHER = 3;
 }
 
 // =============================================================================
