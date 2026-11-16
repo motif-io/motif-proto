@@ -1,159 +1,537 @@
 syntax = "proto3";
 
-// Renderable graphics primitives: encoded vertex/index geometry and the metadata
-// needed to interpret it. These are plain data types and are not themselves
-// components.
+// Renderable graphics primitives and the metadata needed to interpret their
+// binary data.
 package motif.data.graphics.v1;
 
-// A block of renderable geometry: an opaque byte buffer plus the metadata needed
-// to interpret its vertex and index data.
+// Renderable geometry stored as a binary buffer with typed vertex attributes
+// and optional indices.
+//
+// # Overview
+//
+// Geometry is a low-level mesh format optimized for direct GPU integration.
+// It exposes component types, byte offsets, strides, vertex reuse, and primitive
+// assembly. This makes the representation compact and flexible, but also complex
+// to understand: the producer is responsible for describing the buffer layout
+// and preserving the relationships between its attributes.
+//
+// Each geometry has one buffer, one topology, and a common vertex count. The
+// metadata describes how to read values from the buffer; it does not contain
+// the values themselves. Attributes and indices can occupy separate blocks,
+// or attributes can be interleaved into vertex records.
+//
+// The editor supports the subset described below. In particular, Draco encoding,
+// triangle strips, and `normalize = true` are currently unsupported. Colors and
+// UVs require `FLOAT32` components; integer components are unsupported for these
+// attributes. RGBA vertex colors and vertex colors for lines and line strips are
+// not yet supported.
+//
+// # Terminology
+//
+// - **Component**: One scalar channel, such as X in a position or R in a color.
+//   `AttributeDataType` defines its storage type and size.
+// - **Attribute value**: The consecutive components of one position, normal, UV,
+//   or color. `dimension` defines the number of components.
+// - **Vertex**: One complete tuple of attribute values. All attributes share the
+//   same vertex order and have `num_vertices` values.
+// - **Index**: A zero-based vertex number. It selects the position, normal, UV,
+//   and color together; attributes cannot have independent index sequences.
+// - **Primitive**: A point, line segment, or triangle assembled from vertices
+//   according to `topology`.
+//
+// # Cheat sheet
+//
+// - For an ordinary surface, use `ENCODING_UNENCODED`, `TOPOLOGY_TRIANGLES`,
+//   and `POSITION` with `dimension = 3` and `data_type = FLOAT32`.
+// - Pack little-endian values. Set each attribute's `offset` explicitly, even
+//   when zero, and supply a nonzero byte stride. Packed XYZ floats use stride 12.
+// - Write every attribute in the same vertex order. `num_vertices` counts
+//   complete vertices, including duplicates at seams, rather than triangles.
+// - Export single-sided triangles, counterclockwise when viewed from outside.
+//   Back faces are normally culled. Normals affect shading; winding determines
+//   which side faces outward.
+// - Supply finite unit normals for authored shading.
+// - Omit normals to have them auto-generated for triangles. Faces sharing a vertex
+//   index are smoothed together, without a crease-angle threshold. Hard edges
+//   require separate vertices on each side; a sharp cube commonly uses 24 vertices,
+//   four per face, rather than eight shared corners. The editor does not make
+//   these splits automatically.
+// - Split vertices at UV seams and abrupt color boundaries, copying all
+//   attributes into each duplicate. Equal positions with different indices
+//   remain separate; the importer does not weld them.
+// - Use linear RGB `FLOAT32` vertex colors with three channels. Convert sRGB
+//   source colors before packing. On triangle surfaces, vertex colors multiply
+//   the base color per channel; use a white base color for their original tint.
+//   Keep channels in [0,1] for physically lit surfaces. Unlit surfaces may use
+//   values > 1.0, for example to represent data scaled through the base color.
+// - Use primary `UV` with two channels for texture coordinates. UVs require
+//   appropriate texture/material styling to produce a textured surface.
+//   `UV_1`, named attributes, and indirect attribute accessors are unsupported.
+// - For indexed triangles, use `UINT16` or `UINT32` indices, explicitly set
+//   their offset, and write a multiple of three indices, each < `num_vertices`.
+//   Without indices, each consecutive group of three vertices is a triangle.
+//
+// # Vertex layout
+//
+// `AttributeMetadata` defines a typed view into `data`. Offsets are absolute
+// byte offsets from the start of this buffer. Attribute and index blocks can
+// appear in any order; neither is addressed relative to the other.
+//
+// For vertex `i` and component `j`, an attribute component begins at:
+//
+//     offset + i * stride + j * sizeof(data_type)
+//
+// `stride` is the byte distance between consecutive values of the same
+// attribute. The components within one value are consecutive. A packed
+// attribute uses `stride = dimension * sizeof(data_type)`; interleaved
+// attributes usually share the size of the complete vertex record as stride.
+// Zero stride does not imply a packed layout.
+//
+// ## Constraints
+//
+// - `stride` must be >= `dimension * sizeof(data_type)`.
+// - For `num_vertices > 0`, the exclusive end of an attribute is
+//   `offset + (num_vertices - 1) * stride + dimension * sizeof(data_type)`.
+//   This must be <= `sizeof(data)`.
+// - Every supplied attribute must contain a complete value for every vertex,
+//   including vertices unused by the index sequence. Missing bytes are errors.
+// - Supply one usable `POSITION` and at most one of each other supported
+//   semantic. Duplicate descriptors have no defined composition or override.
+// - Set the `offset` accessor and a supported `id` explicitly. Missing required
+//   metadata and unspecified enum values are not supported defaults.
+//
+// The importer supports unaligned attribute reads and padding between values.
+// Tightly packed, aligned `FLOAT32` attributes have a faster bulk conversion
+// path; other supported layouts use scalar reads. Indices have stricter rules:
+// they are packed consecutively, with their offset aligned to their element
+// size.
+//
+// ## Component conversion
+//
+// Positions and normals accept `INT8`, `UINT8`, `INT16`, `UINT16`, and `FLOAT32`.
+// Their component sizes are one, one, two, two, and four bytes respectively.
+// Colors and UVs require `FLOAT32`; signed and unsigned integer components are
+// unsupported for these attributes. Values are stored little-endian and
+// converted to floating point during import.
+//
+// `normalize = true` is unsupported for every attribute; leave it false.
+// Convert integer colors and UVs to `FLOAT32` in the producer, including any
+// required normalization, before packing the buffer.
+//
+// `INT32` and `UINT32` attributes are rejected because their full value ranges
+// cannot be represented exactly as `FLOAT32`. Setting `normalize = true` does
+// not enable them.
+//
+// Named attributes and `UV_1` are skipped. Their direct-accessor buffer metadata
+// is still validated, so an ignored attribute with an invalid range can fail
+// geometry conversion. Attributes using the indirect `index` accessor are
+// skipped before buffer validation. That accessor is unrelated to the vertex
+// indices described by `IndexMetadata`.
+//
+// # Position attribute
+//
+// Positions define the geometry in the owning entity's local coordinate frame.
+// They determine bounds, triangle orientation, picking, and edge extraction.
+//
+// - **Identifier**: `ATTRIBUTE_ID_POSITION`.
+// - **Presence**: Required for every topology.
+// - **Dimension**: 2 (XY in the local Z=0 plane) or 3 (XYZ).
+// - **Values**: Every component must be finite; NaN and positive or negative
+//   infinity are errors.
+// - **Component types**: `INT8`, `UINT8`, `INT16`, `UINT16`, or `FLOAT32`.
+//   `INT32` and `UINT32` are unsupported.
+//
+// Components are converted directly to floating-point coordinates. Coordinate
+// units and the entity transform come from the enclosing model.
+//
+// Use finite, 3D `FLOAT32` positions for general external surface meshes, at a
+// scale suitable for floating-point rendering. Every other attribute needs a
+// value for each position, including duplicated seam vertices.
+//
+// # Normal attribute
+//
+// Normals define shading directions at vertices. They affect lighting rather
+// than triangle winding, and cannot repair an inside-out surface.
+//
+// - **Identifier**: `ATTRIBUTE_ID_NORMAL`.
+// - **Presence**: Optional; triangle normals are generated when absent or skipped.
+// - **Dimension**: 3 (XYZ).
+// - **Component types**: `INT8`, `UINT8`, `INT16`, `UINT16`, or `FLOAT32`.
+//   `INT32` and `UINT32` are unsupported.
+//
+// ## Supplied normals
+//
+// Supplied normals must be finite unit vectors (length 1). Use `FLOAT32`
+// components, including signed components where needed.
+//
+// The editor currently renormalizes non-unit vectors after converting their
+// components to floats. A vector that cannot be normalized, such as zero, NaN,
+// or infinite input, currently falls back to (0,0,1). These corrections are
+// implementation details and are not guaranteed to remain available; producers
+// must supply valid unit vectors. Invalid dimensions, unsupported types, and
+// missing buffer bytes still fail conversion.
+//
+// ## Generated normals
+//
+// For indexed 3D triangles, the editor averages the unit face normals incident
+// to each vertex index, with no area weighting or crease-angle threshold.
+// For non-indexed triangles, each consecutive group of three vertices receives
+// its face normal; coincident positions in other triangles remain separate.
+// For 2D triangles, directions follow the signed XY winding, along +Z or -Z.
+// Unused vertices and directions that cannot be derived fall back to +Z.
+// Points and lines do not receive generated surface normals.
+//
+// For example, two perpendicular faces sharing an index receive a direction
+// averaged across the corner, which makes the edge look rounded. Duplicating
+// the corner vertices and giving each face its own indices keeps their normals
+// independent. A cube with four vertices per face can therefore have sharp
+// edges even when its normals are generated.
+//
+// # UV attribute
+//
+// UVs provide the primary texture coordinates. A texture and its sampling and
+// wrapping behavior are selected through material/rendering settings.
+//
+// - **Identifier**: `ATTRIBUTE_ID_UV`.
+// - **Presence**: Optional; positions and colors do not require UVs.
+// - **Dimension**: 2 (U,V).
+// - **Component types**: `FLOAT32` only. Signed and unsigned integer components
+//   are unsupported.
+//
+// Components pass through as floating-point values.
+//
+// Only the primary UV set is supported. `ATTRIBUTE_ID_UV_1` is currently
+// skipped, and a named attribute such as "TEXCOORD_0" is not an alias for UV.
+// To give a corner different UVs on adjacent faces, duplicate the vertex and
+// update the shared vertex indices. Its position, normal, and color must also
+// be present in each duplicate.
+//
+// # Color attribute
+//
+// Vertex colors provide a tint at each vertex. On triangle surfaces they
+// interpolate across the triangle and multiply the surface's base color.
+//
+// - **Identifier**: `ATTRIBUTE_ID_COLOR`.
+// - **Presence**: Optional.
+// - **Dimension**: 3 (RGB, with alpha = 1). RGBA (dimension 4) is not yet
+//   supported.
+// - **Component types**: `FLOAT32` only. Signed and unsigned integer components
+//   are unsupported.
+//
+// ## Color representation
+//
+// RGB channels are linear. No color-space conversion or channel clamping is
+// performed during import. Use `FLOAT32` values and convert source sRGB colors
+// before packing.
+//
+// On physically lit surfaces, vertex colors are per-channel multipliers on the
+// base color. Keep each channel in [0,1]: values > 1.0 can make the surface
+// reflect more light than it receives, violating energy conservation in
+// physically based rendering (PBR).
+//
+// On unlit surfaces, values > 1.0 are acceptable. For example, a data visualization
+// can store data values directly as vertex colors and adjust the base color
+// programmatically to scale the output. Values > 1.0 would also be appropriate
+// for HDR display output, which is not yet supported.
+//
+// ## Interaction with styling
+//
+// Use a white base color to preserve the vertex tint. This attribute does not
+// select textures, roughness, entity-level opacity, or a blending mode. The
+// enclosing styling must select the appropriate behavior.
+//
+// Different colors within one triangle produce a gradient. Split vertices at their
+// boundary and give every corner of a face its intended color if gradients are not
+// desirable.
+//
+// Points support vertex colors. Vertex colors are not yet supported for lines
+// or line strips.
+//
+// # Primitive assembly
+//
+// Topology operates on the index sequence when `index_metadata` is present,
+// or on the vertex sequence otherwise. All primitives in one geometry share
+// that topology and the same attribute set.
+//
+// - **Points**: Each vertex/index forms an independent point.
+// - **Lines**: Each pair forms an independent segment; the count must be even.
+// - **Line strip**: Each consecutive pair forms a segment. Repeat the first
+//   vertex/index at the end to close a loop.
+// - **Triangles**: Each group of three forms an independent triangle; the
+//   count must be a multiple of three.
+//
+// There are no primitive-restart values. `TOPOLOGY_TRIANGLE_STRIP` is currently
+// unsupported; expand strips into triangles while preserving their alternating
+// winding.
+//
+// Both `INDEX_DATA_TYPE_UINT16` and `INDEX_DATA_TYPE_UINT32` are supported.
+// `UINT16` addresses vertices 0 through 65535; larger indices require `UINT32`.
+// `num_indices` counts scalar indices. Every value must be < `num_vertices`.
+// Out-of-range indices and incomplete primitive groups will fail later processing.
+// Producers must validate these constraints before uploading.
+//
+// ## Sidedness and winding
+//
+// External triangle meshes are expected to be single-sided, with corners
+// counterclockwise when viewed from the outward-facing side. For corners
+// A,B,C, the geometric normal is (B-A) cross (C-A). The reverse side is
+// normally culled for rendering and treated as a back face for picking.
+// Consistent winding is required even with supplied normals. Duplicating
+// faces in both directions can create overlapping surfaces and conflicting
+// generated normals.
+//
+// # Example: a colored, textured triangle
+//
+// Set `topology = TOPOLOGY_TRIANGLES`, `encoding = ENCODING_UNENCODED`, and
+// `num_vertices = 3`. Use these values, with little-endian scalar storage:
+//
+// - Positions: [(0,0,0), (1,0,0), (0,1,0)].
+// - Normals: [(0,0,1), (0,0,1), (0,0,1)].
+// - UVs: [(0,0), (1,0), (0,1)].
+// - Linear RGB colors: [(1,0,0), (0,1,0), (0,0,1)].
+// - Indices: [0,1,2].
+//
+// ## Separate attribute blocks
+//
+// Store each attribute in its own packed block:
+//
+//     Bytes       Attribute  Type     Dimension  Stride  Offset
+//     [0,36)      POSITION   FLOAT32  3          12      0
+//     [36,72)     NORMAL     FLOAT32  3          12      36
+//     [72,96)     UV         FLOAT32  2           8      72
+//     [96,132)    COLOR      FLOAT32  3          12      96
+//     [132,138)   indices    UINT16   (scalar)   (2)     132
+//
+// Set each attribute's `id`, `data_type`, `dimension`, `stride`, and `offset`
+// from the table. Set `index_metadata` to `offset = 132`, `num_indices = 3`,
+// and `data_type = INDEX_DATA_TYPE_UINT16`.
+//
+// The buffer is 138 bytes. The triangle faces +Z and interpolates red, green,
+// and blue. Its normals can be omitted to request generated shading, adjusting
+// subsequent offsets when removing their block. The index block can also be
+// omitted because the vertices are already in triangle order.
+//
+// ## Interleaved attributes
+//
+// The same data can use indices first and one record per vertex. Place the
+// three `UINT16` indices in [0,6) and three 44-byte vertex records in [6,138).
+// Each record contains XYZ, normal XYZ, UV, then RGB:
+//
+//     Attribute  Type     Dimension  Stride  Absolute offset
+//     POSITION   FLOAT32  3          44       6
+//     NORMAL     FLOAT32  3          44      18
+//     UV         FLOAT32  2          44      30
+//     COLOR      FLOAT32  3          44      38
+//
+// Set `index_metadata.offset = 0` and retain `num_indices = 3`. The index block
+// remains packed independently of the attribute strides.
+//
+// # Related resources
+//
+// The Khronos glTF tutorial's
+// [Buffers, BufferViews, and Accessors](https://github.khronos.org/glTF-Tutorials/gltfTutorial/gltfTutorial_005_BuffersBufferViewsAccessors.html)
+// is a useful introduction to typed views of binary buffers and interleaved
+// records. For formal layout rules, see the glTF specification's
+// [accessor layout and alignment](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html#data-alignment).
+//
+// Here, `data` corresponds to the buffer, attribute metadata describes typed
+// access, and `num_vertices` supplies the common attribute count. Offsets are
+// absolute and there is no separate buffer-view object. Use the support and
+// conversion rules above when producing this format; glTF has different
+// supported types, defaults, extensions, and normalization behavior.
 message Geometry {
-  // How the vertices should be interpreted.
+  // Primitive assembly for the index sequence, or the vertex sequence when
+  // index_metadata is absent. Required; TRIANGLE_STRIP is currently unsupported.
   Topology topology = 1;
 
-  // Describes the encoding used for `data`.
+  // Encoding of data. Currently only ENCODING_UNENCODED is supported; Draco
+  // data must be decoded by the producer before uploading.
   Encoding encoding = 2;
 
-  // The number of vertices in `data`.
+  // Number of complete vertices, shared by all attributes. Include duplicated
+  // seam vertices and vertices unused by the index sequence in this count.
   uint32 num_vertices = 3;
 
-  // Metadata describing which attributes are embedded in `data` and
-  // how that information can be extracted.
+  // Typed views into data. POSITION is required; NORMAL, UV, and COLOR are
+  // optional. Each attribute contains num_vertices values in the same order.
+  // See the attribute sections above for supported dimensions and processing.
   repeated AttributeMetadata attribute_metadata = 5;
 
-  // Metadata describing how the index information (if any) can be extracted
-  // from `data`.
+  // Optional packed index block in data. Indices select complete vertices.
+  // When omitted, topology assembles primitives in stored vertex order.
   optional IndexMetadata index_metadata = 6;
 
-  // The packed vertex (and optionally index) buffer.
+  // Binary attribute and index values, including any layout padding. All
+  // offsets are absolute byte offsets into this buffer. Unencoded scalar
+  // values are little-endian; the metadata supplies their layout and types.
   bytes data = 7;
 }
 
-// How a geometry's vertices are assembled into primitives.
+// Assembly of a geometry's vertex or index sequence into primitives.
+// All primitives in one Geometry share this topology and attribute set.
 enum Topology {
-  // Unspecified topology.
+  // Invalid.
   TOPOLOGY_UNSPECIFIED = 0;
-  // Each vertex is an independent point.
+  // Each vertex/index forms an independent point.
   TOPOLOGY_POINTS = 1;
-  // Vertices are taken in pairs as independent line segments.
+  // Each pair forms an independent segment. The count must be even.
   TOPOLOGY_LINES = 2;
-  // Vertices form a connected polyline.
+  // Each consecutive pair forms a segment. Repeat the first vertex/index at
+  // the end to close a loop. Primitive-restart values are unsupported.
   TOPOLOGY_LINE_STRIP = 3;
-  // Vertices are taken in triples as independent triangles.
+  // Each group of three forms a triangle. The count must be a multiple of
+  // three, with outward-facing corners ordered counterclockwise.
   TOPOLOGY_TRIANGLES = 4;
-  // Vertices form a connected triangle strip.
+  // Currently unsupported. Expand into triangles while preserving the strip's face winding.
   TOPOLOGY_TRIANGLE_STRIP = 5;
 }
 
-// The encoding applied to a geometry's data buffer.
+// Encoding applied to Geometry.data. Only unencoded buffers are currently
+// supported; this field describes the buffer contents rather than a file format.
 enum Encoding {
-  // Unspecified encoding.
+  // Invalid.
   ENCODING_UNSPECIFIED = 0;
-  // Raw, unencoded data.
+  // Raw binary values described by attribute and index metadata.
   ENCODING_UNENCODED = 1;
-  // Draco-compressed data.
+  // Currently unsupported. Decode Draco data before populating an unencoded buffer.
   ENCODING_DRACO = 2;
 }
 
-// The scalar type of an attribute's component values.
+// Storage type of each scalar component in a vertex attribute.
+//
+// The editor converts supported values to floats. INT32 and UINT32 are
+// currently unsupported because arbitrary values cannot be represented
+// exactly as FLOAT32.
 enum AttributeDataType {
-  // Unspecified data type.
+  // Invalid.
   ATTRIBUTE_DATA_TYPE_UNSPECIFIED = 0;
-  // Signed 8-bit integer.
+  // One-byte signed integer.
   ATTRIBUTE_DATA_TYPE_INT8 = 1;
-  // Unsigned 8-bit integer.
+  // One-byte unsigned integer.
   ATTRIBUTE_DATA_TYPE_UINT8 = 2;
-  // Signed 16-bit integer.
+  // Two-byte signed integer.
   ATTRIBUTE_DATA_TYPE_INT16 = 3;
-  // Unsigned 16-bit integer.
+  // Two-byte unsigned integer.
   ATTRIBUTE_DATA_TYPE_UINT16 = 4;
-  // Signed 32-bit integer.
+  // Four-byte signed integer. Currently unsupported for vertex attributes.
   ATTRIBUTE_DATA_TYPE_INT32 = 5;
-  // Unsigned 32-bit integer.
+  // Four-byte unsigned integer. Currently unsupported for vertex attributes.
   ATTRIBUTE_DATA_TYPE_UINT32 = 6;
-  // 32-bit floating point.
+  // Four-byte floating point. Recommended for positions, normals, fractional
+  // UVs, and linear RGB colors.
   ATTRIBUTE_DATA_TYPE_FLOAT32 = 7;
 }
 
-// Well-known vertex attribute identifiers.
+// Semantic interpretation of a vertex attribute's components.
+// Supported semantics are selected by ID; string names are not aliases.
+// See Geometry's attribute sections for conversion and rendering behavior.
 enum AttributeId {
-  // Unspecified attribute.
+  // Invalid.
   ATTRIBUTE_ID_UNSPECIFIED = 0;
-  // Vertex position.
+  // Local position: XY (dimension 2) or XYZ (dimension 3). Required.
   ATTRIBUTE_ID_POSITION = 1;
-  // Vertex normal.
+  // Shading direction: XYZ (dimension 3). Optional; must be a finite unit vector.
   ATTRIBUTE_ID_NORMAL = 2;
-  // Primary texture coordinate.
+  // Primary texture coordinate: U,V (dimension 2). Optional.
   ATTRIBUTE_ID_UV = 3;
-  // Secondary texture coordinate.
+  // Secondary UV set. Currently unsupported and skipped by the editor.
   ATTRIBUTE_ID_UV_1 = 4;
-  // Vertex color.
+  // Linear RGB (dimension 3). Optional. RGBA (dimension 4) and vertex colors
+  // for lines and line strips are not yet supported.
   ATTRIBUTE_ID_COLOR = 5;
 }
 
-// Describes a single vertex attribute embedded in a geometry's data buffer.
+// Typed view into Geometry.data for one vertex attribute.
+//
+// # Layout
+//
+// Each value contains dimension consecutive components of data_type. Values
+// begin stride bytes apart and may be packed or interleaved with other attributes.
+// Every attribute contains Geometry.num_vertices values in shared vertex order.
+//
+// # Constraints
+//
+// - Select the direct offset accessor and a supported semantic ID explicitly.
+// - stride must be >= dimension * sizeof(data_type).
+// - For nonempty attributes, offset + (Geometry.num_vertices - 1) * stride +
+//   dimension * sizeof(data_type) must be <= sizeof(Geometry.data).
+// - For empty attributes, offset must be <= sizeof(Geometry.data).
+//
+// See Geometry for supported dimensions, component conversion, and examples.
 message AttributeMetadata {
-  // How to find the specific attribute in the byte array.
+  // Location of the first attribute value. The direct offset is currently
+  // required for supported attributes; indirect accessors are skipped.
   oneof accessor {
-    // An offset into the byte array.
+    // Absolute byte offset into Geometry.data. Later values begin at
+    // offset + vertex_index * stride. Set explicitly, including when zero.
     uint32 offset = 1;
 
-    // An identifier into another metadata block, most likely embedded in the byte array itself.
+    // Indirect accessor into embedded metadata. Currently unsupported; the
+    // attribute is skipped.
     uint32 index = 2;
   }
 
-  // What this attribute represents.
+  // Semantic meaning of this attribute. Use a supported id; named semantics
+  // are currently skipped, including names that resemble known IDs.
   oneof descriptor {
-    // Known attribute ids.
+    // Well-known semantic. POSITION, NORMAL, UV, and COLOR are supported;
+    // UV_1 is currently skipped.
     AttributeId id = 3;
 
-    // Unknown attribute ids.
+    // Custom semantic name. Currently unsupported.
     string name = 4;
   }
 
-  // 3 for positions/normals, 2 for uv, etc.
+  // Number of scalar components per value: POSITION = 2 or 3, NORMAL = 3,
+  // UV = 2, COLOR = 3 or 4. Other dimensions for these semantics are rejected.
   uint32 dimension = 5;
 
-  // The type of the values for the attribute.
+  // Storage type used by every component. Positions and normals support INT8,
+  // UINT8, INT16, UINT16, and FLOAT32. Colors and UVs require FLOAT32.
+  // INT32 and UINT32 are currently unsupported for every attribute.
   AttributeDataType data_type = 6;
 
-  // Offset to the start of the next attribute value.
+  // Byte distance between consecutive attribute values. Must be at least
+  // dimension * sizeof(data_type). Zero does not imply a packed layout.
   uint32 stride = 7;
 
-  // Indicates if the values should be normalized.
-  //     For signed integer types (INT8, INT16, INT32), values will be mapped to [-1.0, 1.0]
-  //     For unsigned integer types (UINT8, UINT16, UINT32), values will be mapped to [0.0, 1.0]
+  // Normalized-integer interpretation: map signed components to [-1,1] and
+  // unsigned components to [0,1]. Currently unsupported for all attributes;
+  // leave false. Perform any required normalization in the producer and store
+  // the result as FLOAT32.
   bool normalize = 8;
-
-  // TODO: consider supporting translation and scaling of attribute data for quantization
-  // number of values should match `dimension`
-  // e.g.
-  //    repeated float translation = 9;
-  //    repeated float scale = 10;
 }
 
-// The scalar type of index values in a geometry's data buffer.
+// Storage type of packed, zero-based vertex indices. Every index should be packed
+// little endian and IndexMetadata.offset should account for the chosen size.
 enum IndexDataType {
-  // Unspecified index type.
+  // Invalid.
   INDEX_DATA_TYPE_UNSPECIFIED = 0;
-  // Unsigned 16-bit indices.
+  // Two-byte indices.
   INDEX_DATA_TYPE_UINT16 = 1;
-  // Unsigned 32-bit indices.
+  // Four-byte indices.
   INDEX_DATA_TYPE_UINT32 = 2;
 }
 
-// Describes how index data is laid out in a geometry's data buffer.
+// One contiguous index block in Geometry.data, shared by all vertex attributes.
+// Omit Geometry.index_metadata entirely for non-indexed primitive assembly.
 message IndexMetadata {
-  // How to extract the indices from the byte array. Will not be specified for those data formats
-  // which embed the index access information.
+  // Location of the packed index block in Geometry.data. This field is currently
+  // required.
   oneof accessor {
-    // An offset into the byte array which indicates where the indices start.
+    // Absolute byte offset into Geometry.data, aligned to the size of IndexMetadata.data_type.
+    // The block ends at offset + num_indices * sizeof(data_type) (exclusive); that value
+    // must lie within sizeof(Geometry.data).
     uint32 offset = 1;
   }
 
-  // The data type of the indices.
+  // The element size for each index, used for every index in this block. Choose the
+  // data type based on the number of vertices - every index value must be within
+  // [0, num_vertices - 1].
   IndexDataType data_type = 2;
 
-  // The number of indices present in the data.
+  // Number of indices to read. Each index value must be < Geometry.num_vertices. Triangle
+  // lists need multiples of three; line lists need multiples of two. No primitive-restart
+  // values are supported.
   uint32 num_indices = 3;
 }
