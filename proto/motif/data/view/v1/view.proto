@@ -371,9 +371,9 @@ message CropRegion {
 // Per-view visibility rules: the ordered overrides that decide which elements
 // the view draws. Lives on the view entity.
 //
-// This component is legacy: readers still apply it, and `VisibilityFilterRules`
-// on the same entity applies after it and overrides it. Writers that write
-// `VisibilityFilterRules` add no new rules here.
+// This component is legacy: readers still apply it, and `ViewFilterRules` on
+// the same entity applies after it and overrides it. Writers that write
+// `ViewFilterRules` add no new rules here.
 //
 // Absent from a view means every element is visible. Rules are evaluated in
 // order against each element and the last matching rule wins, so a broad hide
@@ -436,11 +436,16 @@ message VisibilityRules {
   }
 }
 
-// Per-view visibility rules as filters, on the view entity. They apply as if
-// appended to the entity's `VisibilityRules`: rules are evaluated in order
-// against each element, and the last matching rule across both components wins.
-// An element that no rule of either component matches is visible; an absent
-// component, or one with no rules, decides nothing.
+// Per-view filter rules: the ordered overrides that decide which elements the
+// view draws and with which graphic style. Lives on the view entity.
+//
+// Visibility and style are each decided by the last matching rule that sets
+// them, across the rules of `VisibilityRules` (which set only visibility) and
+// then these rules, in order. An element whose visibility no rule sets is
+// visible. An element whose style no rule sets takes the style of the first
+// matching binding in the model's `motif.data.style.v1.GraphicStyleBindings`,
+// then the defaults. An absent component, or one with no rules, decides
+// nothing.
 //
 // A writer of this component adds no new rules to `VisibilityRules` but may
 // copy a view's `VisibilityRules` unchanged onto a copy of that view. The
@@ -448,26 +453,32 @@ message VisibilityRules {
 // rule whose expression selects the category. An edit adds or changes only the
 // rules it is about, and never copies rules from `VisibilityRules` here.
 //
-// A field added to this message or to a rule must not change which elements any
-// rule hides for a reader that does not know it. A reader that finds an unknown
+// A field added to this message or to a rule must not change what any rule
+// decides for a reader that does not know it. A reader that finds an unknown
 // field on this message itself, outside the rules, must not rewrite the
 // component but may copy the component's bytes unchanged.
-message VisibilityFilterRules {
+message ViewFilterRules {
   option (motif.extension.v1.message).component = 243;
 
   // The rules, in evaluation order.
-  repeated VisibilityFilterRule rules = 1 [(buf.validate.field).repeated.max_items = 1000];
+  repeated ViewFilterRule rules = 1 [(buf.validate.field).repeated.max_items = 1000];
 
-  // One override: which elements it selects, and whether they are drawn. A new
-  // way to select is a new `selector` arm or filter node, which makes the rule
-  // unreadable to older readers. A reader that cannot read a rule, or finds an
-  // unknown field in it, must not rewrite the rule but may keep the rule's
-  // bytes unchanged, move the rule, or remove it.
-  message VisibilityFilterRule {
+  // One override: which elements it selects, whether they are drawn, and with
+  // which graphic style. A new way to select is a new `selector` arm or filter
+  // node, which makes the rule unreadable to older readers. A reader that
+  // cannot read a rule, or finds an unknown field in it, must not rewrite the
+  // rule but may keep the rule's bytes unchanged, move the rule, or remove it.
+  message ViewFilterRule {
+    option (buf.validate.message).cel = {
+      id: "view_filter_rule.effect"
+      message: "a rule must set a visibility, a style, or both"
+      expression: "this.visibility != 0 || has(this.style)"
+    };
+
     // Which elements this rule selects, in the scope of the view. A rule the
-    // reader cannot read (such as an unknown arm or filter node), or whose
-    // saved filter is missing, unreadable, or does not apply, is skipped: it
-    // never matches, and the earlier rules, including those of
+    // reader cannot read (such as an unknown arm, filter node, or visibility),
+    // or whose saved filter is missing, unreadable, or does not apply, is
+    // skipped: it never matches, and the earlier rules, including those of
     // `VisibilityRules`, decide.
     oneof selector {
       option (buf.validate.oneof).required = true;
@@ -481,16 +492,34 @@ message VisibilityFilterRules {
       // the view, with `model` unset. A set `model` is reserved for another
       // model's saved filter; a reader that cannot resolve it skips the rule.
       motif.data.filter.v1.FilterTarget saved_filter = 2 [(buf.validate.field).cel = {
-        id: "visibility_filter_rule.saved_filter_entity"
+        id: "view_filter_rule.saved_filter_entity"
         message: "saved_filter must name a saved filter entity"
         expression: "has(this.entity)"
       }];
     }
 
-    // Whether the selected elements are hidden. False is an explicit "show"
-    // that overrides an earlier rule's hide.
-    bool hidden = 3;
+    // Whether the selected elements are hidden or shown. A value the reader
+    // does not know makes the rule unreadable, so it is skipped and never
+    // treated as `SHOW`.
+    ViewFilterVisibility visibility = 3;
+
+    // The `motif.data.style.v1.GraphicStyleAsset` that the selected elements
+    // are drawn with in this view. An external style is pinned to its model
+    // version; an unset `model` means the model that holds the view. Unset
+    // leaves the style to earlier rules.
+    motif.data.style.v1.PinnedStyleAssetReference style = 4;
   }
+}
+
+// What a `ViewFilterRules` rule does to the visibility of the elements it
+// selects.
+enum ViewFilterVisibility {
+  // Leaves visibility to earlier rules.
+  VIEW_FILTER_VISIBILITY_UNSPECIFIED = 0;
+  // Hides the elements.
+  VIEW_FILTER_VISIBILITY_HIDE = 1;
+  // Shows the elements, overriding an earlier rule's hide.
+  VIEW_FILTER_VISIBILITY_SHOW = 2;
 }
 
 // The result of projecting a source entity's geometry through a view's
