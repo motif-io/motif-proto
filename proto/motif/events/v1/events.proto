@@ -735,7 +735,7 @@ message ModelComponentsChanged {
 // =============================================================================
 
 // The outcome of one asynchronous job that a user started, delivered on
-// `user/{requester_user_id}`.
+// `user/{requested_by_user_id}`.
 //
 // Delivery is not guaranteed and one outcome can arrive more than once.
 // Readers ignore a job whose `request_id` they did not start, and a `status`
@@ -758,7 +758,7 @@ message JobNotification {
 
   // The user who started the job and the recipient of this envelope, a 16-byte
   // UUID. Required.
-  bytes requester_user_id = 3 [(buf.validate.field).bytes.len = 16];
+  bytes requested_by_user_id = 3 [(buf.validate.field).bytes.len = 16];
 
   // Where the job stands. Required.
   JobStatus status = 4 [(buf.validate.field).enum = {
