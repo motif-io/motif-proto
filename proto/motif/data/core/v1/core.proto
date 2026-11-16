@@ -160,6 +160,13 @@ message Comment {
 }
 
 // Renderable mesh geometry for an entity.
+//
+// Each entry in data is a separate geometry with its own topology, byte buffer,
+// attributes, and optional indices. Geometry is a low-level GPU-oriented format;
+// see motif.data.graphics.v1.Geometry for supported attributes and encodings,
+// outward counterclockwise winding, normal generation, and an export cheat sheet.
+// Entity-level styling applies to the mesh; different vertex colors do not by
+// themselves require separate Mesh components or separate entities.
 message Mesh {
   option (motif.extension.v1.message).component = 35;
 
