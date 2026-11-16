@@ -160,6 +160,18 @@ message Comment {
 }
 
 // Renderable mesh geometry for an entity.
+//
+// Rendering notes for agents and humans writing meshes:
+// What writers tried first, and what happened:
+// - Normals in the geometry did not change the shading. The client replaced them.
+//   A zero-length normal failed the whole mesh. See ATTRIBUTE_ID_NORMAL.
+// - Per-vertex color did not change the drawing. The client dropped it.
+//   See ATTRIBUTE_ID_COLOR. One color for the whole entity is the Color component.
+// - A position or index offset left at 0 never arrived, and the mesh did not
+//   appear. The accessor has to be set. See AttributeMetadata.accessor.
+// - Faces wound clockwise were culled and looked missing. Winding is
+//   counter-clockwise when viewed from outside the solid.
+// - A surface that needs two colors is split into two entities.
 message Mesh {
   option (motif.extension.v1.message).component = 35;
 

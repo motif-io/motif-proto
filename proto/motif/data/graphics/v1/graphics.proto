@@ -12,6 +12,7 @@ message Geometry {
   Topology topology = 1;
 
   // Describes the encoding used for `data`.
+  // The editor reads ENCODING_UNENCODED only. Draco (ENCODING_DRACO) is not supported.
   Encoding encoding = 2;
 
   // The number of vertices in `data`.
@@ -30,6 +31,11 @@ message Geometry {
 }
 
 // How a geometry's vertices are assembled into primitives.
+//
+// Rendering notes for triangle topologies (TRIANGLES):
+// - Winding is counter-clockwise when a face is viewed from outside the solid.
+//   Faces wound clockwise are culled, so they appear to be missing.
+// - Triangle strips are not supported by the editor. Use TRIANGLES.
 enum Topology {
   // Unspecified topology.
   TOPOLOGY_UNSPECIFIED = 0;
@@ -82,12 +88,24 @@ enum AttributeId {
   // Vertex position.
   ATTRIBUTE_ID_POSITION = 1;
   // Vertex normal.
+  //
+  // What we tried first did not show up. A mesh written with this attribute drew
+  // the same as one written without it. The client parsed the normals and then
+  // replaced them. A normal of length zero failed the whole geometry, so that
+  // mesh never appeared. Both are client bugs, not rules of this attribute.
+  // Star can shade from a normal supplied here. A hard edge stays sharp when
+  // the vertices on either side of it are not averaged together.
   ATTRIBUTE_ID_NORMAL = 2;
   // Primary texture coordinate.
   ATTRIBUTE_ID_UV = 3;
   // Secondary texture coordinate.
   ATTRIBUTE_ID_UV_1 = 4;
   // Vertex color.
+  //
+  // What we tried first did not show up. Per-vertex color written here was
+  // dropped on the way to the graphics layer, and the entity drew in a single
+  // color. That drop is a client bug. Star reads this attribute. One color for
+  // the whole entity is the Color component (style.v1).
   ATTRIBUTE_ID_COLOR = 5;
 }
 
@@ -96,6 +114,12 @@ message AttributeMetadata {
   // How to find the specific attribute in the byte array.
   oneof accessor {
     // An offset into the byte array.
+    //
+    // Leaving this unset did not work. The mesh never appeared. Proto3 omits a
+    // plain 0, so the accessor is absent on the wire, and the client ignores a
+    // mesh with no accessor. It does not assume offset 0. Set this oneof even
+    // when the offset is 0. A nested message in place of the oneof was also
+    // ignored, and that mesh never appeared either.
     uint32 offset = 1;
 
     // An identifier into another metadata block, most likely embedded in the byte array itself.
@@ -118,6 +142,7 @@ message AttributeMetadata {
   AttributeDataType data_type = 6;
 
   // Offset to the start of the next attribute value.
+  // For a tightly packed FLOAT32 vec3 this is 12 bytes.
   uint32 stride = 7;
 
   // Indicates if the values should be normalized.
@@ -148,10 +173,14 @@ message IndexMetadata {
   // which embed the index access information.
   oneof accessor {
     // An offset into the byte array which indicates where the indices start.
+    //
+    // Same failure as AttributeMetadata.offset. An omitted 0 meant no accessor,
+    // and the client ignored the mesh. Set this oneof even when the offset is 0.
     uint32 offset = 1;
   }
 
   // The data type of the indices.
+  // Use INDEX_DATA_TYPE_UINT16 when num_vertices <= 65535, otherwise UINT32.
   IndexDataType data_type = 2;
 
   // The number of indices present in the data.
