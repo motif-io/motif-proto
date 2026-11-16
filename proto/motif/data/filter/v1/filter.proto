@@ -18,6 +18,12 @@ syntax = "proto3";
 // computed values of at least 8 levels and 256 nodes, where each operation is
 // a level. A read of a computed value inside another is a level too, and the
 // nodes of the one it reads count toward the one that reads it.
+//
+// A saved filter that a `saved_filter` node names has those limits of its
+// own. Readers also accept a filter with the saved filters that it reaches,
+// counting a saved filter once for each node that names it, of at least 8000
+// nodes and 128 levels, where the root of a saved filter is one level below
+// the node that names it.
 
 package motif.data.filter.v1;
 
@@ -70,6 +76,13 @@ message FilterNode {
     // Matches entities whose placement path or source asset reaches the
     // target at this index.
     uint32 instances_of = 8;
+    // Matches the entities that the saved filter at this target index
+    // matches, as its expression does in the place of the node. The target
+    // is a saved filter of the filter's own model; a reader that cannot
+    // apply one of another model reads the filter as unreadable. A saved
+    // filter that is missing, that is unreadable, or that reaches itself
+    // through these nodes makes the filter fail; it does not match nothing.
+    uint32 saved_filter = 9;
   }
 }
 
