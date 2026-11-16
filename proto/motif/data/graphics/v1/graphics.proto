@@ -79,7 +79,9 @@ package motif.data.graphics.v1;
 //
 // For vertex `i` and component `j`, an attribute component begins at:
 //
-//     offset + i * stride + j * sizeof(data_type)
+// ```text
+// offset + i * stride + j * sizeof(data_type)
+// ```
 //
 // `stride` is the byte distance between consecutive values of the same
 // attribute. The components within one value are consecutive. A packed
@@ -295,12 +297,14 @@ package motif.data.graphics.v1;
 //
 // Store each attribute in its own packed block:
 //
-//     Bytes       Attribute  Type     Dimension  Stride  Offset
-//     [0,36)      POSITION   FLOAT32  3          12      0
-//     [36,72)     NORMAL     FLOAT32  3          12      36
-//     [72,96)     UV         FLOAT32  2           8      72
-//     [96,132)    COLOR      FLOAT32  3          12      96
-//     [132,138)   indices    UINT16   (scalar)   (2)     132
+// ```text
+// Bytes       Attribute  Type     Dimension  Stride  Offset
+// [0,36)      POSITION   FLOAT32  3          12      0
+// [36,72)     NORMAL     FLOAT32  3          12      36
+// [72,96)     UV         FLOAT32  2           8      72
+// [96,132)    COLOR      FLOAT32  3          12      96
+// [132,138)   indices    UINT16   (scalar)   (2)     132
+// ```
 //
 // Set each attribute's `id`, `data_type`, `dimension`, `stride`, and `offset`
 // from the table. Set `index_metadata` to `offset = 132`, `num_indices = 3`,
@@ -317,11 +321,13 @@ package motif.data.graphics.v1;
 // three `UINT16` indices in [0,6) and three 44-byte vertex records in [6,138).
 // Each record contains XYZ, normal XYZ, UV, then RGB:
 //
-//     Attribute  Type     Dimension  Stride  Absolute offset
-//     POSITION   FLOAT32  3          44       6
-//     NORMAL     FLOAT32  3          44      18
-//     UV         FLOAT32  2          44      30
-//     COLOR      FLOAT32  3          44      38
+// ```text
+// Attribute  Type     Dimension  Stride  Absolute offset
+// POSITION   FLOAT32  3          44       6
+// NORMAL     FLOAT32  3          44      18
+// UV         FLOAT32  2          44      30
+// COLOR      FLOAT32  3          44      38
+// ```
 //
 // Set `index_metadata.offset = 0` and retain `num_indices = 3`. The index block
 // remains packed independently of the attribute strides.
