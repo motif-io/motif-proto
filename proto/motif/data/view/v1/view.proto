@@ -371,8 +371,8 @@ message CropRegion {
 // Per-view visibility rules: the ordered overrides that decide which elements
 // the view draws. Lives on the view entity.
 //
-// This component is legacy: readers still apply it, before `ViewFilterRules`
-// on the same entity.
+// This component is legacy: readers still apply it, and `ViewFilterRules` on
+// the same entity override it.
 //
 // Absent from a view means every element is visible. Rules are evaluated in
 // order against each element and the last matching rule wins, so a broad hide
@@ -435,18 +435,24 @@ message VisibilityRules {
   }
 }
 
-// Per-view filter rules: the ordered overrides that decide which elements the
-// view draws and with which graphic style. Lives on the view entity.
+// Per-view filter rules: the overrides that decide which elements the view
+// draws and how it draws them. Lives on the view entity.
 //
-// Visibility and style are each decided by the last matching rule that sets
-// them, across the rules of `VisibilityRules` (which set only visibility) and
-// then these rules, in order. An element whose visibility no rule sets is
-// visible. The deciding style is a layer of the order in
+// The rules are in priority order: the first rule has the highest priority.
+// Each property of an element, its visibility and each graphic property, comes
+// from the first matching rule that sets it, so a later rule fills what an
+// earlier one leaves unset. Within a rule, `graphics` sets a property before
+// `style` does.
+//
+// These rules override `VisibilityRules`: an element whose visibility no rule
+// here sets is hidden or shown as `VisibilityRules` decide, and is visible when
+// they do not. Their graphics are a layer of the order in
 // `motif.data.style.v1.GraphicStyleAsset`, below the per-(source, view)
-// overrides and above the model's `motif.data.style.v1.GraphicStyleBindings`.
-// Each property it leaves unset, or every property when no rule sets a style,
-// falls through to the first matching model binding and then the layers below
-// it, not to an earlier rule here.
+// overrides and above the model's `motif.data.style.v1.GraphicStyleBindings`,
+// so a graphic property that no rule sets comes from the first matching model
+// binding and the layers below it. Element entries are per-(source, view)
+// overrides, so they rank above every rule, and a property that an entry sets
+// wins over the outline and cap-fill overrides of the same (source, view).
 //
 // A writer of this component puts every new visibility edit here, including a
 // category edit as a rule whose expression selects the category, and adds no
@@ -454,27 +460,30 @@ message VisibilityRules {
 // about and copies no rules from `VisibilityRules`. A copy of a view may carry
 // the view's `VisibilityRules` unchanged. A new view that starts from another
 // view's visibility may instead have no `VisibilityRules` and start here with
-// rules that hide what that view's `VisibilityRules` hide, followed by that
-// view's rules here.
+// that view's rules, followed by rules that hide what that view's
+// `VisibilityRules` hide.
 //
-// A field added to this message or to a rule must not change what any rule
-// decides for a reader that does not know it. A reader that finds an unknown
-// field on this message, outside the rules, must not rewrite the component
-// but may copy its bytes unchanged.
+// A field added to this message, to a rule, or to an entry must not change what
+// any rule or entry decides for a reader that does not know it. A reader that
+// cannot read a rule or an entry, or finds an unknown field in one, must not
+// rewrite it but may keep its bytes unchanged, move it, or remove it. A reader
+// that finds an unknown field on this message, outside the rules and entries,
+// must not rewrite the component but may copy its bytes unchanged.
 message ViewFilterRules {
   option (motif.extension.v1.message).component = 243;
 
   repeated ViewFilterRule rules = 1 [(buf.validate.field).repeated.max_items = 1000];
 
+  // At most one entry per element; a reader uses the first.
+  repeated ViewElementOverride elements = 2 [(buf.validate.field).repeated.max_items = 1000];
+
   // One override. A new way to select is a new `selector` arm or filter node,
-  // which makes the rule unreadable to older readers. A reader that cannot
-  // read a rule, or finds an unknown field in it, must not rewrite the rule
-  // but may keep its bytes unchanged, move it, or remove it.
+  // which makes the rule unreadable to older readers.
   message ViewFilterRule {
     option (buf.validate.message).cel = {
       id: "view_filter_rule.effect"
-      message: "a rule must set a visibility, a style, or both"
-      expression: "this.visibility != 0 || has(this.style)"
+      message: "a rule must set a visibility, a style, or graphics"
+      expression: "this.visibility != 0 || has(this.style) || has(this.graphics)"
     };
 
     // Which elements this rule selects, in the scope of the view. A rule the
@@ -506,6 +515,28 @@ message ViewFilterRules {
     // are drawn with; an unset `model` means the model that holds the view. A
     // malformed reference makes the whole rule unreadable, visibility included.
     motif.data.style.v1.PinnedStyleAssetReference style = 4;
+
+    // Graphic properties of the selected elements, set in this rule.
+    GraphicOverride graphics = 5;
+  }
+
+  // Graphic properties of one element in this view. An entry the reader
+  // cannot read is skipped.
+  message ViewElementOverride {
+    // `entity` names an element of the model that holds the view, with `model`
+    // unset. A set `model` is reserved for an element of another model; readers
+    // that predate the version that defines what a set `model` means here skip
+    // the entry.
+    motif.data.filter.v1.FilterTarget element = 1 [
+      (buf.validate.field).required = true,
+      (buf.validate.field).cel = {
+        id: "view_element_override.element_entity"
+        message: "element must name an entity"
+        expression: "has(this.entity)"
+      }
+    ];
+
+    GraphicOverride graphics = 2 [(buf.validate.field).required = true];
   }
 }
 
@@ -516,6 +547,37 @@ enum ViewFilterVisibility {
   VIEW_FILTER_VISIBILITY_UNSPECIFIED = 0;
   VIEW_FILTER_VISIBILITY_HIDE = 1;
   VIEW_FILTER_VISIBILITY_SHOW = 2;
+}
+
+// Graphic properties that a `ViewFilterRules` rule or element entry sets. Every
+// property is optional: an unset one is left to the next rule or layer, and
+// black or a continuous stroke is a value, not an unset one. A malformed
+// override makes the whole rule or entry that holds it unreadable.
+message GraphicOverride {
+  // Linework of the cut.
+  StrokeOverride cut = 1;
+
+  // Linework of the projection.
+  StrokeOverride projection = 2;
+}
+
+// Stroke properties of a `GraphicOverride`.
+message StrokeOverride {
+  // Pen-table index.
+  optional uint32 pen_size = 1 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 16
+  }];
+
+  motif.data.style.v1.Color color = 2;
+
+  // The line pattern, by name as in `motif.data.style.v1.LineStyle`, or
+  // inline. The pattern "Solid" and an inline empty cycle are a continuous
+  // stroke.
+  oneof pattern {
+    string pattern_ref = 3 [(buf.validate.field).string.min_len = 1];
+    motif.data.style.v1.LinePattern pattern_def = 4;
+  }
 }
 
 // The result of projecting a source entity's geometry through a view's
