@@ -118,6 +118,45 @@ enum UnitNotation {
   UNIT_NOTATION_DECIMAL = 2;
 }
 
+// Symbols used in formatted length labels. Applications determine which symbols
+// are valid for the selected unit and notation.
+enum UnitSymbol {
+  // Legacy settings omit optional symbols.
+  UNIT_SYMBOL_UNSPECIFIED = 0;
+  // Omit optional unit symbols.
+  UNIT_SYMBOL_NONE = 1;
+  // Millimeter symbol: mm.
+  UNIT_SYMBOL_MM = 2;
+  // Centimeter symbol: cm.
+  UNIT_SYMBOL_CM = 3;
+  // Decimeter symbol: dm.
+  UNIT_SYMBOL_DM = 4;
+  // Meter symbol: m.
+  UNIT_SYMBOL_M = 5;
+  // Decameter symbol: dam.
+  UNIT_SYMBOL_DAM = 6;
+  // Hectometer symbol: hm.
+  UNIT_SYMBOL_HM = 7;
+  // Kilometer symbol: km.
+  UNIT_SYMBOL_KM = 8;
+  // Foot symbol: '.
+  UNIT_SYMBOL_FOOT_SINGLE_QUOTE = 9;
+  // Foot abbreviation: ft.
+  UNIT_SYMBOL_FT = 10;
+  // Linear foot abbreviation: LF.
+  UNIT_SYMBOL_LF = 11;
+  // Inch symbol: ".
+  UNIT_SYMBOL_INCH_DOUBLE_QUOTE = 12;
+  // Inch abbreviation: in.
+  UNIT_SYMBOL_IN = 13;
+  // Yard abbreviation: yd.
+  UNIT_SYMBOL_YD = 14;
+  // Furlong abbreviation: fur.
+  UNIT_SYMBOL_FUR = 15;
+  // Mile abbreviation: mi.
+  UNIT_SYMBOL_MI = 16;
+}
+
 // A unit of length.
 enum LengthUnit {
   // Unspecified length unit.
@@ -215,6 +254,9 @@ message ModelUnitSettings {
   AreaUnitGroup area = 3;
   // Angle display settings.
   AngleUnitGroup angle = 4;
+  // Selected length symbol. Applications validate it against the effective unit
+  // and notation when displaying labels.
+  UnitSymbol unit_symbol = 5;
 }
 
 // Wall-asset compose behavior. Reads the 6 declared sub-parameters (workplane,
