@@ -440,20 +440,19 @@ message VisibilityRules {
 //
 // The rules are in priority order: the first rule has the highest priority.
 // An element's visibility comes from the first matching rule that sets one.
-// Its graphics come from the first matching rule that sets any, through
-// `style`, `cut`, or `projection`; within that rule, `cut` and `projection`
-// set a property before `style` does, and later rules do not fill gaps in that
-// rule's graphics. A rule that sets no visibility leaves visibility to later
-// rules, and one that sets no graphics leaves graphics to later rules.
+// Its style comes from the first matching rule that sets a `style`, and later
+// rules do not fill gaps in that style. A rule that sets no visibility leaves
+// visibility to later rules, and one that sets no `style` leaves the style to
+// later rules.
 //
 // These rules override `VisibilityRules`: an element whose visibility no rule
 // here sets is hidden or shown as `VisibilityRules` decide, and is visible when
-// they do not. Their graphics are a layer of the order in
+// they do not. Their styles are a layer of the order in
 // `motif.data.style.v1.GraphicStyleAsset`, below the per-(source, view)
 // overrides and above the model's `motif.data.style.v1.GraphicStyleBindings`,
-// so each property that the deciding rule leaves unset, or every property when
-// no rule sets graphics, comes from the first matching model binding and the
-// layers below it.
+// so each property that the deciding rule's style leaves unset, or every
+// property when no rule sets a style, comes from the first matching model
+// binding and the layers below it.
 //
 // A writer of this component puts every new visibility edit here, including a
 // category edit as a rule whose expression selects the category, and adds no
@@ -476,15 +475,15 @@ message ViewFilterRules {
   // One override. A new way to select is a new filter node, which makes the
   // rule unreadable to older readers. A rule the reader cannot read, or whose
   // expression fails, such as through a saved filter that is missing or
-  // unreadable, is skipped: it never matches. A malformed `style`, `cut`, or
-  // `projection` makes the whole rule unreadable, visibility included. A
-  // reader that skips a rule, or finds an unknown field in it, must not
-  // rewrite the rule but may keep its bytes unchanged, move it, or remove it.
+  // unreadable, is skipped: it never matches. A malformed `style` makes the
+  // whole rule unreadable, visibility included. A reader that skips a rule, or
+  // finds an unknown field in it, must not rewrite the rule but may keep its
+  // bytes unchanged, move it, or remove it.
   message ViewFilterRule {
     option (buf.validate.message).cel = {
       id: "view_filter_rule.effect"
-      message: "a rule must set a visibility, a style, or graphics"
-      expression: "this.visibility != 0 || has(this.style) || has(this.cut) || has(this.projection)"
+      message: "a rule must set a visibility or a style"
+      expression: "this.visibility != 0 || has(this.style)"
     };
 
     // Which elements this rule selects, in the scope of the view. Targets
@@ -502,14 +501,6 @@ message ViewFilterRules {
     // The `motif.data.style.v1.GraphicStyleAsset` that the selected elements
     // are drawn with; an unset `model` means the model that holds the view.
     motif.data.style.v1.PinnedStyleAssetReference style = 4;
-
-    // Cut and projection appearance of the selected elements, set in this
-    // rule as a `motif.data.style.v1.GraphicStyleAsset` sets it. Every
-    // property is optional, and the style references inside use the same
-    // pinned resolution, with an unset `model` meaning the model that holds
-    // the view.
-    motif.data.style.v1.GeometryStyle cut = 5;
-    motif.data.style.v1.GeometryStyle projection = 6;
   }
 }
 
