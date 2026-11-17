@@ -124,21 +124,18 @@ message FilterOperandList {
 }
 
 // The paths of a `path_under` test, for values that name a place in a
-// hierarchy, such as a layer or a folder. A value and each path split into
-// segments at each `separator` from the left, and a value is under a path
-// when it equals the path or starts with the path's segments. So with
-// separator "::", "A:::B" splits into "A" and ":B", and nothing is below
-// "A:". Segments compare whole: with separator "/", "A/B" and "A/B/C" are
-// under "A/B", and "A/BC" is not. An empty segment, as in "A//B", is a
-// segment. A value that is not text never matches, and an empty list of paths
-// matches nothing. Positional codes, such as UniFormat, use `starts_with`.
+// hierarchy, such as a layer. A value and each path split into segments at
+// each `separator`, from the left, so with separator "::", "A:::B" splits
+// into "A" and ":B". A value is under a path when its first segments are the
+// path's segments, so with separator "/", "A/B/C" is under "A/B" and "A/BC"
+// is not. An empty segment, as in "A//B", is a segment. A value that is not
+// text never matches, and an empty list of paths matches nothing. Positional
+// codes, such as UniFormat, use `starts_with`.
 message FilterPathList {
-  // The text that joins the segments of a value, such as "/".
   string separator = 1 [(buf.validate.field).string.min_len = 1];
 
-  // Each path is not empty, and split from the left, its last segment is
-  // not empty. A path that breaks this fails to compile; the filter stays
-  // readable.
+  // A path that is empty, or whose last segment is empty, fails to compile;
+  // the filter stays readable.
   repeated string paths = 2 [(buf.validate.field).repeated = {
     max_items: 1000
     items: {
