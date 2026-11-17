@@ -134,14 +134,9 @@ message FilterOperandList {
 message FilterPathList {
   string separator = 1 [(buf.validate.field).string.min_len = 1];
 
-  // A path that is empty, or whose last segment is empty, fails to compile;
+  // A path whose last segment is empty, such as "" or "A/", fails to compile;
   // the filter stays readable.
-  repeated string paths = 2 [(buf.validate.field).repeated = {
-    max_items: 1000
-    items: {
-      string: {min_len: 1}
-    }
-  }];
+  repeated string paths = 2 [(buf.validate.field).repeated.max_items = 1000];
 }
 
 // A value that a condition compares with.
