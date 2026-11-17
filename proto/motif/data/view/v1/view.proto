@@ -439,18 +439,21 @@ message VisibilityRules {
 // draws and how it draws them. Lives on the view entity.
 //
 // The rules are in priority order: the first rule has the highest priority.
-// Each property of an element, its visibility and each graphic property, comes
-// from the first matching rule that sets it, so a later rule fills what an
-// earlier one leaves unset. Within a rule, `cut` and `projection` set a
-// property before `style` does.
+// An element's visibility comes from the first matching rule that sets one.
+// Its graphics come from the first matching rule that sets any, through
+// `style`, `cut`, or `projection`; within that rule, `cut` and `projection`
+// set a property before `style` does, and later rules do not fill gaps in that
+// rule's graphics. A rule that sets no visibility leaves visibility to later
+// rules, and one that sets no graphics leaves graphics to later rules.
 //
 // These rules override `VisibilityRules`: an element whose visibility no rule
 // here sets is hidden or shown as `VisibilityRules` decide, and is visible when
 // they do not. Their graphics are a layer of the order in
 // `motif.data.style.v1.GraphicStyleAsset`, below the per-(source, view)
 // overrides and above the model's `motif.data.style.v1.GraphicStyleBindings`,
-// so a graphic property that no rule sets comes from the first matching model
-// binding and the layers below it.
+// so each property that the deciding rule leaves unset, or every property when
+// no rule sets graphics, comes from the first matching model binding and the
+// layers below it.
 //
 // A writer of this component puts every new visibility edit here, including a
 // category edit as a rule whose expression selects the category, and adds no
