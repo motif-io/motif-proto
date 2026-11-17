@@ -9,10 +9,10 @@ syntax = "proto3";
 //
 // Length, angle, and area operands use SI units: meters, radians, and square
 // meters. Text equality, inequality, membership, containment, and prefix
-// tests ignore case using Unicode simple case folding. Numeric comparisons
-// use the display precision of the model that applies the filter for lengths,
-// angles, and areas, so results can vary between models. Every test except
-// `not_exists` fails for an entity with no value.
+// tests ignore case. Numeric comparisons use the display precision of the
+// model that applies the filter for lengths, angles, and areas, so results
+// can vary between models. Every test except `not_exists` fails for an entity
+// with no value.
 //
 // Readers accept at least 32 levels of nesting in the expression, and
 // computed values of at least 8 levels and 256 nodes, where each operation is
