@@ -443,7 +443,7 @@ message VisibilityRules {
 // source, legacy view, and built-in fallbacks. Annotations skip legacy view
 // defaults. Cap fill remains in its existing view and element components.
 message ViewGraphicOverrides {
-  option (motif.extension.v1.message).component = 239;
+  option (motif.extension.v1.message).component = 240;
 
   // The lowest reader version that understands every field and variant in
   // this component, including nested messages. Writers raise it when using a
