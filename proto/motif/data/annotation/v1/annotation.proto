@@ -176,6 +176,8 @@ message ArrowheadStyleAsset {
 // loader stamps it and the commit path guarantees it. Derived geometry
 // (resolved points, part meshes, labels) is regenerated client-side and never
 // enters changesets.
+// A reader that cannot interpret the kind or placement arm must not rewrite
+// this component or treat it as an empty annotation.
 message Dimension {
   option (motif.extension.v1.message).component = 120;
   option (buf.validate.message).cel = {
@@ -418,7 +420,8 @@ message Dimension {
       expression: "!has(this.text_offset) || (!this.text_offset.x.isNan() && !this.text_offset.x.isInf() && !this.text_offset.y.isNan() && !this.text_offset.y.isInf())"
     };
 
-    // Counterclockwise angle from the carrier's positive U axis, radians.
+    // Angle in the source owner's carrier plane, measured counterclockwise
+    // from its positive U axis, radians.
     double owner_plane_angle_radians = 1 [(buf.validate.field).double.finite = true];
     // The natural text anchor on the ray through the current resolved center.
     // Inside placement follows radius changes proportionally; outside placement
@@ -570,6 +573,7 @@ message Dimension {
   // at most one entry per witness. Entries align with `LinearGeometry.anchors`
   // in insertion order, or `a`, `b` when that list is empty. Empty entries and
   // omitted trailing entries leave origins at their resolved anchors.
+  // Circular dimensions must leave this list empty; nonempty entries are invalid.
   repeated WitnessOriginOffset witness_origin_offsets = 6;
 
   // Field-number allocation (kind/placement oneofs and top-level fields share
@@ -583,8 +587,17 @@ message Dimension {
 }
 
 // One associated source for source-based dimension kinds. It shares an entity
-// with Dimension; the two components are created, changed, and removed atomically.
-// Older readers must never rewrite an unsupported or incomplete pair.
+// with Dimension; together they form one annotation record. Writers must create
+// and remove the pair atomically and keep its geometry and placement consistent.
+//
+// If the owner or compatible circular geometry is unavailable, retain the source
+// identity and authored placement and draw no annotation. A supported complete
+// pair may still be edited or atomically deleted; unavailable geometry does not
+// authorize automatic cleanup.
+//
+// Incomplete, mismatched, or unsupported pairs must not be drawn, rewritten, or
+// deleted by a reader that cannot interpret them. An operation that cannot preserve
+// such a pair, including export, must fail rather than silently omit it.
 message DimensionSource {
   option (motif.extension.v1.message).component = 240;
 
@@ -603,21 +616,26 @@ message DimensionSource {
   message PublishedDatum {
     // Durable owner-local ReferenceGeometry reference id. A circular consumer needs
     // a cylindrical datum and a compatible circular baseline on the same owner.
-    // Circular version 1 supports wall-face entries 4 and 5. Other identities
+    // Version 1 uses the built-in wall reference contract: 4 identifies the left
+    // face and 5 the right face. IDs remain owner-local; other asset definitions
+    // must not be assumed to share these meanings. The selected entry must be
+    // cylindrical and coaxial with the owner's circular baseline. Other identities
     // require a reader version that declares their circular-source semantics.
     uint32 reference_id = 1 [(buf.validate.field).uint32.gt = 0];
   }
 
   oneof selector {
     option (buf.validate.oneof).required = true;
-    // The owner's Curve2. Its stable carrier is the owner's CoordinateSystem3
-    // or its owning sketch/workplane frame, independent of the circle's LCS.
+    // The owner's Curve2. Its stable carrier uses the owner's CoordinateSystem3
+    // when present; otherwise it uses the owning sketch's workplane or level frame.
+    // The owner's frame takes precedence, independently of the circle's fitted LCS.
     google.protobuf.Empty own_curve = 3;
     // The owner's circular wall baseline. The baseline's resolved drawing-plane
     // U/V axes carry placement, independently of its circle's fitted LCS.
     google.protobuf.Empty wall_baseline = 4;
     // A published cylindrical wall face. It uses the same owner's circular
-    // baseline carrier and signed sweep; the cylinder supplies its axis/radius.
+    // baseline carrier and signed sweep. The published cylinder supplies the face's
+    // current axis/radius directly, without deriving it from wall thickness.
     PublishedDatum published_datum = 5;
   }
 }

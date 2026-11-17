@@ -13,11 +13,19 @@ cp buf.yaml buf.lock "$test_dir/candidate/"
 schema=proto/motif/data/annotation/v1/annotation.proto
 candidate="$test_dir/candidate/$schema"
 
+assert_fixture_changed() {
+  if cmp -s "$schema" "$candidate"; then
+    echo "Evolution fixture did not change the schema; check its insertion pattern." >&2
+    exit 1
+  fi
+}
+
 # Existing owners may acquire reference-free selector metadata. This checks
 # structural evolution only; new authored semantics still need a reader-version bump.
 awk '/^message DimensionSource \{/ {
   print; print "  uint32 future_selector_option = 6;"; next
 } { print }' "$schema" > "$candidate"
+assert_fixture_changed
 buf breaking "$test_dir/candidate" --against "$test_dir/baseline.binpb"
 echo "Reference-free source metadata remains structurally additive."
 
@@ -38,11 +46,13 @@ expect_reference_break() {
 awk '/^message DimensionSource \{/ {
   print; print "  motif.extension.v1.EntityReference additional_owner = 6;"; next
 } { print }' "$schema" > "$candidate"
+assert_fixture_changed
 expect_reference_break
 echo "Adding another owner to an existing source is rejected."
 
 awk '/^  message CircularGeometry \{/ {
   print; print "    motif.extension.v1.EntityReference source_owner = 2;"; next
 } { print }' "$schema" > "$candidate"
+assert_fixture_changed
 expect_reference_break
 echo "Adding a reference inside circular Dimension metadata is rejected."
