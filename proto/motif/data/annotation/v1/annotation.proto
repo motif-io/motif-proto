@@ -542,8 +542,8 @@ message DimensionStyle {
     // Em size, millimeters on paper — the ordinary meaning of a "12 pt" text
     // size, not the cap height.
     optional float size = 2;
-    // 3 reserved: font (motif.data.style.v1.Font), once more than one family
-    // is available to choose from.
+    // Label font: family, weight and slant. Unset inherits.
+    motif.data.style.v1.Font font = 3;
     // 4 reserved: width factor (horizontal glyph scale), once the text stack
     // can render one.
   }
@@ -683,9 +683,11 @@ enum ListKind {
 message TextStyleAsset {
   option (motif.extension.v1.message).component = 189;
 
-  // Font family name, e.g. "Roboto".
+  // Font family id (see style.v1.Font.family), e.g. "Roboto" or "Inter".
   optional string font_family = 1;
-  // Bold weight.
+  // Bold weight. When font_weight is set, bold mirrors it (true for a weight
+  // of 600 or more), so readers that predate font_weight still draw regular
+  // or bold.
   optional bool bold = 2;
   // Italic slant.
   optional bool italic = 3;
@@ -703,6 +705,13 @@ message TextStyleAsset {
   }
   // Horizontal alignment; UNSPECIFIED leaves it unset.
   Justify justify = 6;
+
+  // Font weight on the CSS / OS/2 usWeightClass scale: 400 regular, 500
+  // medium, 600 semibold, 700 bold. Takes precedence over bold when set.
+  optional uint32 font_weight = 9 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 1000
+  }];
 
   // Formerly list_kind: lists belong to the text, not its style.
   reserved 7;

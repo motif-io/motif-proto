@@ -454,8 +454,15 @@ message GraphicStyleBindings {
 // Font identity that survives reload (family name, not an unstable runtime
 // font-database id). A plain embedded message, not a standalone component.
 message Font {
-  // Font family name, e.g. "Roboto".
+  // Font family id. For a family Motif ships, its typographic family name,
+  // e.g. "Roboto" or "Inter". Empty means the application default.
   string family = 1;
   // star font style bits: BOLD = 0x1, ITALIC = 0x2. Unknown bits are ignored.
+  // When weight is set, BOLD mirrors it (set for a weight of 600 or more), so
+  // readers that predate weight still draw regular or bold.
   uint32 style_flags = 2;
+  // Weight on the CSS / OS/2 usWeightClass scale: 400 regular, 500 medium,
+  // 600 semibold, 700 bold. 0 means unset, and the weight comes from the BOLD
+  // bit: 700 when set, 400 otherwise.
+  uint32 weight = 3 [(buf.validate.field).uint32.lte = 1000];
 }
