@@ -7,10 +7,10 @@ syntax = "proto3";
 // unreadable; it does not mean the filter matches nothing.
 //
 // Length and angle operands use SI units. Text equality, inequality,
-// membership, containment, and prefix tests ignore case using Unicode simple
-// case folding. Numeric comparisons use the display precision of the model
-// that applies the filter for lengths and angles, so results can vary between
-// models. Every test except `not_exists` fails for an entity with no value.
+// membership, containment, and prefix tests ignore case. Numeric comparisons
+// use the display precision of the model that applies the filter for lengths
+// and angles, so results can vary between models. Every test except
+// `not_exists` fails for an entity with no value.
 //
 // Readers accept at least 32 levels of nesting.
 
