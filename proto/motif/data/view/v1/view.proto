@@ -442,16 +442,22 @@ message VisibilityRules {
 // Visibility and style are each decided by the last matching rule that sets
 // them, across the rules of `VisibilityRules` (which set only visibility) and
 // then these rules, in order. An element whose visibility no rule sets is
-// visible. An element whose style no rule sets takes the style of the first
-// matching binding in the model's `motif.data.style.v1.GraphicStyleBindings`,
-// then the defaults. An absent component, or one with no rules, decides
-// nothing.
+// visible. The style that decides is one layer of the order in
+// `motif.data.style.v1.GraphicStyleAsset`, which resolves each property on its
+// own: it ranks below the per-(source, view) overrides and above the model's
+// `motif.data.style.v1.GraphicStyleBindings`. A property that it leaves unset,
+// or every property when no rule sets a style, falls through to the first
+// matching model binding and then the layers below it, not to an earlier rule
+// here. An absent component, or one with no rules, decides nothing.
 //
-// A writer of this component adds no new rules to `VisibilityRules` but may
-// copy a view's `VisibilityRules` unchanged onto a copy of that view. The
-// writer puts every new visibility edit here, including a category edit as a
-// rule whose expression selects the category. An edit adds or changes only the
-// rules it is about, and never copies rules from `VisibilityRules` here.
+// A writer of this component adds no new rules to `VisibilityRules`. A copy of
+// a view may carry the view's `VisibilityRules` unchanged. A new view that
+// starts from another view's visibility may instead have no `VisibilityRules`
+// and start here with rules that hide what that view's `VisibilityRules` hide,
+// followed by that view's rules here. The writer puts every new visibility edit
+// here, including a category edit as a rule whose expression selects the
+// category. An edit adds or changes only the rules it is about, and never
+// copies rules from `VisibilityRules` here.
 //
 // A field added to this message or to a rule must not change what any rule
 // decides for a reader that does not know it. A reader that finds an unknown
@@ -488,9 +494,10 @@ message ViewFilterRules {
       motif.data.filter.v1.FilterExpression expression = 1;
       // The elements that this saved filter matches when the view is drawn, so
       // the rule follows edits of the filter. `entity` is required and names a
-      // `motif.data.filter.v1.SavedFilter`, today one in the model that holds
-      // the view, with `model` unset. A set `model` is reserved for another
-      // model's saved filter; a reader that cannot resolve it skips the rule.
+      // `motif.data.filter.v1.SavedFilter` in the model that holds the view,
+      // with `model` unset. A set `model` is reserved for another model's saved
+      // filter. A later version defines what it means here, and a reader that
+      // predates that version skips the rule.
       motif.data.filter.v1.FilterTarget saved_filter = 2 [(buf.validate.field).cel = {
         id: "view_filter_rule.saved_filter_entity"
         message: "saved_filter must name a saved filter entity"
@@ -506,7 +513,8 @@ message ViewFilterRules {
     // The `motif.data.style.v1.GraphicStyleAsset` that the selected elements
     // are drawn with in this view. An external style is pinned to its model
     // version; an unset `model` means the model that holds the view. Unset
-    // leaves the style to earlier rules.
+    // leaves the style to earlier rules. A malformed reference makes the whole
+    // rule unreadable, visibility included.
     motif.data.style.v1.PinnedStyleAssetReference style = 4;
   }
 }
