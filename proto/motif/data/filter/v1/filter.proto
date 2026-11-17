@@ -3,16 +3,26 @@ syntax = "proto3";
 // Filter expressions select model entities.
 //
 // An unknown field, required oneof arm, enum value, component ID, or field
-// path, or a target index past the end of `targets`, makes the entire filter
-// unreadable; it does not mean the filter matches nothing.
+// path, a target index past the end of `targets`, or a source on the read of
+// a computed value, makes the entire filter unreadable; it does not mean the
+// filter matches nothing.
 //
-// Length and angle operands use SI units. Text equality, inequality,
-// membership, containment, and prefix tests ignore case. Numeric comparisons
-// use the display precision of the model that applies the filter for lengths
-// and angles, so results can vary between models. Every test except
-// `not_exists` fails for an entity with no value.
+// Length, angle, and area operands use SI units: meters, radians, and square
+// meters. Text equality, inequality, membership, containment, and prefix
+// tests ignore case. Numeric comparisons use the display precision of the
+// model that applies the filter for lengths, angles, and areas, so results
+// can vary between models. Every test except `not_exists` fails for an entity
+// with no value.
 //
-// Readers accept at least 32 levels of nesting.
+// Readers accept at least 32 levels of nesting in the expression, and
+// computed values of at least 8 levels and 256 nodes, where each operation is
+// a level. A read of a computed value inside another is a level, and the
+// nodes of the one it reads count toward the one that reads it.
+//
+// A saved filter that a `saved_filter` node names has those limits of its
+// own. Readers also accept at least 8000 nodes and 128 levels in all across a
+// filter and the saved filters it reaches, counting a saved filter once per
+// node that names it, with its root one level below that node.
 
 package motif.data.filter.v1;
 
@@ -65,6 +75,13 @@ message FilterNode {
     // Matches entities whose placement path or source asset reaches the
     // target at this index.
     uint32 instances_of = 8;
+    // Matches what the saved filter at this target index matches, as its
+    // expression would in place of this node. The target is a saved filter of
+    // the filter's own model; a reader that cannot apply one of another model
+    // reads the filter as unreadable. A saved filter that is missing or
+    // unreadable, or that reaches itself through these nodes, makes the filter
+    // fail; it does not match nothing.
+    uint32 saved_filter = 9;
   }
 }
 
@@ -138,7 +155,93 @@ message FilterProperty {
     FilterStoredField field = 2;
     FilterParameter parameter = 3;
     FilterForeignProperty foreign = 4;
+    // Inside a computed value, a read of one is the same value as its
+    // operation nested in its place; writers write the nested operation.
+    FilterComputedValue computed = 5;
   }
+}
+
+// A value computed, not stored, from an entity's properties. A writer that
+// edits through one, such as a table cell, writes a property that it reads. A
+// parameter that its asset does not declare has no value and takes any
+// measure and kind.
+//
+// Arithmetic has no value when a read it uses has no value or a value that
+// is not a number, on division by zero, or when a result is not finite; to
+// arithmetic, imported text has no value and an imported number with no
+// measure is a plain number. Outside each `coalesce`, the entity then has no
+// value.
+//
+// A number snaps in three places: the final result, the value that a `ceil`,
+// `floor`, or `round` rounds, and the number that a `coalesce` picks.
+// Intermediate sums, differences, products, and quotients do not, and a
+// `coalesce` that keeps the kind of its values gives the value its property
+// holds. To snap v, in the SI unit of its measure: v becomes the whole number
+// nearest v when that is within 64 × 2^-52 × max(1, |v|) of v; else the
+// decimal with the fewest digits after the point that is within
+// 64 × 2^-52 × |v| of v and has one digit after the point or at most 12
+// significant digits; else it stays v. So 0.1 + 0.2 is 0.3.
+//
+// Values that read a property and are added or subtracted must have one
+// measure, and a product or quotient has the measure its parts make: model
+// length × model length is an area, and area / area is a plain number. Model
+// length and paper length are separate measures. Arithmetic reads plain
+// numbers, lengths, angles, and areas, and a ratio, such as an opacity, as a
+// plain number. Arithmetic that reads a property of another kind, such as
+// text, an index into a table, or a size in screen pixels, or whose result is
+// not a plain number, length, angle, or area, fails to compile; the filter
+// stays readable.
+//
+// A plain value is text, a number, or a bool, as an imported property holds
+// it: a length, angle, or area is its number in SI units, a color its
+// `#rrggbb` text, and an enum value the first name that the reader's schema
+// declares for its number, such as `REVIT_CATEGORY_DOORS`. As a plain value,
+// a reference, or an enum value the reader does not know, has no value.
+message FilterComputedValue {
+  oneof value {
+    option (buf.validate.oneof).required = true;
+
+    // A property of the entity, read from the source that it names.
+    FilterPropertyRead read = 1;
+    // A number with no measure of its own. In a sum or difference it takes
+    // the measure of the values it meets, in SI units; in a product or
+    // quotient it is a plain factor. An operation on literals alone acts as
+    // one literal, and a computation of literals alone is a plain number.
+    double literal = 2 [(buf.validate.field).double.finite = true];
+    FilterComputedValues add = 3;
+    FilterComputedPair subtract = 4;
+    FilterComputedValues multiply = 5;
+    FilterComputedPair divide = 6;
+    // The least whole number at or above the value. `ceil`, `floor`, and
+    // `round` round in the SI unit of the value and keep its measure.
+    FilterComputedValue ceil = 7;
+    // The greatest whole number at or below the value.
+    FilterComputedValue floor = 8;
+    // The nearest whole number; halfway rounds away from zero.
+    FilterComputedValue round = 9;
+    // The first value, in order, that has a value; empty text has none. When
+    // each value is a read of a property or a `coalesce` that keeps its kind,
+    // all of one kind such as text or a ratio, the result has that kind; else,
+    // when all have one measure, it has that measure, which a literal among
+    // them takes as in a sum. Values of two or more kinds, such as text and a
+    // literal, are plain values. Arithmetic reads a `coalesce` as a property
+    // of its kind or measure.
+    FilterComputedValues coalesce = 10;
+  }
+}
+
+// The values of an `add`, a `multiply`, or a `coalesce`.
+message FilterComputedValues {
+  repeated FilterComputedValue values = 1 [(buf.validate.field).repeated = {
+    min_items: 2
+    max_items: 100
+  }];
+}
+
+// The values of a `subtract` or a `divide`, in order.
+message FilterComputedPair {
+  FilterComputedValue left = 1 [(buf.validate.field).required = true];
+  FilterComputedValue right = 2 [(buf.validate.field).required = true];
 }
 
 // A persisted component field, identified by component ID and field-number
@@ -148,7 +251,10 @@ message FilterStoredField {
   motif.extension.v1.FieldPath path = 2 [(buf.validate.field).required = true];
 }
 
-// Parameter names are scoped to the asset that declares them.
+// A parameter by name: with `asset`, that asset's parameter. Without `asset`,
+// every asset that declares the name gives the same property, and
+// declarations of different kinds read as plain values (see
+// `FilterComputedValue`).
 message FilterParameter {
   string name = 1 [(buf.validate.field).string.min_len = 1];
   // A target index. Unset reads the parameter on whichever asset each entity
