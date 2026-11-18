@@ -188,6 +188,32 @@ message Opacity {
 }
 ```
 
+## Your Commit Email
+
+This repository is public, so the author and committer email on every commit
+you push becomes public too. We recommend your GitHub
+[noreply address](https://docs.github.com/en/account-and-profile/how-tos/email-preferences/setting-your-commit-email-address#setting-your-email-address-for-a-single-repository)
+(`<id>+<username>@users.noreply.github.com`); a public address you are
+comfortable sharing is also fine. To set it for this repository only:
+
+```sh
+git config user.email "<id>+<username>@users.noreply.github.com"
+```
+
+Motif engineers must use their noreply address, with "Keep my email addresses
+private" and "Block command line pushes that expose my email" turned on in
+their GitHub email settings.
+
+GitHub rejects a push when any commit's author or committer email is a Motif
+work address or a machine-generated address, such as one ending in `.internal`
+or `.local` that git creates when no email is configured. A `Co-authored-by`
+trailer naming one of those addresses is rejected too. If a push is rejected,
+set `user.email`, rewrite the email on your branch's commits, and push again:
+
+```sh
+git rebase --exec 'git commit --amend --no-edit --reset-author' origin/main
+```
+
 ## Tooling
 
 Tooling is installed through [`mise`](https://mise.jdx.dev/). After
@@ -219,7 +245,7 @@ above), and `mise tasks` to list everything.
 
 ### What CI Runs
 
-Two workflows gate a pull request:
+Three workflows gate a pull request:
 
 - **Buf CI** ([`.github/workflows/buf.yaml`](.github/workflows/buf.yaml)) — build,
   lint, format, and breaking-change detection against the PR base branch, via
@@ -229,6 +255,10 @@ Two workflows gate a pull request:
 - **Component IDs**
   ([`.github/workflows/component-ids.yaml`](.github/workflows/component-ids.yaml))
   — the ID-gap check.
+- **Commit history**
+  ([`.github/workflows/history.yaml`](.github/workflows/history.yaml)) — fails
+  when the branch carries history that is not part of the base branch. Build
+  your branch on a fresh clone or a recent fetch of `main`.
 
-`mise run lint` locally covers everything the PR checks do. Running it before you
-push is the difference between one review round and three.
+`mise run lint` locally covers the Buf and Component ID checks. Running it before
+you push is the difference between one review round and three.
