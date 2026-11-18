@@ -38,8 +38,8 @@
 /proto/motif/data/project/  @motif-io/motif-data-management
 
 # Operation schemas are owned by the Motif Modeling team.
-/proto/motif/operations/     @motif-io/motif-modeling
 /proto/motif/data/operation/ @motif-io/motif-modeling
+/proto/motif/operations/     @motif-io/motif-modeling
 
 # The FDE package is owned by the Motif FDE team.
 /proto/motif/data/fde/ @motif-io/motif-fde
