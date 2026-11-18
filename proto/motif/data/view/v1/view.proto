@@ -6,6 +6,7 @@ package motif.data.view.v1;
 
 import "buf/validate/validate.proto";
 import "motif/data/external/v1/categories.proto";
+import "motif/data/filter/v1/filter.proto";
 import "motif/data/geometry/v1/geometry.proto";
 import "motif/data/style/v1/style.proto";
 import "motif/extension/v1/options.proto";
@@ -370,6 +371,9 @@ message CropRegion {
 // Per-view visibility rules: the ordered overrides that decide which elements
 // the view draws. Lives on the view entity.
 //
+// This component is legacy: readers still apply it, and `ViewFilterRules` on
+// the same entity override it.
+//
 // Absent from a view means every element is visible. Rules are evaluated in
 // order against each element and the last matching rule wins, so a broad hide
 // can be narrowed by a later rule that shows a subset. An element that no rule
@@ -429,6 +433,84 @@ message VisibilityRules {
     // The category to select. `UNSPECIFIED` selects nothing.
     motif.data.external.v1.RevitCategory category = 1;
   }
+}
+
+// Per-view filter rules: the overrides that decide which elements the view
+// draws and how it draws them. Lives on the view entity.
+//
+// The rules are in priority order: the first rule has the highest priority.
+// An element's visibility comes from the first matching rule that sets one.
+// Its style comes from the first matching rule that sets a `style`, and later
+// rules do not fill gaps in that style. A rule that sets no visibility leaves
+// visibility to later rules, and one that sets no `style` leaves the style to
+// later rules.
+//
+// These rules override `VisibilityRules`: an element whose visibility no rule
+// here sets is hidden or shown as `VisibilityRules` decide, and is visible when
+// they do not. Their styles are a layer of the order in
+// `motif.data.style.v1.GraphicStyleAsset`, below the per-(source, view)
+// overrides and above the model's `motif.data.style.v1.GraphicStyleBindings`,
+// so each property that the deciding rule's style leaves unset, or every
+// property when no rule sets a style, comes from the first matching model
+// binding and the layers below it.
+//
+// A writer of this component puts every new visibility edit here, including a
+// category edit as a rule whose expression selects the category, and adds no
+// rules to `VisibilityRules`. An edit adds or changes only the rules it is
+// about and copies no rules from `VisibilityRules`. A copy of a view may carry
+// the view's `VisibilityRules` unchanged. A new view that starts from another
+// view's visibility may instead have no `VisibilityRules` and start here with
+// that view's rules, followed by rules that hide what that view's
+// `VisibilityRules` hide.
+//
+// A field added to this message or to a rule must not change what any rule
+// decides for a reader that does not know it. A reader that finds an unknown
+// field on this message, outside the rules, must not rewrite the component
+// but may copy its bytes unchanged.
+message ViewFilterRules {
+  option (motif.extension.v1.message).component = 243;
+
+  repeated ViewFilterRule rules = 1 [(buf.validate.field).repeated.max_items = 1000];
+
+  // One override. A new way to select is a new filter node, which makes the
+  // rule unreadable to older readers. A rule the reader cannot read, or whose
+  // expression fails, such as through a saved filter that is missing or
+  // unreadable, is skipped: it never matches. A malformed `style` makes the
+  // whole rule unreadable, visibility included. A reader that skips a rule, or
+  // finds an unknown field in it, must not rewrite the rule but may keep its
+  // bytes unchanged, move it, or remove it.
+  message ViewFilterRule {
+    option (buf.validate.message).cel = {
+      id: "view_filter_rule.effect"
+      message: "a rule must set a visibility or a style"
+      expression: "this.visibility != 0 || has(this.style)"
+    };
+
+    // Which elements this rule selects, in the scope of the view. Targets
+    // with `model` unset name entities of the model that holds the view. A
+    // rule that follows a saved filter, and so its edits, has an expression
+    // whose root is a `saved_filter` node naming a
+    // `motif.data.filter.v1.SavedFilter` of that model. A rule whose
+    // expression names another model's saved filter is reserved for a later
+    // version; readers skip it.
+    motif.data.filter.v1.FilterExpression expression = 1 [(buf.validate.field).required = true];
+
+    // A value the reader does not know makes the rule unreadable.
+    ViewFilterVisibility visibility = 3;
+
+    // The `motif.data.style.v1.GraphicStyleAsset` that the selected elements
+    // are drawn with; an unset `model` means the model that holds the view.
+    motif.data.style.v1.PinnedStyleAssetReference style = 4;
+  }
+}
+
+// What a `ViewFilterRules` rule does to the visibility of the elements it
+// selects.
+enum ViewFilterVisibility {
+  // Sets no visibility.
+  VIEW_FILTER_VISIBILITY_UNSPECIFIED = 0;
+  VIEW_FILTER_VISIBILITY_HIDE = 1;
+  VIEW_FILTER_VISIBILITY_SHOW = 2;
 }
 
 // The result of projecting a source entity's geometry through a view's
