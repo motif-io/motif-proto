@@ -11,8 +11,7 @@ import "motif/operations/expressions/v1/vector3_expression.proto";
 // A recipe selecting how to construct an unbounded plane.
 //
 // Each construction method defines its own inputs. The consuming operation
-// determines the coordinate frame and units. An evaluator must reject methods
-// it does not support rather than substitute a different construction.
+// determines the coordinate frame and units.
 message PlaneRecipe {
   // Exactly one plane construction method.
   oneof recipe {
@@ -32,8 +31,10 @@ message PlaneRecipe {
 message PlaneUsingOriginNormalRecipe {
   // Required point on the plane, in the consuming operation's coordinate units.
   motif.operations.expressions.v1.Vector3Expression origin = 1 [(buf.validate.field).required = true];
+
   // Required perpendicular direction. Evaluation must produce a nonzero vector.
   motif.operations.expressions.v1.Vector3Expression normal = 2 [(buf.validate.field).required = true];
+
   // Optional direction hint for the plane's local U axis.
   motif.operations.expressions.v1.Vector3Expression axis_u = 3;
 }

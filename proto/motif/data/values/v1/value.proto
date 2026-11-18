@@ -21,6 +21,7 @@ message Value {
     // An encoded protobuf message. Resolve its type_url to the registered,
     // fully qualified message name and validate its payload against that type.
     google.protobuf.Any message_value = 1;
+
     // A protobuf scalar with an explicitly selected primitive kind.
     ScalarValue scalar_value = 2;
   }

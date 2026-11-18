@@ -5,7 +5,6 @@ Protobuf schemas for the Motif platform.
 ## Overview
 
 Schemas are grouped at a high level into the following packages:
-
 - **`motif.api.v1`** - gRPC service API for the Motif platform
 - **`motif.data.<subpackage>.v1`** — Component schemas and supporting model-data types
 - **`motif.events.v1`** - Message types for notification events sent by the Motif platform

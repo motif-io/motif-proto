@@ -8,13 +8,12 @@ package motif.operations.reference_geometry.v1;
 import "buf/validate/validate.proto";
 import "motif/operations/reference_geometry/v1/reference_geometry_recipe.proto";
 
-// A collection of recipes for generating geometric references.
+// A collection of recipes for generating stable geometric references.
 //
-// Evaluate the entries against one explicitly supplied variable environment.
-// Map keys identify references within this definition; the recipes do not carry
-// separate IDs. Keeping keys stable across evaluations lets consumers identify
-// the same reference when its geometry changes. Map iteration order has no
-// semantic meaning.
+// A resolver evaluates the recipes against an explicitly supplied variable
+// environment. Map keys identify a piece of reference geometry across compatible
+// recipe changes, allowing consumers to identify the same reference when its
+// geometry changes. Map iteration order has no semantic meaning.
 //
 // Generated references use the local frame of the entity receiving the resolved
 // ReferenceGeometry. Recipe coordinates must already be expressed in that frame.

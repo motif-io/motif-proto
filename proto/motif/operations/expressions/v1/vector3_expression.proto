@@ -16,8 +16,10 @@ import "motif/operations/expressions/v1/scalar_expression.proto";
 message Vector3Expression {
   // Expression for the X coordinate.
   ScalarExpression x = 1 [(buf.validate.field).required = true];
+
   // Expression for the Y coordinate.
   ScalarExpression y = 2 [(buf.validate.field).required = true];
+
   // Expression for the Z coordinate.
   ScalarExpression z = 3 [(buf.validate.field).required = true];
 }
