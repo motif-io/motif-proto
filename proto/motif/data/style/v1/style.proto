@@ -375,8 +375,9 @@ message GeometryStyle {
 // This schema defines the asset only; it does not attach it to an entity,
 // category, or view. When a binding applies the asset, resolve each property
 // independently in this order (first set wins): per-(source, view) override
-// (outline Color/LineStyle or CapFillStyle), graphic style, source Color/LineStyle,
-// ViewStyle default, application default. For example, a cut cap uses an explicit
+// (ViewGraphicOverrides, outline Color/LineStyle, or CapFillStyle), style from
+// ViewFilterRules, model graphic style, source Color/LineStyle, ViewStyle
+// default, application default. For example, a cut cap uses an explicit
 // CapFillStyle.color before this style's cut fill, then source Color, then
 // ViewStyle.fill_color. Defining an asset alone changes no appearance.
 // Bindings may select sources by filters; a Color/LineStyle component on a
