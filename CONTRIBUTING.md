@@ -89,6 +89,11 @@ your component IDs based on the current state of `main` due to conflicting
 component IDs merged by other contributors. Your pull request will not be
 accepted until such conflicts are resolved.
 
+The top 10,000 IDs, 2147473648 through 2147483647 (the int32 maximum), are
+reserved for component types a model defines for its own use in a
+`motif.data.schema.v1.ComponentSchema`. Never assign them to a component type
+in this repository.
+
 ### Once Merged, an ID Is Permanent
 
 After a component type merges, its ID is part of persisted model data. Both

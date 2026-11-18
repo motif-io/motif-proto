@@ -25,6 +25,11 @@ extend google.protobuf.FieldOptions {
 // Motif options applied to a message, via `option (motif.extension.v1.message)`.
 message MotifMessageOptions {
   // Marks a message as a component type and defines its component ID.
+  //
+  // IDs 2147483647 - 9999 through 2147483647 (the top 10,000 int32 values) are
+  // reserved for component types a model defines for its own use, in a
+  // `motif.data.schema.v1.ComponentSchema`. Platform component types never use
+  // them.
   int32 component = 1;
 
   // Marks the component as auxiliary when present. Source content authored by

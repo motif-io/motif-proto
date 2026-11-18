@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package motif.data.schema.v1;
+
+import "motif/extension/v1/options.proto";
+
+// Component types defined by a model for its own use, making the model
+// self-describing: some of the data it stores is described by schemas it also
+// stores.
+//
+// Lives on the model entity (the model's sentinel entity), and a model holds at
+// most one. The types it defines are usable only in that model; another model
+// cannot read or write them, even with the same component IDs.
+//
+// Every component type the set defines takes its component ID from the range
+// reserved for model-defined types, 2147483647 - 9999 through 2147483647 (the
+// top 10,000 int32 values), which platform component types never use. The set
+// may import platform files such as `motif/extension/v1/options.proto`; the
+// platform's copies of those files take precedence over any copies included in
+// the set.
+//
+// Changes are additive: a later version may add component types, but must not
+// remove a component ID, assign it to a different type, or delete the schema
+// while it defines component types.
+message ComponentSchema {
+  option (motif.extension.v1.message).component = 254;
+
+  // A serialized `google.protobuf.FileDescriptorSet` holding the files that
+  // define the model's component types.
+  bytes file_descriptor_set = 1;
+}

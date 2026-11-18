@@ -3,7 +3,8 @@
 Follow [CONTRIBUTING.md](CONTRIBUTING.md) to add or change schemas;
 [`buf.md`](buf.md) lists the top-level packages. In particular:
 
-- Component IDs come from `mise run next-id`; never pick one by hand.
+- Component IDs come from `mise run next-id`; never pick one by hand. IDs from
+  2147473648 up are reserved for types a model defines for its own use.
 - Run `mise run format`, then `mise run lint`, after every change.
 - Commits and pull requests are public. Do not manually add `Co-authored-by`,
   `Made-with`, or other tool/AI attribution trailers, and do not reference
