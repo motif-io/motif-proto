@@ -1,0 +1,29 @@
+// The messages in this file are unstable APIs. Motif makes no guarantees that
+// these messages will continue to be supported.
+
+syntax = "proto3";
+
+package motif.data.operation.v1;
+
+import "buf/validate/validate.proto";
+import "motif/extension/v1/options.proto";
+
+// An execution descriptor for a script-backed operation definition.
+//
+// Place it alongside OperationDefinition to associate the declared interface
+// with an implementation. The execution provider resolves and runs that
+// implementation. Dependency analysis treats every input slot as affecting
+// every output slot.
+message Script {
+  option (motif.extension.v1.message).component = 253;
+
+  // Required implementation selector.
+  oneof implementation {
+    option (buf.validate.oneof).required = true;
+
+    // UUID of a native implementation registered with the execution provider.
+    // This 16-byte identifier is distinct from definition entity and component
+    // IDs. Writing this field does not register implementation code.
+    bytes native_implementation_id = 1 [(buf.validate.field).bytes.len = 16];
+  }
+}

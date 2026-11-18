@@ -1,0 +1,29 @@
+// The messages in this file are unstable APIs. Motif makes no guarantees that
+// these messages will continue to be supported.
+
+syntax = "proto3";
+
+package motif.operations.reference_geometry.v1;
+
+import "buf/validate/validate.proto";
+import "motif/operations/reference_geometry/v1/reference_geometry_recipe.proto";
+
+// A collection of recipes for generating stable geometric references.
+//
+// A resolver evaluates the recipes against an explicitly supplied variable
+// environment. Map keys identify a piece of reference geometry across compatible
+// recipe changes, allowing consumers to identify the same reference when its
+// geometry changes. Map iteration order has no semantic meaning.
+//
+// Generated references use the local frame of the entity receiving the resolved
+// ReferenceGeometry. Recipe coordinates must already be expressed in that frame.
+message ReferenceGeometryDefinition {
+  // Up to 50 reference recipes, keyed by nonzero reference ID. May be empty.
+  // Keys must remain stable across compatible recipe revisions.
+  map<uint32, ReferenceGeometryRecipe> entries = 1 [(buf.validate.field).map = {
+    max_pairs: 50
+    keys: {
+      uint32: {gt: 0}
+    }
+  }];
+}

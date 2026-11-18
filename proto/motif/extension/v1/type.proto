@@ -4,7 +4,8 @@ package motif.extension.v1;
 
 import "google/protobuf/type.proto";
 
-// Declares the expected type for a DataReference.
+// Describes a protobuf value type and cardinality. Consumers define which
+// combinations they support and validate those constraints locally.
 //
 // Kind and cardinality reuse the enums nested in the well-known
 // `google.protobuf.Field` (google/protobuf/type.proto). These are the proto3

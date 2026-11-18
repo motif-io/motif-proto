@@ -1,0 +1,20 @@
+// The messages in this file are unstable APIs. Motif makes no guarantees that
+// these messages will continue to be supported.
+
+syntax = "proto3";
+
+package motif.operations.declarations.v1;
+
+import "buf/validate/validate.proto";
+import "motif/operations/declarations/v1/slot_type.proto";
+
+// The result contract for one named output slot. Its key in
+// OutputDeclarations.slots supplies its name; an OutputBinding uses that name to
+// publish values.
+message OutputSlotDeclaration {
+  // Short human-readable purpose of the output, at most 160 characters.
+  string description = 1 [(buf.validate.field).string.max_len = 160];
+
+  // Required element type and permitted number of members.
+  SlotType slot_type = 2 [(buf.validate.field).required = true];
+}

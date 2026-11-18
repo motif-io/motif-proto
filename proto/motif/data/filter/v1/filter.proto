@@ -8,11 +8,11 @@ syntax = "proto3";
 // filter matches nothing.
 //
 // Length, angle, and area operands use SI units: meters, radians, and square
-// meters. Text equality, inequality, membership, containment, and prefix
-// tests ignore case. Numeric comparisons use the display precision of the
-// model that applies the filter for lengths, angles, and areas, so results
-// can vary between models. Every test except `not_exists` fails for an entity
-// with no value.
+// meters. Text equality, inequality, membership, containment, prefix, and
+// `path_under` tests ignore case. Numeric comparisons use the display
+// precision of the model that applies the filter for lengths, angles, and
+// areas, so results can vary between models. Every test except `not_exists`
+// fails for an entity with no value.
 //
 // Readers accept at least 32 levels of nesting in the expression, and
 // computed values of at least 8 levels and 256 nodes, where each operation is
@@ -113,12 +113,30 @@ message FilterCondition {
     string contains = 10;
     string starts_with = 11;
     FilterOperandList any_of = 12;
+    // Matches text that is one of the paths or below one.
+    FilterPathList path_under = 13;
   }
 }
 
 // The operands of an `any_of`.
 message FilterOperandList {
   repeated FilterOperand operands = 1 [(buf.validate.field).repeated.max_items = 1000];
+}
+
+// The paths of a `path_under` test, for values that name a place in a
+// hierarchy, such as a layer. A value and each path split into segments at
+// each `separator`, from the left, so with separator "::", "A:::B" splits
+// into "A" and ":B". A value is under a path when its first segments are the
+// path's segments, so with separator "/", "A/B/C" is under "A/B" and "A/BC"
+// is not. An empty segment, as in "A//B", is a segment. A value that is not
+// text never matches, and an empty list of paths matches nothing. Positional
+// codes, such as UniFormat, use `starts_with`.
+message FilterPathList {
+  string separator = 1 [(buf.validate.field).string.min_len = 1];
+
+  // A path whose last segment is empty, such as "" or "A/", fails to compile;
+  // the filter stays readable.
+  repeated string paths = 2 [(buf.validate.field).repeated.max_items = 1000];
 }
 
 // A value that a condition compares with.

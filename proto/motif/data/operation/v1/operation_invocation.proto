@@ -1,0 +1,30 @@
+// The messages in this file are unstable APIs. Motif makes no guarantees that
+// these messages will continue to be supported.
+
+syntax = "proto3";
+
+package motif.data.operation.v1;
+
+import "buf/validate/validate.proto";
+import "motif/extension/v1/options.proto";
+import "motif/operations/declarations/v1/input_binding.proto";
+import "motif/operations/declarations/v1/operation_reference.proto";
+
+// A use of an operation definition with bindings for its named inputs.
+//
+// The referenced OperationDefinition declares the input and output slots. This
+// component selects that definition and supplies input sources; other nodes can
+// consume its results with OutputSlotReference.
+message OperationInvocation {
+  option (motif.extension.v1.message).component = 251;
+
+  // Required definition target.
+  motif.operations.declarations.v1.OperationReference definition = 1 [(buf.validate.field).required = true];
+
+  // Ordered input sources. ONE/ZERO_OR_ONE accept at most one binding per slot;
+  // MANY concatenates bindings in list order and members in source order. With
+  // no binding, use the declaration default; explicit empty values suppress it.
+  // Defaults are never appended to bound sources. Bindings whose destination
+  // is no longer declared are retained and ignored after definition upgrades.
+  repeated motif.operations.declarations.v1.InputBinding input_bindings = 2;
+}

@@ -1,0 +1,26 @@
+// The messages in this file are unstable APIs. Motif makes no guarantees that
+// these messages will continue to be supported.
+
+syntax = "proto3";
+
+package motif.data.operation.v1;
+
+import "motif/extension/v1/options.proto";
+import "motif/operations/declarations/v1/input_declarations.proto";
+import "motif/operations/declarations/v1/output_declarations.proto";
+
+// The input and output slot interface shared by invocations of an operation.
+//
+// Place this component on the definition entity. Its declarations describe the
+// named slots; OperationInvocation supplies input bindings for each use. A Script
+// on the same entity supplies an implementation, or contained invocations and
+// OutputBindings describe a graph-backed implementation.
+message OperationDefinition {
+  option (motif.extension.v1.message).component = 250;
+
+  // Input slot declarations, including types, cardinalities, and optional defaults.
+  motif.operations.declarations.v1.InputDeclarations inputs = 1;
+
+  // Output slot declarations, including types and cardinalities.
+  motif.operations.declarations.v1.OutputDeclarations outputs = 2;
+}

@@ -1,0 +1,31 @@
+// The messages in this file are unstable APIs. Motif makes no guarantees that
+// these messages will continue to be supported.
+
+syntax = "proto3";
+
+package motif.operations.reference_geometry.v1;
+
+import "buf/validate/validate.proto";
+import "motif/operations/geometry/v1/plane_recipe.proto";
+
+// A construction method and descriptive metadata for one geometric reference.
+//
+// The key in ReferenceGeometryDefinition.entries supplies the reference identity.
+// Each primitive defines its own construction inputs; an evaluator must reject
+// primitives it does not support.
+message ReferenceGeometryRecipe {
+  // Optional human-readable label, at most 50 characters, separate from the
+  // reference identity.
+  optional string name = 1 [(buf.validate.field).string.max_len = 50];
+
+  // Ranking metadata; its interpretation is determined by the consumer.
+  int32 priority = 2;
+
+  // Exactly one construction method for the reference geometry.
+  oneof primitive {
+    option (buf.validate.oneof).required = true;
+
+    // The recipe for a planar reference.
+    motif.operations.geometry.v1.PlaneRecipe plane = 3;
+  }
+}
