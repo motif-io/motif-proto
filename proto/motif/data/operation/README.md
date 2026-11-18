@@ -24,10 +24,9 @@ The component messages work together as follows:
 
 | Component | Where it belongs | Purpose |
 | --- | --- | --- |
-| [InputDeclarations](v1/input_declarations.proto) | Definition entity | Declares named inputs, their types, cardinalities, and optional defaults. |
-| [OutputDeclarations](v1/output_declarations.proto) | Definition entity | Declares named outputs and their types and cardinalities. |
+| [OperationDefinition](v1/operation_definition.proto) | Definition entity | Contains named input and output slot declarations, including types, cardinalities, and input defaults. |
 | [Script](v1/script.proto) | Script-backed definition entity | Selects the implementation that computes the declared outputs. |
-| [InvokeOperation](v1/invoke_operation.proto) | Invocation entity | Selects a definition and binds its inputs. |
+| [OperationInvocation](v1/operation_invocation.proto) | Invocation entity | Selects a definition and binds its inputs. |
 | [OutputBindings](v1/output_bindings.proto) | Direct Member children of a graph-backed definition | Connects internal values to the definition's declared outputs. |
 
 A script-backed definition delegates computation to an implementation. A
@@ -36,9 +35,12 @@ Both expose the same declaration-based interface to their callers. A component
 is a registered message attached to an entity; supporting messages such as a
 binding or slot reference are fields within those components.
 
+OperationDefinition defines its inputs and outputs via [InputDeclarations](v1/input_declarations.proto) and
+[OutputDeclarations](v1/output_declarations.proto).
+
 Input binding destinations match keys in the called definition's
-`InputDeclarations.slots` map. Output binding destinations match keys in the
-enclosing graph definition's `OutputDeclarations.slots` map. Slot names are
+`OperationDefinition.inputs.slots` map. Output binding destinations match keys in the
+enclosing graph definition's `OperationDefinition.outputs.slots` map. Slot names are
 nonempty, case-sensitive, and at most 50 characters. Each input or output
 declaration map may contain up to 250 slots, and each slot description may contain
 up to 160 characters. Declaration map order has no argument or display ordering
@@ -47,34 +49,33 @@ meaning.
 ## Example: declare and invoke a numeric operation
 
 Suppose a provider implements an operation that doubles a number. Its definition
-entity carries the following three components. The implementation and UUIDs are
+entity carries the following two components. The implementation and UUIDs are
 illustrative: a provider must register code for the selected implementation ID.
 These textproto snippets are individual component payloads, not entity-creation
 requests.
 
-`motif.data.operation.v1.InputDeclarations`:
+`motif.data.operation.v1.OperationDefinition`:
 
 ```textproto
-slots {
-  key: "value"
-  value {
-    description: "Number to double."
-    slot_type {
-      type_spec { kind: TYPE_DOUBLE cardinality: CARDINALITY_REQUIRED }
+inputs {
+  slots {
+    key: "value"
+    value {
+      description: "Number to double."
+      slot_type {
+        type_spec { kind: TYPE_DOUBLE cardinality: CARDINALITY_REQUIRED }
+      }
     }
   }
 }
-```
-
-`motif.data.operation.v1.OutputDeclarations`:
-
-```textproto
-slots {
-  key: "doubled"
-  value {
-    description: "Twice the supplied number."
-    slot_type {
-      type_spec { kind: TYPE_DOUBLE cardinality: CARDINALITY_REQUIRED }
+outputs {
+  slots {
+    key: "doubled"
+    value {
+      description: "Twice the supplied number."
+      slot_type {
+        type_spec { kind: TYPE_DOUBLE cardinality: CARDINALITY_REQUIRED }
+      }
     }
   }
 }
@@ -91,7 +92,7 @@ To use it, create a separate invocation entity carrying the following component.
 `definition.entity` selects the definition; `input_bindings` supplies the
 invocation's data. UUIDs are written as their 16 bytes, using textproto escapes.
 
-`motif.data.operation.v1.InvokeOperation`:
+`motif.data.operation.v1.OperationInvocation`:
 
 ```textproto
 definition {
@@ -124,9 +125,10 @@ selects a whole output slot, including all members when its cardinality is MANY.
 
 ## Define a graph-backed operation
 
-A graph-backed definition carries its own input and output declarations. Its
-contained invocations bind to one another's outputs to form the computation.
-Callers use this definition through InvokeOperation, just as in the previous
+A graph-backed definition carries OperationDefinition with its own input and
+output slot declarations. Its contained invocations bind to one another's output
+slots to form the computation.
+Callers use this definition through OperationInvocation, just as in the previous
 example.
 
 To forward an enclosing graph's input to an internal invocation, use an
@@ -151,7 +153,7 @@ hierarchy exactly; a mismatch is a validation error. Member expresses ownership,
 containment, and deletion. Explicit slot references express data dependencies.
 When evaluating this graph as an invocation, the source resolves through that
 caller's bindings and declaration defaults. Standalone evaluation resolves its
-input declarations and defaults without needing a caller.
+input slot declarations and defaults without needing a caller.
 
 To expose the internal result as the enclosing graph's declared `doubled` output,
 place this component on a direct Member child of the graph definition:
@@ -205,7 +207,7 @@ and numeric conversions require explicit operations.
 
 ## Literal values, defaults, and ordering
 
-A [SlotLiteral](v1/slot_literal.proto) contains up to 1,000 ordered
+A [SlotValue](v1/slot_value.proto) contains up to 1,000 ordered
 [Value](../values/v1/value.proto) members. Each member is a scalar with an
 explicit primitive kind or a message encoded as `google.protobuf.Any`. A message
 uses its registered fully qualified name as logical identity; the `type_url`

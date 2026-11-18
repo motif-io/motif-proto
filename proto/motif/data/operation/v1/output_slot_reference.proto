@@ -15,10 +15,10 @@ import "motif/extension/v1/reference.proto";
 // local invocations stay live even when an invocation's definition is pinned to
 // an external model version.
 message OutputSlotReference {
-  // Required entity carrying InvokeOperation, resolved using EntityReference
+  // Required entity carrying OperationInvocation, resolved using EntityReference
   // model-scoping rules.
   motif.extension.v1.EntityReference invocation = 1 [(buf.validate.field).required = true];
-  // Key in the invoked definition's OutputDeclarations.slots map.
+  // Key in the invoked OperationDefinition.outputs.slots map.
   string output_name = 2 [(buf.validate.field).string = {
     min_len: 1
     max_len: 50

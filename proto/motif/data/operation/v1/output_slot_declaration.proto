@@ -8,8 +8,9 @@ package motif.data.operation.v1;
 import "buf/validate/validate.proto";
 import "motif/data/operation/v1/slot_type.proto";
 
-// The result contract for one named output. The containing OutputDeclarations
-// map key supplies its name; an OutputBinding uses that name to publish a value.
+// The result contract for one named output slot. Its key in
+// OutputDeclarations.slots supplies its name; an OutputBinding uses that name to
+// publish values.
 message OutputSlotDeclaration {
   // Short human-readable purpose of the output, at most 160 characters.
   string description = 1 [(buf.validate.field).string.max_len = 160];

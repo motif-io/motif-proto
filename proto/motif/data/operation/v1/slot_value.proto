@@ -16,7 +16,7 @@ import "motif/data/values/v1/value.proto";
 // input binding, it suppresses the declaration default; omitting the binding
 // instead requests default resolution. Values are successful data, not errors
 // or references.
-message SlotLiteral {
+message SlotValue {
   // Up to 1,000 members in source order, each matching the enclosing slot's
   // element type.
   repeated motif.data.values.v1.Value members = 1 [(buf.validate.field).repeated.max_items = 1000];

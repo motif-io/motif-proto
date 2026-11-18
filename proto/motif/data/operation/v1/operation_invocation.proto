@@ -12,11 +12,11 @@ import "motif/extension/v1/reference.proto";
 
 // A use of an operation definition with bindings for its named inputs.
 //
-// The referenced definition declares the input and output interface. This
+// The referenced OperationDefinition declares the input and output slots. This
 // component selects that definition and supplies input sources; other nodes can
 // consume its results with OutputSlotReference.
-message InvokeOperation {
-  option (motif.extension.v1.message).component = 240;
+message OperationInvocation {
+  option (motif.extension.v1.message).component = 251;
 
   // The definition to execute, optionally in a specific external model version.
   // This nested message keeps definition scoping separate from input sources.
@@ -30,7 +30,7 @@ message InvokeOperation {
     motif.extension.v1.ModelReference model = 2;
 
     option (buf.validate.message).cel = {
-      id: "invoke_operation.definition.target"
+      id: "operation_invocation.definition.target"
       message: "a definition requires an entity or model target"
       expression: "has(this.entity) || has(this.model)"
     };

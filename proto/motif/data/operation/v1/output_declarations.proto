@@ -7,17 +7,15 @@ package motif.data.operation.v1;
 
 import "buf/validate/validate.proto";
 import "motif/data/operation/v1/output_slot_declaration.proto";
-import "motif/extension/v1/options.proto";
 
-// The named output interface of an operation definition.
+// The named output slots of an operation definition.
 //
-// Each map entry declares the type and cardinality of one result. A script
-// implementation produces results by these names. A graph-backed definition
-// connects internal values to them through OutputBindings.
+// Each map entry declares the type and cardinality of one output slot.
+// OperationDefinition.outputs contains these declarations; each map value is an
+// OutputSlotDeclaration. Scripts produce results under these names, while
+// graph-backed definitions connect internal values through OutputBindings.
 message OutputDeclarations {
-  option (motif.extension.v1.message).component = 239;
-
-  // Up to 250 output contracts. Keys are nonempty, case-sensitive slot names
+  // Up to 250 output slot contracts. Keys are nonempty, case-sensitive slot names
   // of at most 50 characters. Map order does not specify result or display order.
   map<string, OutputSlotDeclaration> slots = 1 [(buf.validate.field).map = {
     max_pairs: 250

@@ -10,12 +10,12 @@ import "motif/extension/v1/options.proto";
 
 // An execution descriptor for a script-backed operation definition.
 //
-// Place it alongside InputDeclarations and OutputDeclarations to associate the
-// declared interface with an implementation. The execution provider resolves and
-// runs that implementation. Dependency analysis treats every input as affecting
-// every output.
+// Place it alongside OperationDefinition to associate the declared interface
+// with an implementation. The execution provider resolves and runs that
+// implementation. Dependency analysis treats every input slot as affecting
+// every output slot.
 message Script {
-  option (motif.extension.v1.message).component = 241;
+  option (motif.extension.v1.message).component = 253;
 
   // Required implementation selector.
   oneof implementation {

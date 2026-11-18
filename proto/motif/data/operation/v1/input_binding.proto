@@ -8,7 +8,7 @@ package motif.data.operation.v1;
 import "buf/validate/validate.proto";
 import "motif/data/operation/v1/input_slot_reference.proto";
 import "motif/data/operation/v1/output_slot_reference.proto";
-import "motif/data/operation/v1/slot_literal.proto";
+import "motif/data/operation/v1/slot_value.proto";
 
 // One source of values for a named input slot.
 //
@@ -17,7 +17,7 @@ import "motif/data/operation/v1/slot_literal.proto";
 // in binding-list order while preserving each source's member order. ONE and
 // ZERO_OR_ONE slots accept at most one record.
 message InputBinding {
-  // Destination key in the InputDeclarations.slots map.
+  // Destination input slot name in OperationDefinition.inputs.slots.
   string input_name = 4 [(buf.validate.field).string = {
     min_len: 1
     max_len: 50
@@ -27,7 +27,7 @@ message InputBinding {
     option (buf.validate.oneof).required = true;
 
     // Concrete values stored in this binding, including an explicit empty list.
-    SlotLiteral literal = 1;
+    SlotValue literal = 1;
     // Values produced by a named output of an invocation.
     OutputSlotReference output = 2;
     // Values supplied to an input of the immediately enclosing graph definition.

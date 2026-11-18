@@ -8,7 +8,7 @@ package motif.data.operation.v1;
 import "motif/data/operation/v1/output_binding.proto";
 import "motif/extension/v1/options.proto";
 
-// Connections from internal values to a graph definition's declared outputs.
+// Connections from internal values to a graph definition's declared output slots.
 //
 // Place these components on direct Member children of the graph definition.
 // Each output slot must have exactly one owning OutputBindings component, even
@@ -16,9 +16,9 @@ import "motif/extension/v1/options.proto";
 // ordered contributions to a MANY slot. Graph validation checks ownership,
 // destination names, source types, and permitted member counts.
 message OutputBindings {
-  option (motif.extension.v1.message).component = 242;
+  option (motif.extension.v1.message).component = 252;
 
-  // Ordered contributions to outputs declared by the enclosing definition.
+  // Ordered contributions to output slots declared by the enclosing definition.
   // MANY concatenates binding-list order and each source's member order.
   repeated OutputBinding bindings = 1;
 }
