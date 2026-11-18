@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package motif.data.annotation.v1;
+
+import "motif/data/style/v1/table.proto";
+import "motif/extension/v1/options.proto";
+
+// A table of typed text, such as a key, a legend or general notes: an
+// annotation that owns its cells and reads nothing from the model. Lives on
+// an entity that is a `Member` of a sheet or a drafting view, whose paper
+// `Transform` is the table's top-left corner.
+message TextTable {
+  option (motif.extension.v1.message).component = 246;
+
+  // The printed title.
+  string title = 1;
+
+  // One header per column; their number is the table's column count.
+  repeated string headers = 2;
+
+  // The body, top to bottom.
+  repeated TextTableRow rows = 3;
+
+  // How the table prints. Unset uses the reader's defaults for the model's
+  // units.
+  motif.data.style.v1.TableStyle style = 4;
+}
+
+// One body row of a text table.
+message TextTableRow {
+  // One per column, in header order. Missing cells are blank; cells past the
+  // column count are ignored.
+  repeated string cells = 1;
+}
