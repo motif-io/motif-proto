@@ -3,10 +3,10 @@
 
 syntax = "proto3";
 
-package motif.data.operation.v1;
+package motif.operations.declarations.v1;
 
 import "buf/validate/validate.proto";
-import "motif/data/values/v1/value.proto";
+import "motif/operations/values/v1/value.proto";
 
 // An ordered sequence of concrete values stored in a binding or input default.
 //
@@ -19,5 +19,5 @@ import "motif/data/values/v1/value.proto";
 message SlotValue {
   // Up to 1,000 members in source order, each matching the enclosing slot's
   // element type.
-  repeated motif.data.values.v1.Value members = 1 [(buf.validate.field).repeated.max_items = 1000];
+  repeated motif.operations.values.v1.Value members = 1 [(buf.validate.field).repeated.max_items = 1000];
 }

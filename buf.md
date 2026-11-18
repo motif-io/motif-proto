@@ -9,7 +9,7 @@ Schemas are grouped at a high level into the following packages:
 - **`motif.data.<subpackage>.v1`** — Component types defined by Motif, grouped by subpackage
 - **`motif.events.v1`** - Message types for notification events sent by the Motif platform
 - **`motif.extension.v1`** — Custom protobuf options and types used to extend the Motif platform with new Component types
-- **`motif.operations.<subpackage>.v1`** — Reusable operation input/output value formats; values may be stored as graph literals
+- **`motif.operations.<subpackage>.v1`** — Operation declarations, bindings, references, and value formats
 
 ## Usage
 

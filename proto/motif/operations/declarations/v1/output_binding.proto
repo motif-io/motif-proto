@@ -3,22 +3,22 @@
 
 syntax = "proto3";
 
-package motif.data.operation.v1;
+package motif.operations.declarations.v1;
 
 import "buf/validate/validate.proto";
-import "motif/data/operation/v1/input_slot_reference.proto";
-import "motif/data/operation/v1/output_slot_reference.proto";
-import "motif/data/operation/v1/slot_value.proto";
+import "motif/operations/declarations/v1/input_slot_reference.proto";
+import "motif/operations/declarations/v1/output_slot_reference.proto";
+import "motif/operations/declarations/v1/slot_value.proto";
 
-// One source of values for a named input slot.
+// One source of values for a named output slot.
 //
 // The destination name selects a declaration; the source supplies its entire
 // slot value or a literal. Multiple records may target a MANY slot, concatenated
 // in binding-list order while preserving each source's member order. ONE and
 // ZERO_OR_ONE slots accept at most one record.
-message InputBinding {
-  // Destination input slot name in OperationDefinition.inputs.slots.
-  string input_name = 4 [(buf.validate.field).string = {
+message OutputBinding {
+  // Destination output slot name in OperationDefinition.outputs.slots.
+  string output_name = 4 [(buf.validate.field).string = {
     min_len: 1
     max_len: 50
   }];

@@ -3,7 +3,7 @@
 
 syntax = "proto3";
 
-package motif.data.operation.v1;
+package motif.operations.declarations.v1;
 
 import "buf/validate/validate.proto";
 import "motif/extension/v1/reference.proto";

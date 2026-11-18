@@ -35,8 +35,8 @@ Both expose the same declaration-based interface to their callers. A component
 is a registered message attached to an entity; supporting messages such as a
 binding or slot reference are fields within those components.
 
-OperationDefinition defines its inputs and outputs via [InputDeclarations](v1/input_declarations.proto) and
-[OutputDeclarations](v1/output_declarations.proto).
+OperationDefinition defines its inputs and outputs via [InputDeclarations](../../operations/declarations/v1/input_declarations.proto) and
+[OutputDeclarations](../../operations/declarations/v1/output_declarations.proto).
 
 Input binding destinations match keys in the called definition's
 `OperationDefinition.inputs.slots` map. Output binding destinations match keys in the
@@ -109,7 +109,7 @@ Give the invocation entity UUID `20000000-0000-4000-8000-000000000001`. Another
 invocation can consume that result by using the following record in its
 `input_bindings`, provided its definition declares a compatible input named `value`.
 
-`motif.data.operation.v1.InputBinding`:
+`motif.operations.declarations.v1.InputBinding`:
 
 ```textproto
 input_name: "value"
@@ -120,7 +120,7 @@ output {
 ```
 
 Here, `input_name` identifies the destination slot; `output_name` identifies the
-source slot on the referenced invocation. An [OutputSlotReference](v1/output_slot_reference.proto) always
+source slot on the referenced invocation. An [OutputSlotReference](../../operations/declarations/v1/output_slot_reference.proto) always
 selects a whole output slot, including all members when its cardinality is MANY.
 
 ## Define a graph-backed operation
@@ -132,12 +132,12 @@ Callers use this definition through OperationInvocation, just as in the previous
 example.
 
 To forward an enclosing graph's input to an internal invocation, use an
-[InputSlotReference](v1/input_slot_reference.proto). For example, a graph with
+[InputSlotReference](../../operations/declarations/v1/input_slot_reference.proto). For example, a graph with
 UUID `30000000-0000-4000-8000-000000000001` can declare an input named `value` and
 contain the doubling invocation above. Replace that invocation's literal
 binding with:
 
-`motif.data.operation.v1.InputBinding`:
+`motif.operations.declarations.v1.InputBinding`:
 
 ```textproto
 input_name: "value"
@@ -183,7 +183,7 @@ stored as model data.
 
 ## Slot types and cardinality
 
-[SlotType](v1/slot_type.proto) uses `motif.extension.v1.TypeSpec` to declare a
+[SlotType](../../operations/declarations/v1/slot_type.proto) uses `motif.extension.v1.TypeSpec` to declare a
 protobuf scalar kind or a registered message name, plus cardinality:
 
 | TypeSpec cardinality | Slot meaning | Permitted member count |
@@ -207,8 +207,8 @@ and numeric conversions require explicit operations.
 
 ## Literal values, defaults, and ordering
 
-A [SlotValue](v1/slot_value.proto) contains up to 1,000 ordered
-[Value](../values/v1/value.proto) members. Each member is a scalar with an
+A [SlotValue](../../operations/declarations/v1/slot_value.proto) contains up to 1,000 ordered
+[Value](../../operations/values/v1/value.proto) members. Each member is a scalar with an
 explicit primitive kind or a message encoded as `google.protobuf.Any`. A message
 uses its registered fully qualified name as logical identity; the `type_url`
 prefix is transport metadata.
@@ -227,11 +227,17 @@ after a definition upgrade are retained and ignored.
 
 ## Definition scope and validation
 
-An invocation's `definition.entity` is live in the owning model when
-`definition.model` is absent. Setting `definition.model` pins the definition to
-that external model version. Omitting `definition.entity` then selects the whole
-model definition. This model scope applies only to the definition target;
-references in input bindings keep their own scope.
+An invocation's `definition` is an operation-specific
+[OperationReference](../../operations/declarations/v1/operation_reference.proto).
+With `definition.entity` set, an absent `definition.model` selects a live definition
+in the owning model. Setting `definition.model` pins the definition to that external
+model version. This scope applies only to the definition target; references in
+input bindings keep their own scope.
+
+OperationReference requires at least one of `entity` or `model`, but provisionally
+allows an omitted entity. How to select a model-level operation remains open:
+a model reference alone may suffice, or an explicit sentinel entity may be needed.
+The current message shape does not settle that resolution contract.
 
 Field validation checks local constraints such as required sources and nonempty
 names. Graph validation must also resolve definitions and references, check slot

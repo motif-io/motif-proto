@@ -3,10 +3,10 @@
 
 syntax = "proto3";
 
-package motif.data.operation.v1;
+package motif.operations.declarations.v1;
 
 import "buf/validate/validate.proto";
-import "motif/data/operation/v1/slot_type.proto";
+import "motif/operations/declarations/v1/slot_type.proto";
 
 // The result contract for one named output slot. Its key in
 // OutputDeclarations.slots supplies its name; an OutputBinding uses that name to

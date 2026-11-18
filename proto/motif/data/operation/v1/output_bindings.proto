@@ -5,8 +5,8 @@ syntax = "proto3";
 
 package motif.data.operation.v1;
 
-import "motif/data/operation/v1/output_binding.proto";
 import "motif/extension/v1/options.proto";
+import "motif/operations/declarations/v1/output_binding.proto";
 
 // Connections from internal values to a graph definition's declared output slots.
 //
@@ -20,5 +20,5 @@ message OutputBindings {
 
   // Ordered contributions to output slots declared by the enclosing definition.
   // MANY concatenates binding-list order and each source's member order.
-  repeated OutputBinding bindings = 1;
+  repeated motif.operations.declarations.v1.OutputBinding bindings = 1;
 }

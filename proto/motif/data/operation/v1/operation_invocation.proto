@@ -6,9 +6,9 @@ syntax = "proto3";
 package motif.data.operation.v1;
 
 import "buf/validate/validate.proto";
-import "motif/data/operation/v1/input_binding.proto";
 import "motif/extension/v1/options.proto";
-import "motif/extension/v1/reference.proto";
+import "motif/operations/declarations/v1/input_binding.proto";
+import "motif/operations/declarations/v1/operation_reference.proto";
 
 // A use of an operation definition with bindings for its named inputs.
 //
@@ -18,31 +18,13 @@ import "motif/extension/v1/reference.proto";
 message OperationInvocation {
   option (motif.extension.v1.message).component = 251;
 
-  // The definition to execute, optionally in a specific external model version.
-  // This nested message keeps definition scoping separate from input sources.
-  message Definition {
-    // Definition entity. When model is unset, this is a live reference within
-    // the owning model. Omit only when model identifies the whole definition.
-    motif.extension.v1.EntityReference entity = 1;
-
-    // Pins the definition to an external model version. This scopes entity only;
-    // references in input_bindings retain their own model scope.
-    motif.extension.v1.ModelReference model = 2;
-
-    option (buf.validate.message).cel = {
-      id: "operation_invocation.definition.target"
-      message: "a definition requires an entity or model target"
-      expression: "has(this.entity) || has(this.model)"
-    };
-  }
-
   // Required definition target.
-  Definition definition = 1 [(buf.validate.field).required = true];
+  motif.operations.declarations.v1.OperationReference definition = 1 [(buf.validate.field).required = true];
 
   // Ordered input sources. ONE/ZERO_OR_ONE accept at most one binding per slot;
   // MANY concatenates bindings in list order and members in source order. With
   // no binding, use the declaration default; explicit empty values suppress it.
   // Defaults are never appended to bound sources. Bindings whose destination
   // is no longer declared are retained and ignored after definition upgrades.
-  repeated InputBinding input_bindings = 2;
+  repeated motif.operations.declarations.v1.InputBinding input_bindings = 2;
 }

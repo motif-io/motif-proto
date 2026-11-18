@@ -32,6 +32,8 @@ Schemas are grouped into these top-level packages, all versioned `v1`:
 - **`motif.events.v1`** — Message types for notification events.
 - **`motif.extension.v1`** — Custom Protobuf options and types used to extend the
   platform with new component types.
+- **`motif.operations.<subpackage>.v1`** — Message types for operations including
+  definition and runtime processing.
 - **`thirdparty.<partner>.data.<domain>.v1`** — Partner-owned component types
   (e.g. `thirdparty.bhom.data.physical.v1`), under `proto/thirdparty/…` so they
   sort after `motif` on the Buf Schema Registry.

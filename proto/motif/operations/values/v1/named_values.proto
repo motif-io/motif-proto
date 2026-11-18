@@ -6,7 +6,7 @@ syntax = "proto3";
 package motif.operations.values.v1;
 
 import "buf/validate/validate.proto";
-import "motif/data/values/v1/value.proto";
+import "motif/operations/values/v1/value.proto";
 
 // A map from names to individual scalar or protobuf message values.
 //
@@ -16,7 +16,7 @@ import "motif/data/values/v1/value.proto";
 message NamedValues {
   // Up to 50 values keyed by nonempty, case-sensitive names of at most 50
   // characters. The map may be empty.
-  map<string, motif.data.values.v1.Value> values = 1 [(buf.validate.field).map = {
+  map<string, Value> values = 1 [(buf.validate.field).map = {
     max_pairs: 50
     keys: {
       string: {

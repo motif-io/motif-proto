@@ -3,11 +3,11 @@
 
 syntax = "proto3";
 
-package motif.data.operation.v1;
+package motif.operations.declarations.v1;
 
 import "buf/validate/validate.proto";
-import "motif/data/operation/v1/slot_type.proto";
-import "motif/data/operation/v1/slot_value.proto";
+import "motif/operations/declarations/v1/slot_type.proto";
+import "motif/operations/declarations/v1/slot_value.proto";
 
 // The type and default for one named input slot. Its key in
 // InputDeclarations.slots supplies its name; an InputBinding uses that name to
