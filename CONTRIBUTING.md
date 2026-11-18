@@ -245,7 +245,7 @@ above), and `mise tasks` to list everything.
 
 ### What CI Runs
 
-Three workflows gate a pull request:
+Two workflows gate a pull request:
 
 - **Buf CI** ([`.github/workflows/buf.yaml`](.github/workflows/buf.yaml)) — build,
   lint, format, and breaking-change detection against the PR base branch, via
@@ -255,10 +255,6 @@ Three workflows gate a pull request:
 - **Component IDs**
   ([`.github/workflows/component-ids.yaml`](.github/workflows/component-ids.yaml))
   — the ID-gap check.
-- **Commit history**
-  ([`.github/workflows/history.yaml`](.github/workflows/history.yaml)) — fails
-  when the branch carries history that is not part of the base branch. Build
-  your branch on a fresh clone or a recent fetch of `main`.
 
-`mise run lint` locally covers the Buf and Component ID checks. Running it before
-you push is the difference between one review round and three.
+`mise run lint` locally covers everything the PR checks do. Running it before you
+push is the difference between one review round and three.
