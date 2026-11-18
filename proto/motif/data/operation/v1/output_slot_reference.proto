@@ -18,6 +18,7 @@ message OutputSlotReference {
   // Required entity carrying OperationInvocation, resolved using EntityReference
   // model-scoping rules.
   motif.extension.v1.EntityReference invocation = 1 [(buf.validate.field).required = true];
+
   // Key in the invoked OperationDefinition.outputs.slots map.
   string output_name = 2 [(buf.validate.field).string = {
     min_len: 1

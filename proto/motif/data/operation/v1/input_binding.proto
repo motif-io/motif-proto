@@ -28,8 +28,10 @@ message InputBinding {
 
     // Concrete values stored in this binding, including an explicit empty list.
     SlotValue literal = 1;
+
     // Values produced by a named output of an invocation.
     OutputSlotReference output = 2;
+
     // Values supplied to an input of the immediately enclosing graph definition.
     InputSlotReference input = 3;
   }

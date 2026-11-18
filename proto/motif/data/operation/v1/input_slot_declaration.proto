@@ -15,6 +15,7 @@ import "motif/data/operation/v1/slot_value.proto";
 message InputSlotDeclaration {
   // Short human-readable purpose of the input, at most 160 characters.
   string description = 1 [(buf.validate.field).string.max_len = 160];
+
   // Required element type and permitted number of members.
   SlotType slot_type = 2 [(buf.validate.field).required = true];
 

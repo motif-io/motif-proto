@@ -27,17 +27,19 @@ message SlotType {
   // Required message/scalar type and cardinality, constrained by the rules below.
   motif.extension.v1.TypeSpec type_spec = 1 [(buf.validate.field).required = true];
 
-  // Validation is local to operation slots, without tightening shared TypeSpec.
+  // Validation is local to operation slots.
   option (buf.validate.message).cel = {
     id: "slot_type.cardinality"
     message: "operation slot cardinality must be REQUIRED, OPTIONAL, or REPEATED"
     expression: "this.type_spec.cardinality in [1, 2, 3]"
   };
+
   option (buf.validate.message).cel = {
     id: "slot_type.kind"
     message: "operation slots require a protobuf message or supported scalar kind"
     expression: "this.type_spec.kind in [1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 15, 16, 17, 18]"
   };
+
   option (buf.validate.message).cel = {
     id: "slot_type.type_name"
     message: "messages require a fully qualified protobuf name; scalars have no type_name"

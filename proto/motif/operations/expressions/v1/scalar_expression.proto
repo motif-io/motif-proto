@@ -9,8 +9,8 @@ import "buf/validate/validate.proto";
 
 // An arithmetic expression tree that evaluates to a scalar number.
 //
-// A node is a numeric literal, a named variable, a negation, or a binary
-// operation. Variable values come from the environment explicitly supplied to
+// Supported nodes are numeric literals, named variables, negations, and binary
+// operations. Variable values come from the environment explicitly supplied to
 // the evaluator. A missing referenced variable or an unset or unsupported node
 // is an evaluation error.
 message ScalarExpression {
@@ -19,6 +19,7 @@ message ScalarExpression {
 
     // Constant numeric value.
     double literal = 1;
+
     // Exact, case-sensitive name in the supplied variable environment, at most
     // 50 characters. The evaluator determines supported value kinds; a missing
     // name is an error.
@@ -26,8 +27,10 @@ message ScalarExpression {
       min_len: 1
       max_len: 50
     }];
+
     // Arithmetic negation of the nested expression.
     ScalarExpression negate = 3;
+
     // Arithmetic combination of two expressions.
     BinaryExpression binary = 4;
   }
@@ -41,8 +44,10 @@ message BinaryExpression {
     defined_only: true
     not_in: [0]
   }];
+
   // Left operand.
   ScalarExpression left = 2 [(buf.validate.field).required = true];
+
   // Right operand.
   ScalarExpression right = 3 [(buf.validate.field).required = true];
 }

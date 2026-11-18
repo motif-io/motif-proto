@@ -8,14 +8,28 @@ package motif.operations.geometry.v1;
 import "buf/validate/validate.proto";
 import "motif/operations/expressions/v1/vector3_expression.proto";
 
-// An expression-based definition of a plane's position and orientation.
+// A recipe selecting how to construct an unbounded plane.
+//
+// Each construction method defines its own inputs. The consuming operation
+// determines the coordinate frame and units. An evaluator must reject methods
+// it does not support rather than substitute a different construction.
+message PlaneRecipe {
+  // Exactly one plane construction method.
+  oneof recipe {
+    option (buf.validate.oneof).required = true;
+
+    // Construct a plane from an origin and normal.
+    PlaneUsingOriginNormalRecipe origin_normal = 1;
+  }
+}
+
+// Constructs a plane by evaluating its origin and normal coordinates.
 //
 // Evaluating origin and normal locates the plane and determines its perpendicular
 // direction. The optional axis_u supplies an in-plane orientation hint; when it
 // is omitted, the evaluator chooses that direction. All expressions use the
-// same variable environment and coordinate system. The recipe specifies no
-// finite extent.
-message PlaneRecipe {
+// same variable environment and coordinate system.
+message PlaneUsingOriginNormalRecipe {
   // Required point on the plane, in the consuming operation's coordinate units.
   motif.operations.expressions.v1.Vector3Expression origin = 1 [(buf.validate.field).required = true];
   // Required perpendicular direction. Evaluation must produce a nonzero vector.

@@ -14,6 +14,15 @@ import "motif/data/values/v1/value.proto";
 // expression evaluator. Each consumer determines which names it needs and the
 // expected types of their values. Map iteration order has no meaning.
 message NamedValues {
-  // Values keyed by nonempty, case-sensitive name. The map may be empty.
-  map<string, motif.data.values.v1.Value> values = 1 [(buf.validate.field).map.keys.string.min_len = 1];
+  // Up to 50 values keyed by nonempty, case-sensitive names of at most 50
+  // characters. The map may be empty.
+  map<string, motif.data.values.v1.Value> values = 1 [(buf.validate.field).map = {
+    max_pairs: 50
+    keys: {
+      string: {
+        min_len: 1
+        max_len: 50
+      }
+    }
+  }];
 }

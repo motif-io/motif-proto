@@ -8,20 +8,24 @@ package motif.operations.reference_geometry.v1;
 import "buf/validate/validate.proto";
 import "motif/operations/geometry/v1/plane_recipe.proto";
 
-// A recipe for one plane reference, combining geometric expressions with an
-// identifier and descriptive metadata.
+// A construction method and descriptive metadata for one geometric reference.
 //
-// The ID distinguishes this reference within its definition. The optional name
-// is a human-readable label; priority provides ranking metadata for consumers.
+// The key in ReferenceGeometryDefinition.entries supplies the reference identity.
+// Each primitive defines its own construction inputs; an evaluator must reject
+// primitives it does not support.
 message ReferenceGeometryRecipe {
-  // Reference identity, unique within the containing definition. Preserve it
-  // across evaluations to retain the reference's identity.
-  uint32 id = 1;
   // Optional human-readable label, at most 50 characters, separate from the
   // reference identity.
-  optional string name = 2 [(buf.validate.field).string.max_len = 50];
+  optional string name = 1 [(buf.validate.field).string.max_len = 50];
+
   // Ranking metadata; its interpretation is determined by the consumer.
-  int32 priority = 3;
-  // Required expressions defining the reference plane.
-  motif.operations.geometry.v1.PlaneRecipe plane = 4 [(buf.validate.field).required = true];
+  int32 priority = 2;
+
+  // Exactly one construction method for the reference geometry.
+  oneof primitive {
+    option (buf.validate.oneof).required = true;
+
+    // The recipe for a planar reference.
+    motif.operations.geometry.v1.PlaneRecipe plane = 3;
+  }
 }

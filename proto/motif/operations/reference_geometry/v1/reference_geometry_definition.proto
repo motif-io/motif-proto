@@ -5,15 +5,26 @@ syntax = "proto3";
 
 package motif.operations.reference_geometry.v1;
 
+import "buf/validate/validate.proto";
 import "motif/operations/reference_geometry/v1/reference_geometry_recipe.proto";
 
 // A collection of recipes for generating geometric references.
 //
-// Evaluate the recipes against one explicitly supplied variable environment.
-// Recipe IDs identify references within the collection and must be unique.
-// Keeping IDs stable across evaluations lets consumers identify the same
-// reference when its geometry changes.
+// Evaluate the entries against one explicitly supplied variable environment.
+// Map keys identify references within this definition; the recipes do not carry
+// separate IDs. Keeping keys stable across evaluations lets consumers identify
+// the same reference when its geometry changes. Map iteration order has no
+// semantic meaning.
+//
+// Generated references use the local frame of the entity receiving the resolved
+// ReferenceGeometry. Recipe coordinates must already be expressed in that frame.
 message ReferenceGeometryDefinition {
-  // Reference recipes in authored order, with distinct IDs. May be empty.
-  repeated ReferenceGeometryRecipe recipes = 1;
+  // Up to 50 reference recipes, keyed by nonzero reference ID. May be empty.
+  // Keys must remain stable across compatible recipe revisions.
+  map<uint32, ReferenceGeometryRecipe> entries = 1 [(buf.validate.field).map = {
+    max_pairs: 50
+    keys: {
+      uint32: {gt: 0}
+    }
+  }];
 }
