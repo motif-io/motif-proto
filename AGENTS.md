@@ -12,9 +12,15 @@ and [`buf`](https://buf.build/). Run `mise run <task>` for the tasks below.
 This repository is public, so treat every commit and pull request as externally
 visible. This applies to all contributors, internal and external:
 
-- Prefer a GitHub [`users.noreply.github.com`](https://docs.github.com/en/account-and-profile/how-tos/email-preferences/setting-your-commit-email-address#setting-your-email-address-for-a-single-repository)
-  email for your author/committer identity so you do not expose a personal
-  address. Using a public email you are comfortable sharing is also fine.
+- Motif engineers must use their GitHub
+  [`users.noreply.github.com`](https://docs.github.com/en/account-and-profile/how-tos/email-preferences/setting-your-commit-email-address#setting-your-email-address-for-a-single-repository)
+  address as their author/committer identity, and turn on "Keep my email
+  addresses private" and "Block command line pushes that expose my email" in
+  their GitHub email settings. External contributors should prefer the noreply
+  address too; a public email they are comfortable sharing is also fine.
+- Pushes are rejected when any commit's author or committer email is a Motif
+  work address or a machine-generated address (for example one ending in
+  `.internal` or `.local`), or when a `Co-authored-by` trailer names one.
 - Do not add `Co-authored-by`, `Made-with`, or other tool/AI attribution
   trailers to commits or PRs.
 - Do not link to private or internal systems (such as private issue trackers)
