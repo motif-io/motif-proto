@@ -778,8 +778,9 @@ message SweepProfileAlongCurvesBehavior {
 //
 // Regeneration resolves the named `inputs` into a parameter map, evaluates the
 // asset's stored `configuration` against it to obtain the engine-agnostic asset
-// parts, looks up the part selected by `part_index`, sweeps or extrudes it (in
-// the part's own self-placing frame), and writes the result to the `output`
+// parts, looks up the part selected by `part_index`, <remove>sweeps or extrudes
+// it (in the part's own self-placing frame)</remove><add>evaluates its geometry
+// recipe</add>, and writes the result to the `output`
 // entity as a `Shape`.
 //
 // Distinct from `SweepWidthHeightAlongCurveBehavior` (which only sweeps a
@@ -821,31 +822,56 @@ message BuiltinAssetPartBehavior {
 
 // Stored, expression-driven definition of a built-in asset's parts.
 //
-// Placed permanently on a `CONFIGURATION_DRIVEN` asset entity. Each part's
-// geometry is a sweep/extrude recipe whose scalars are expression trees over
-// named parameters; evaluating the configuration against an instance's resolved
+// <add>Contains either a planar solid recipe in `parts` or an analytical recipe
+// in `analytical`. Readers select the recipe by field presence.</add>
+//
+// Placed permanently on a `CONFIGURATION_DRIVEN` asset entity.
+// <add>In a planar recipe,</add> each part's geometry is a sweep/extrude recipe
+// whose scalars are expression trees over named parameters; evaluating the
+// configuration against an instance's resolved
 // parameter scope yields the same engine-agnostic parts vocabulary the
 // code-authored recipes produce (`builtin_asset_recipes::geometry_parts::AssetPart`),
 // so consumers bake configured and code-authored assemblies identically.
 //
-// The expression language is single-typed (every expression is a finite double
-// in meters) and exactly IEEE-754-specified, so evaluation is deterministic.
+// The <add>planar</add> expression language is single-typed (every expression is
+// a finite double in meters) and exactly IEEE-754-specified, so evaluation is
+// deterministic.
 // Structural limits (expression depth, part and point counts) are enforced at
 // decode.
 message BuiltinAssetConfiguration {
   option (motif.extension.v1.message).component = 119;
 
+  // <add>
+  option (buf.validate.message).cel = {
+    id: "builtin_asset_configuration.exclusive_recipe"
+    message: "an analytical recipe cannot also set the planar parts field"
+    expression: "!has(this.analytical) || size(this.parts) == 0"
+  };
+
+  option (buf.validate.message).cel = {
+    id: "builtin_asset_configuration.analytical_minimum_reader_version"
+    message: "analytical recipes require version 3 or later"
+    expression: "!has(this.analytical) || this.version >= 3u"
+  };
+  // </add>
+
   // Minimum reader version required to interpret this configuration. Readers
   // built against an older supported version reject higher-versioned payloads
   // up front. Bump only for semantic extensions an older evaluator cannot
   // represent (new ops, new geometry kinds); purely additive optional fields do
-  // not bump it. The encoder sets the minimum a payload actually needs: 2 when
-  // any part uses curve geometry (`curve_sweep`/`curve_extrude`), otherwise 1.
+  // not bump it. The encoder sets the minimum a payload actually needs:
+  // <add>3 when `analytical` is present,</add> 2 when any part uses curve
+  // geometry (`curve_sweep`/`curve_extrude`), otherwise 1.
   uint32 version = 1;
 
   // The assembly's parts, in stable authoring order (a per-part behavior's
   // `part_index` indexes this list).
   repeated Part parts = 2;
+
+  // <add>
+  // The analytical recipe. When present, the behavior indexes its evaluated parts.
+  AnalyticalRecipe analytical = 3;
+  // </add>
 
   // Scalar expressions over named parameters use the shared
   // `ParametricExpression`. Built-in asset configurations accept its
@@ -968,6 +994,620 @@ message BuiltinAssetConfiguration {
     // The frame embedding the 2D recipe into 3D.
     FrameExpr frame = 6;
   }
+
+  // <add>
+  // An asset recipe built from analytical points, curves, and surfaces.
+  // Nodes marked "kernel" require a geometry kernel. Readers without one
+  // decline the part rather than approximating those operations.
+  message AnalyticalRecipe {
+    // Named analytical geometry, resolved before any part is evaluated. An entry
+    // may reference another entry by name through a `GeometryRef`; the
+    // references must form a DAG, and a cycle is rejected at decode. A `scalar`
+    // entry's value is added to the evaluation scope under its key, so an
+    // `Expr.parameter` leaf can read it. Keys must not collide with the asset's
+    // declared parameter names.
+    map<string, GeometryExpr> geometry = 1;
+
+    // The assembly's parts, in stable authoring order (a per-part behavior's
+    // `part_index` indexes this list).
+    repeated Part parts = 2;
+
+    // A scalar expression over named inputs and the recipe's evaluation scope.
+    // It supports the arithmetic shared with `ParametricExpression`, plus
+    // geometry measurements and trigonometric functions. Angles are radians.
+    message Expr {
+      // The expression node.
+      oneof node {
+        // A literal f64 value.
+        double literal = 1;
+        // A parameter name looked up in the evaluation scope.
+        string parameter = 2;
+        // A binary operation over two sub-expressions.
+        BinaryOp binary_op = 3;
+        // Arithmetic negation of a sub-expression.
+        Expr neg = 4;
+        // Arc length of a curve, in meters.
+        CurveLengthExpr curve_length = 5;
+        // Euclidean distance between two points, in meters.
+        DistanceExpr distance = 6;
+        // Sine, cosine, tangent, or their inverses, or a hyperbolic
+        // function, of one operand.
+        TrigExpr trig = 7;
+        // Two-argument arctangent, `atan2(y, x)`, in radians.
+        Atan2Expr atan2 = 8;
+      }
+    }
+
+    // Which one-argument trigonometric or hyperbolic function `TrigExpr` applies.
+    // Trigonometric angles are radians. Hyperbolic functions take a real argument.
+    enum TrigFn {
+      // Unspecified function.
+      TRIG_FN_UNSPECIFIED = 0;
+      // Sine.
+      TRIG_FN_SIN = 1;
+      // Cosine.
+      TRIG_FN_COS = 2;
+      // Tangent.
+      TRIG_FN_TAN = 3;
+      // Arcsine. The operand is a ratio in `[-1, 1]`.
+      TRIG_FN_ASIN = 4;
+      // Arccosine. The operand is a ratio in `[-1, 1]`.
+      TRIG_FN_ACOS = 5;
+      // Arctangent.
+      TRIG_FN_ATAN = 6;
+      // Hyperbolic sine.
+      TRIG_FN_SINH = 7;
+      // Hyperbolic cosine.
+      TRIG_FN_COSH = 8;
+      // Hyperbolic tangent.
+      TRIG_FN_TANH = 9;
+      // Inverse hyperbolic sine.
+      TRIG_FN_ASINH = 10;
+      // Inverse hyperbolic cosine. The operand is a ratio in `[1, +∞)`.
+      TRIG_FN_ACOSH = 11;
+      // Inverse hyperbolic tangent. The operand is a ratio in `(-1, 1)`.
+      TRIG_FN_ATANH = 12;
+    }
+
+    // One trigonometric or hyperbolic function of `operand`. A non-finite result
+    // (for example arcsine of a value outside `[-1, 1]`, or `atanh` of a value
+    // outside `(-1, 1)`) fails evaluation.
+    message TrigExpr {
+      // The function applied to `operand`.
+      TrigFn kind = 1;
+      // The operand. Radians for `sin`, `cos`, and `tan`; a real number for the
+      // hyperbolic functions.
+      Expr operand = 2;
+    }
+
+    // `atan2(y, x)` in radians. The quadrant follows the signs of both operands.
+    message Atan2Expr {
+      // The y operand.
+      Expr y = 1;
+      // The x operand.
+      Expr x = 2;
+    }
+
+    // A binary arithmetic operation applied to two sub-expressions.
+    message BinaryOp {
+      // The operator applied to `left` and `right`.
+      ParametricOperator operator = 1;
+      // The left operand.
+      Expr left = 2;
+      // The right operand.
+      Expr right = 3;
+    }
+
+    // Arc length of `curve`. Closed form for lines, arcs, polylines, and circles;
+    // numerically integrated with a fixed scheme for splines and ellipses.
+    message CurveLengthExpr {
+      // The measured curve.
+      CurveExpr curve = 1;
+    }
+
+    // Distance between `a` and `b`.
+    message DistanceExpr {
+      // The first point.
+      PointExpr a = 1;
+      // The second point.
+      PointExpr b = 2;
+    }
+
+    // A 2D point whose coordinates are expressions.
+    message Point2Expr {
+      // The x-coordinate.
+      Expr x = 1;
+      // The y-coordinate.
+      Expr y = 2;
+    }
+
+    // A 3D point whose coordinates are expressions.
+    message Point3Expr {
+      // The x-coordinate.
+      Expr x = 1;
+      // The y-coordinate.
+      Expr y = 2;
+      // The z-coordinate.
+      Expr z = 3;
+    }
+
+    // A 3D vector whose components are expressions.
+    message Vector3Expr {
+      // The x component.
+      Expr x = 1;
+      // The y component.
+      Expr y = 2;
+      // The z component.
+      Expr z = 3;
+    }
+
+    // A frame embedding 2D geometry into 3D: expression origin, *literal* unit
+    // axes (a parameter-dependent rotation would require normalization, which
+    // the language cannot express). The y-axis is `z × x`.
+    message FrameExpr {
+      // The frame origin.
+      Point3Expr origin = 1;
+      // The frame x-axis.
+      motif.data.geometry.v1.UnitVector3 x_axis = 2;
+      // The frame z-axis.
+      motif.data.geometry.v1.UnitVector3 z_axis = 3;
+    }
+
+    // One named analytical value.
+    message GeometryExpr {
+      // The value kind.
+      oneof value {
+        // A derived scalar, in meters.
+        Expr scalar = 1;
+        // A 3D point.
+        PointExpr point = 2;
+        // A 3D curve.
+        CurveExpr curve = 3;
+        // A surface.
+        SurfaceExpr surface = 4;
+        // A frame (right-handed orthonormal coordinate system).
+        FrameNodeExpr frame = 5;
+        // A generator rather than a value: emits parts once per index.
+        RepeatExpr repeat = 6;
+      }
+    }
+
+    // A frame as a value: the thing a section is authored in once and then
+    // placed on every station of a curve.
+    message FrameNodeExpr {
+      // The frame kind.
+      oneof frame {
+        // An expression origin with literal axes.
+        FrameExpr literal = 1;
+        // A named `frame` entry.
+        GeometryRef ref = 2;
+        // The frame at a station of a curve.
+        FrameAtExpr at_curve = 3;
+      }
+    }
+
+    // The frame at station `t` of `curve`. Axis convention: `z` is the tangent
+    // (direction of travel; a displacement along it leaves the section plane),
+    // `y` is section-vertical (the component of `up` perpendicular to the
+    // tangent), `x = y × z` is section-horizontal. Evaluation fails where the
+    // tangent is parallel to `up`.
+    message FrameAtExpr {
+      // The curve carrying the station.
+      CurveExpr curve = 1;
+      // Station parameter: the curve's own domain (meters of arc length), or a
+      // `[0, 1]` fraction of it when `normalized` is set.
+      Expr t = 2;
+      // Interpret `t` as a normalized `[0, 1]` fraction of the domain.
+      bool normalized = 3;
+      // The up direction the section-vertical axis follows; `+Z` when unset.
+      motif.data.geometry.v1.UnitVector3 up = 4;
+    }
+
+    // Count-driven repetition. Evaluates `parts` once per index `i` in
+    // `0..count`, with `index` bound to `i` (and `parity` to `i mod 2` when set)
+    // as scalars, and `geometry` resolved per iteration on top of the
+    // configuration's named geometry. Emitted parts are named
+    // `"{part.name}[{i}]"` and follow all fixed parts, in repeat-entry key order.
+    //
+    // `count` is a number of stations: on a closed plan `t = i / count` gives
+    // `count` sections and `count` bays (the last closing back to station 0); on
+    // an open plan `t = i / (count − 1)` includes both endpoints and the bay
+    // repeat's count is `count − 1`. `count` must evaluate to a finite
+    // non-negative integer. `index`, `parity`, and the local entry names must be
+    // distinct and must not shadow a parameter or configuration-level entry;
+    // a local entry may not itself be a repeat.
+    message RepeatExpr {
+      // Number of iterations.
+      Expr count = 1;
+      // Scalar name bound to the iteration index.
+      string index = 2;
+      // Scalar name bound to `index mod 2`, for alternating recipes.
+      optional string parity = 3;
+      // Permit an odd `count` with `parity` set; otherwise strict alternation
+      // cannot close a ring and the odd count is rejected.
+      bool allow_parity_seam = 4;
+      // Entries local to each iteration.
+      map<string, GeometryExpr> geometry = 5;
+      // The template parts.
+      repeated Part parts = 6;
+    }
+
+    // A reference to a named entry in `geometry`. The entry's kind must match
+    // the referencing field.
+    message GeometryRef {
+      // The entry key.
+      string name = 1;
+    }
+
+    // A 3D point.
+    message PointExpr {
+      // The point kind.
+      oneof point {
+        // Literal expression coordinates.
+        Point3Expr literal = 1;
+        // A named `point` entry.
+        GeometryRef ref = 2;
+        // A point evaluated on a curve.
+        PointAtExpr point_at = 3;
+        // A curve–curve intersection (kernel).
+        IntersectExpr intersect = 4;
+        // A point projected onto a surface (kernel for non-planar surfaces).
+        ProjectPointExpr project = 5;
+        // A point written in a frame's coordinates.
+        InFrameExpr in_frame = 6;
+      }
+    }
+
+    // The point with coordinates `local` in `frame`: `origin + x·X + y·Y + z·Z`.
+    message InFrameExpr {
+      // The frame.
+      FrameNodeExpr frame = 1;
+      // Frame-local coordinates.
+      Point3Expr local = 2;
+    }
+
+    // The point on `curve` at parameter `t`.
+    message PointAtExpr {
+      // The evaluated curve.
+      CurveExpr curve = 1;
+      // Curve parameter in the curve's own domain. A circle's domain is its angle,
+      // not `[0, 1]`. Set `normalized` to read `t` as a fraction of that domain.
+      Expr t = 2;
+      // Read `t` as a `[0, 1]` fraction of the curve domain. An iso curve has no
+      // switch: surface parameters are already that fraction.
+      bool normalized = 3;
+    }
+
+    // One intersection point of two curves. Intersections are ordered along
+    // `a`'s parameter; `index` selects one. Fewer intersections than `index + 1`
+    // is a per-part evaluation error, not an empty result.
+    message IntersectExpr {
+      // The first curve; results are ordered along its parameter.
+      CurveExpr a = 1;
+      // The second curve.
+      CurveExpr b = 2;
+      // Which intersection, in order along `a`.
+      uint32 index = 3;
+    }
+
+    // The closest point on `onto` to `point`.
+    message ProjectPointExpr {
+      // The projected point.
+      PointExpr point = 1;
+      // The target surface.
+      SurfaceExpr onto = 2;
+    }
+
+    // A 3D curve.
+    message CurveExpr {
+      // The curve kind.
+      oneof curve {
+        // Ordered planar segments embedded by a frame.
+        PlanarCurveExpr planar = 1;
+        // A named `curve` entry.
+        GeometryRef ref = 2;
+        // A curve projected onto a surface (kernel).
+        ProjectCurveExpr project = 3;
+        // An isoparametric curve of a surface.
+        IsoCurveExpr iso = 4;
+        // A parameter sub-range of a curve.
+        TrimExpr trim = 5;
+        // A curve read as authored in a frame.
+        PlacedCurveExpr placed = 6;
+        // An interpolating spline through 3D points.
+        Spline3Expr spline = 7;
+        // A curve with its direction of travel reversed.
+        CurveExpr reversed = 8;
+      }
+    }
+
+    // `curve` read as if authored in `frame`: its world coordinates are taken as
+    // coordinates in `frame`. A planar curve composes frames exactly; sampled
+    // and spline curves map their points.
+    message PlacedCurveExpr {
+      // The curve to place.
+      CurveExpr curve = 1;
+      // The frame to place it in.
+      FrameNodeExpr frame = 2;
+    }
+
+    // Interpolating spline of `order` (degree + 1; `0` selects cubic, lowered to
+    // fit fewer points) through 3D `points`; `closed` returns to the first point.
+    message Spline3Expr {
+      // The interpolation points, at least two.
+      repeated PointExpr points = 1 [(buf.validate.field).repeated.min_items = 2];
+      // Spline order; `0` for the default.
+      uint32 order = 2;
+      // Close back to the first point.
+      bool closed = 3;
+    }
+
+    // Ordered 2D segments in `frame`, forming one connected curve. Segments are
+    // consumed in order; each must start where the previous one ended.
+    message PlanarCurveExpr {
+      // The frame embedding the 2D segments into 3D.
+      FrameExpr frame = 1;
+      // The ordered segments, at least one.
+      repeated SegmentExpr segments = 2;
+    }
+
+    // One planar curve segment, built on the fly from expression points at
+    // evaluation time; the concrete curve is never persisted.
+    message SegmentExpr {
+      // The segment kind.
+      oneof segment {
+        // A straight segment.
+        LineSegment line = 1;
+        // A circular arc through three points.
+        ArcSegment arc = 2;
+        // An elliptical arc through start/end plus a middle point.
+        EllipseArcSegment ellipse_arc = 3;
+        // A polyline through expression points.
+        PolylineSegment polyline = 4;
+        // An interpolating spline through expression points.
+        SplineSegment spline = 5;
+        // A full circle.
+        CircleSegment circle = 6;
+      }
+    }
+
+    // A straight segment `start -> end`.
+    message LineSegment {
+      // The segment start point.
+      Point2Expr start = 1;
+      // The segment end point.
+      Point2Expr end = 2;
+    }
+
+    // A circular arc through three expression points.
+    message ArcSegment {
+      // The arc start point.
+      Point2Expr start = 1;
+      // A point on the arc between `start` and `end`.
+      Point2Expr mid = 2;
+      // The arc end point.
+      Point2Expr end = 3;
+    }
+
+    // An elliptical arc through start/end plus a middle point.
+    message EllipseArcSegment {
+      // The arc start point.
+      Point2Expr start = 1;
+      // The arc end point.
+      Point2Expr end = 2;
+      // A point on the arc between `start` and `end`.
+      Point2Expr middle = 3;
+    }
+
+    // A polyline through `points`, in order.
+    message PolylineSegment {
+      // The vertices, at least two.
+      repeated Point2Expr points = 1 [(buf.validate.field).repeated.min_items = 2];
+      // Append the segment back to the first point.
+      bool closed = 2;
+    }
+
+    // A spline interpolating `points`, in order. Evaluated as a fixed-order
+    // interpolation in IEEE-754 arithmetic with a fixed operation order, so the
+    // result is reproducible across readers.
+    message SplineSegment {
+      // The interpolated points, at least two.
+      repeated Point2Expr points = 1 [(buf.validate.field).repeated.min_items = 2];
+      // Spline order (degree + 1); 0 selects the reader's default, cubic.
+      uint32 order = 2;
+      // Interpolate a closed, periodic curve.
+      bool closed = 3;
+    }
+
+    // A full circle, counter-clockwise from `+X` in its frame.
+    message CircleSegment {
+      // The center.
+      Point2Expr center = 1;
+      // The radius, in meters; must evaluate positive.
+      Expr radius = 2;
+    }
+
+    // `curve` projected onto `onto` along the surface normal.
+    message ProjectCurveExpr {
+      // The projected curve.
+      CurveExpr curve = 1;
+      // The target surface.
+      SurfaceExpr onto = 2;
+    }
+
+    // The isoparametric curve of `surface` at fixed `t` in `dir`.
+    message IsoCurveExpr {
+      // The host surface.
+      SurfaceExpr surface = 1;
+      // The fixed parameter direction.
+      IsoDirection dir = 2;
+      // The fixed parameter in `[0, 1]`. Surface parameters are always a fraction
+      // of the domain, so this has no `normalized` switch.
+      Expr t = 3;
+    }
+
+    // Which surface parameter an iso curve holds fixed.
+    enum IsoDirection {
+      // Unspecified direction.
+      ISO_DIRECTION_UNSPECIFIED = 0;
+      // `u` fixed: the curve runs across the rails.
+      ISO_DIRECTION_U = 1;
+      // `v` fixed: the curve runs along the rails.
+      ISO_DIRECTION_V = 2;
+    }
+
+    // The sub-range `[t0, t1]` of `curve`.
+    message TrimExpr {
+      // The trimmed curve.
+      CurveExpr curve = 1;
+      // Start parameter in the curve's own domain, or a `[0, 1]` fraction when
+      // `normalized` is set.
+      Expr t0 = 2;
+      // End parameter in the curve's own domain, or a `[0, 1]` fraction when
+      // `normalized` is set.
+      Expr t1 = 3;
+      // Read `t0` and `t1` as `[0, 1]` fractions of the curve domain.
+      bool normalized = 4;
+    }
+
+    // A surface.
+    message SurfaceExpr {
+      // The surface kind.
+      oneof surface {
+        // A named `surface` entry.
+        GeometryRef ref = 1;
+        // An unbounded plane.
+        PlaneExpr plane = 2;
+        // A ruled surface between two rails.
+        RuledSurfaceExpr ruled = 3;
+        // A rail extruded along a direction.
+        ExtrudedSurfaceExpr extruded = 4;
+        // A smooth loft over three or more rails (kernel).
+        LoftSurfaceExpr loft = 5;
+      }
+    }
+
+    // The plane of `frame`: origin on the plane, `z_axis` its normal.
+    message PlaneExpr {
+      // The defining frame.
+      FrameExpr frame = 1;
+    }
+
+    // Straight lines between corresponding normalized arc-length parameters of
+    // two rails: `rail0(u)` to `rail1(u)`, start to start and end to end, as
+    // authored. Wrap a rail in `CurveExpr.reversed` to change the
+    // correspondence; it is never inferred.
+    message RuledSurfaceExpr {
+      // The first rail (`v = 0`).
+      CurveExpr rail0 = 1;
+      // The second rail (`v = 1`).
+      CurveExpr rail1 = 2;
+    }
+
+    // `rail` swept along `direction`; the vector's length is the extrusion
+    // distance.
+    message ExtrudedSurfaceExpr {
+      // A literal direction has to leave the origin. An expression that evaluates
+      // to zero fails at evaluation, where the components are numbers.
+      option (buf.validate.message).cel = {
+        id: "extruded_surface.direction"
+        message: "a literal extrusion direction is not the zero vector"
+        expression: "!has(this.direction.x.literal) || !has(this.direction.y.literal) || !has(this.direction.z.literal) || this.direction.x.literal != 0.0 || this.direction.y.literal != 0.0 || this.direction.z.literal != 0.0"
+      };
+
+      // The extruded rail.
+      CurveExpr rail = 1;
+      // The extrusion vector, in meters. Its length is the distance.
+      Vector3Expr direction = 2;
+    }
+
+    // A smooth blend across `rails`, in order.
+    message LoftSurfaceExpr {
+      // The rails, at least three.
+      repeated CurveExpr rails = 1 [(buf.validate.field).repeated.min_items = 3];
+    }
+
+    // A single part of the assembly.
+    message Part {
+      // Display label; becomes the materialized child entity's name.
+      string name = 1;
+      // The part's display color.
+      motif.data.style.v1.Color.Srgb color = 2;
+      // Display opacity in [0, 1]; absent = fully opaque.
+      optional float opacity = 3 [(buf.validate.field).float = {
+        gte: 0
+        lte: 1
+      }];
+      // The part's geometry recipe.
+      oneof geometry {
+        // A solid: a planar profile swept along a planar spine, both in `frame`.
+        CurveSweepGeometry curve_sweep = 4;
+        // A solid: a planar profile extruded along `frame`'s `+Z`.
+        CurveExtrudeGeometry curve_extrude = 5;
+        // A vertex marker.
+        PointGeometry point = 6;
+        // Drawn curves (a wire body).
+        LineworkGeometry linework = 7;
+        // A sheet body.
+        SurfaceGeometry surface = 8;
+        // A solid: a planar profile swept along an analytical 3D spine.
+        SweepGeometry sweep = 9;
+      }
+      // The frame embedding a planar recipe into 3D. Required for `curve_sweep`
+      // and `curve_extrude`; analytical geometry carries its own frames, so the
+      // field is ignored for the other kinds.
+      FrameExpr frame = 10;
+    }
+
+    // Sweep an ordered closed profile along an ordered spine, both planar in the
+    // part's frame (`BuiltinAssetConfiguration.CurveSweepExpr` semantics).
+    message CurveSweepGeometry {
+      // The ordered spine segments.
+      repeated SegmentExpr spine = 1;
+      // The ordered profile segments (a closed loop).
+      repeated SegmentExpr profile = 2;
+    }
+
+    // Extrude a closed planar profile along the part frame's `+Z`
+    // (`BuiltinAssetConfiguration.CurveExtrudeExpr` semantics).
+    message CurveExtrudeGeometry {
+      // The closed profile segments.
+      repeated SegmentExpr profile = 1;
+      // The extrusion depth, in meters.
+      Expr depth_m = 2;
+      // The extrusion start offset along `+Z`, in meters.
+      Expr depth_start_m = 3;
+    }
+
+    // A part that bakes to a single vertex at `point`.
+    message PointGeometry {
+      // The marked point.
+      PointExpr point = 1;
+    }
+
+    // A part that bakes to a wire of `curves`.
+    message LineworkGeometry {
+      // The drawn curves, at least one.
+      repeated CurveExpr curves = 1;
+    }
+
+    // A part that bakes to a sheet of `surface`.
+    message SurfaceGeometry {
+      // The baked surface.
+      SurfaceExpr surface = 1;
+    }
+
+    // A solid swept from a closed planar `profile` along `spine` (kernel). The
+    // profile's frame is re-based at the spine start so its origin rides the
+    // spine; its plane is held normal to the spine tangent along the sweep.
+    message SweepGeometry {
+      // The 3D spine.
+      CurveExpr spine = 1;
+      // The closed profile, in its own frame at the spine start.
+      PlanarCurveExpr profile = 2;
+    }
+  }
+  // </add>
 }
 
 // Tessellates a shape into a triangular mesh.
