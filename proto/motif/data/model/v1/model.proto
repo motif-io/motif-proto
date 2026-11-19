@@ -480,6 +480,17 @@ message ParametricExpression {
 
     // A sub-expression selected by a choice parameter's text value.
     ParametricSelect select = 7;
+
+    // <add>
+    // Arc length of a curve, in meters.
+    BuiltinAssetConfiguration.AnalyticalRecipe.CurveLengthExpr curve_length = 8;
+    // Euclidean distance between two points, in meters.
+    BuiltinAssetConfiguration.AnalyticalRecipe.DistanceExpr distance = 9;
+    // Sine, cosine, tangent, their inverses, or a hyperbolic function.
+    BuiltinAssetConfiguration.AnalyticalRecipe.TrigExpr trig = 10;
+    // Two-argument arctangent, `atan2(y, x)`, in radians.
+    BuiltinAssetConfiguration.AnalyticalRecipe.Atan2Expr atan2 = 11;
+    // </add>
   }
 }
 
@@ -877,6 +888,8 @@ message BuiltinAssetConfiguration {
   // `ParametricExpression`. Built-in asset configurations accept its
   // `literal`/`parameter`/`binary_op`/`neg` leaves; the `binding`
   // (`DataReference`) and `select` leaves are rejected at decode.
+  // <add>Analytical recipes also accept `curve_length`, `distance`, `trig`,
+  // and `atan2`.</add>
 
   // A 2D point whose coordinates are parametric expressions.
   message Point2Expr {
@@ -966,6 +979,7 @@ message BuiltinAssetConfiguration {
   // The frame embedding a part's 2D recipe into 3D: expression origin, *literal*
   // unit axes (a parameter-dependent rotation would require normalization, which
   // the language cannot express; no recipe needs it).
+  // <add>The y-axis is `z × x`.</add>
   message FrameExpr {
     // The frame origin.
     Point3Expr origin = 1;
@@ -1003,40 +1017,14 @@ message BuiltinAssetConfiguration {
     // Named analytical geometry, resolved before any part is evaluated. An entry
     // may reference another entry by name through a `GeometryRef`; the
     // references must form a DAG, and a cycle is rejected at decode. A `scalar`
-    // entry's value is added to the evaluation scope under its key, so an
-    // `Expr.parameter` leaf can read it. Keys must not collide with the asset's
-    // declared parameter names.
+    // entry's value is added to the evaluation scope under its key, so
+    // `ParametricExpression.parameter` can read it. Keys must be distinct from
+    // the asset's declared parameter names.
     map<string, GeometryExpr> geometry = 1;
 
     // The assembly's parts, in stable authoring order (a per-part behavior's
     // `part_index` indexes this list).
     repeated Part parts = 2;
-
-    // A scalar expression over named inputs and the recipe's evaluation scope.
-    // It supports the arithmetic shared with `ParametricExpression`, plus
-    // geometry measurements and trigonometric functions. Angles are radians.
-    message Expr {
-      // The expression node.
-      oneof node {
-        // A literal f64 value.
-        double literal = 1;
-        // A parameter name looked up in the evaluation scope.
-        string parameter = 2;
-        // A binary operation over two sub-expressions.
-        BinaryOp binary_op = 3;
-        // Arithmetic negation of a sub-expression.
-        Expr neg = 4;
-        // Arc length of a curve, in meters.
-        CurveLengthExpr curve_length = 5;
-        // Euclidean distance between two points, in meters.
-        DistanceExpr distance = 6;
-        // Sine, cosine, tangent, or their inverses, or a hyperbolic
-        // function, of one operand.
-        TrigExpr trig = 7;
-        // Two-argument arctangent, `atan2(y, x)`, in radians.
-        Atan2Expr atan2 = 8;
-      }
-    }
 
     // Which one-argument trigonometric or hyperbolic function `TrigExpr` applies.
     // Trigonometric angles are radians. Hyperbolic functions take a real argument.
@@ -1077,25 +1065,15 @@ message BuiltinAssetConfiguration {
       TrigFn kind = 1;
       // The operand. Radians for `sin`, `cos`, and `tan`; a real number for the
       // hyperbolic functions.
-      Expr operand = 2;
+      ParametricExpression operand = 2;
     }
 
     // `atan2(y, x)` in radians. The quadrant follows the signs of both operands.
     message Atan2Expr {
       // The y operand.
-      Expr y = 1;
+      ParametricExpression y = 1;
       // The x operand.
-      Expr x = 2;
-    }
-
-    // A binary arithmetic operation applied to two sub-expressions.
-    message BinaryOp {
-      // The operator applied to `left` and `right`.
-      ParametricOperator operator = 1;
-      // The left operand.
-      Expr left = 2;
-      // The right operand.
-      Expr right = 3;
+      ParametricExpression x = 2;
     }
 
     // Arc length of `curve`. Closed form for lines, arcs, polylines, and circles;
@@ -1113,44 +1091,14 @@ message BuiltinAssetConfiguration {
       PointExpr b = 2;
     }
 
-    // A 2D point whose coordinates are expressions.
-    message Point2Expr {
-      // The x-coordinate.
-      Expr x = 1;
-      // The y-coordinate.
-      Expr y = 2;
-    }
-
-    // A 3D point whose coordinates are expressions.
-    message Point3Expr {
-      // The x-coordinate.
-      Expr x = 1;
-      // The y-coordinate.
-      Expr y = 2;
-      // The z-coordinate.
-      Expr z = 3;
-    }
-
     // A 3D vector whose components are expressions.
     message Vector3Expr {
       // The x component.
-      Expr x = 1;
+      ParametricExpression x = 1;
       // The y component.
-      Expr y = 2;
+      ParametricExpression y = 2;
       // The z component.
-      Expr z = 3;
-    }
-
-    // A frame embedding 2D geometry into 3D: expression origin, *literal* unit
-    // axes (a parameter-dependent rotation would require normalization, which
-    // the language cannot express). The y-axis is `z × x`.
-    message FrameExpr {
-      // The frame origin.
-      Point3Expr origin = 1;
-      // The frame x-axis.
-      motif.data.geometry.v1.UnitVector3 x_axis = 2;
-      // The frame z-axis.
-      motif.data.geometry.v1.UnitVector3 z_axis = 3;
+      ParametricExpression z = 3;
     }
 
     // One named analytical value.
@@ -1158,7 +1106,7 @@ message BuiltinAssetConfiguration {
       // The value kind.
       oneof value {
         // A derived scalar, in meters.
-        Expr scalar = 1;
+        ParametricExpression scalar = 1;
         // A 3D point.
         PointExpr point = 2;
         // A 3D curve.
@@ -1196,7 +1144,7 @@ message BuiltinAssetConfiguration {
       CurveExpr curve = 1;
       // Station parameter: the curve's own domain (meters of arc length), or a
       // `[0, 1]` fraction of it when `normalized` is set.
-      Expr t = 2;
+      ParametricExpression t = 2;
       // Interpret `t` as a normalized `[0, 1]` fraction of the domain.
       bool normalized = 3;
       // The up direction the section-vertical axis follows; `+Z` when unset.
@@ -1218,7 +1166,7 @@ message BuiltinAssetConfiguration {
     // a local entry may not itself be a repeat.
     message RepeatExpr {
       // Number of iterations.
-      Expr count = 1;
+      ParametricExpression count = 1;
       // Scalar name bound to the iteration index.
       string index = 2;
       // Scalar name bound to `index mod 2`, for alternating recipes.
@@ -1272,7 +1220,7 @@ message BuiltinAssetConfiguration {
       CurveExpr curve = 1;
       // Curve parameter in the curve's own domain. A circle's domain is its angle,
       // not `[0, 1]`. Set `normalized` to read `t` as a fraction of that domain.
-      Expr t = 2;
+      ParametricExpression t = 2;
       // Read `t` as a `[0, 1]` fraction of the curve domain. An iso curve has no
       // switch: surface parameters are already that fraction.
       bool normalized = 3;
@@ -1357,11 +1305,11 @@ message BuiltinAssetConfiguration {
       // The segment kind.
       oneof segment {
         // A straight segment.
-        LineSegment line = 1;
+        LineCurve line = 1;
         // A circular arc through three points.
-        ArcSegment arc = 2;
+        ArcCurve arc = 2;
         // An elliptical arc through start/end plus a middle point.
-        EllipseArcSegment ellipse_arc = 3;
+        EllipseArcCurve ellipse_arc = 3;
         // A polyline through expression points.
         PolylineSegment polyline = 4;
         // An interpolating spline through expression points.
@@ -1369,34 +1317,6 @@ message BuiltinAssetConfiguration {
         // A full circle.
         CircleSegment circle = 6;
       }
-    }
-
-    // A straight segment `start -> end`.
-    message LineSegment {
-      // The segment start point.
-      Point2Expr start = 1;
-      // The segment end point.
-      Point2Expr end = 2;
-    }
-
-    // A circular arc through three expression points.
-    message ArcSegment {
-      // The arc start point.
-      Point2Expr start = 1;
-      // A point on the arc between `start` and `end`.
-      Point2Expr mid = 2;
-      // The arc end point.
-      Point2Expr end = 3;
-    }
-
-    // An elliptical arc through start/end plus a middle point.
-    message EllipseArcSegment {
-      // The arc start point.
-      Point2Expr start = 1;
-      // The arc end point.
-      Point2Expr end = 2;
-      // A point on the arc between `start` and `end`.
-      Point2Expr middle = 3;
     }
 
     // A polyline through `points`, in order.
@@ -1424,7 +1344,7 @@ message BuiltinAssetConfiguration {
       // The center.
       Point2Expr center = 1;
       // The radius, in meters; must evaluate positive.
-      Expr radius = 2;
+      ParametricExpression radius = 2;
     }
 
     // `curve` projected onto `onto` along the surface normal.
@@ -1443,7 +1363,7 @@ message BuiltinAssetConfiguration {
       IsoDirection dir = 2;
       // The fixed parameter in `[0, 1]`. Surface parameters are always a fraction
       // of the domain, so this has no `normalized` switch.
-      Expr t = 3;
+      ParametricExpression t = 3;
     }
 
     // Which surface parameter an iso curve holds fixed.
@@ -1462,10 +1382,10 @@ message BuiltinAssetConfiguration {
       CurveExpr curve = 1;
       // Start parameter in the curve's own domain, or a `[0, 1]` fraction when
       // `normalized` is set.
-      Expr t0 = 2;
+      ParametricExpression t0 = 2;
       // End parameter in the curve's own domain, or a `[0, 1]` fraction when
       // `normalized` is set.
-      Expr t1 = 3;
+      ParametricExpression t1 = 3;
       // Read `t0` and `t1` as `[0, 1]` fractions of the curve domain.
       bool normalized = 4;
     }
@@ -1574,9 +1494,9 @@ message BuiltinAssetConfiguration {
       // The closed profile segments.
       repeated SegmentExpr profile = 1;
       // The extrusion depth, in meters.
-      Expr depth_m = 2;
+      ParametricExpression depth_m = 2;
       // The extrusion start offset along `+Z`, in meters.
-      Expr depth_start_m = 3;
+      ParametricExpression depth_start_m = 3;
     }
 
     // A part that bakes to a single vertex at `point`.
