@@ -924,6 +924,14 @@ message BuiltinAssetConfiguration {
       // Elliptical arc through start/end plus a middle point
       // (`geometry::Ellipse2::from_ellipse_points`).
       EllipseArcCurve ellipse_arc = 3;
+      // <add>
+      // A polyline through expression points.
+      AnalyticalRecipe.PolylineSegment polyline = 4;
+      // An interpolating spline through expression points.
+      AnalyticalRecipe.SplineSegment spline = 5;
+      // A full circle.
+      AnalyticalRecipe.CircleSegment circle = 6;
+      // </add>
     }
   }
 
@@ -956,8 +964,8 @@ message BuiltinAssetConfiguration {
   }
 
   // Sweep an ordered curve profile along an ordered curve spine. Unlike
-  // `SweepExpr`, spine and profile are curve segments (lines/arcs) rather than
-  // straight-polyline points: spine connectivity is explicit in the ordered
+  // `SweepExpr`, spine and profile are curve segments <remove>(lines/arcs)</remove>
+  // rather than straight-polyline points: spine connectivity is explicit in the ordered
   // curves, and the profile curves must themselves form a closed loop.
   message CurveSweepExpr {
     // The ordered spine curve segments.
@@ -966,7 +974,7 @@ message BuiltinAssetConfiguration {
     repeated CurveExpr profile = 2;
   }
 
-  // Extrude a closed curve profile (lines/arcs) along the frame's `+Z`.
+  // Extrude a closed curve profile <remove>(lines/arcs)</remove> along the frame's `+Z`.
   message CurveExtrudeExpr {
     // The closed profile curve segments.
     repeated CurveExpr profile = 1;
@@ -1004,8 +1012,20 @@ message BuiltinAssetConfiguration {
       CurveSweepExpr curve_sweep = 7;
       // Extrude a curve profile along the frame's `+Z`.
       CurveExtrudeExpr curve_extrude = 8;
+      // <add>
+      // A vertex marker.
+      AnalyticalRecipe.PointGeometry point = 9;
+      // Drawn curves (a wire body).
+      AnalyticalRecipe.LineworkGeometry linework = 10;
+      // A sheet body.
+      AnalyticalRecipe.SurfaceGeometry surface = 11;
+      // A solid: a planar profile swept along an analytical 3D spine.
+      AnalyticalRecipe.SweepGeometry sweep = 12;
+      // </add>
     }
     // The frame embedding the 2D recipe into 3D.
+    // <add>Planar sweeps and extrusions require this frame. The other kinds
+    // use their geometry's frames.</add>
     FrameExpr frame = 6;
   }
 
@@ -1024,7 +1044,11 @@ message BuiltinAssetConfiguration {
 
     // The assembly's parts, in stable authoring order (a per-part behavior's
     // `part_index` indexes this list).
-    repeated Part parts = 2;
+    repeated Part parts = 2 [(buf.validate.field).repeated.items.cel = {
+      id: "analytical_recipe.part_opacity"
+      message: "part opacity must be between 0 and 1"
+      expression: "!has(this.opacity) || (this.opacity >= 0.0 && this.opacity <= 1.0)"
+    }];
 
     // Which one-argument trigonometric or hyperbolic function `TrigExpr` applies.
     // Trigonometric angles are radians. Hyperbolic functions take a real argument.
@@ -1177,7 +1201,11 @@ message BuiltinAssetConfiguration {
       // Entries local to each iteration.
       map<string, GeometryExpr> geometry = 5;
       // The template parts.
-      repeated Part parts = 6;
+      repeated Part parts = 6 [(buf.validate.field).repeated.items.cel = {
+        id: "analytical_repeat.part_opacity"
+        message: "part opacity must be between 0 and 1"
+        expression: "!has(this.opacity) || (this.opacity >= 0.0 && this.opacity <= 1.0)"
+      }];
     }
 
     // A reference to a named entry in `geometry`. The entry's kind must match
@@ -1296,27 +1324,7 @@ message BuiltinAssetConfiguration {
       // The frame embedding the 2D segments into 3D.
       FrameExpr frame = 1;
       // The ordered segments, at least one.
-      repeated SegmentExpr segments = 2;
-    }
-
-    // One planar curve segment, built on the fly from expression points at
-    // evaluation time; the concrete curve is never persisted.
-    message SegmentExpr {
-      // The segment kind.
-      oneof segment {
-        // A straight segment.
-        LineCurve line = 1;
-        // A circular arc through three points.
-        ArcCurve arc = 2;
-        // An elliptical arc through start/end plus a middle point.
-        EllipseArcCurve ellipse_arc = 3;
-        // A polyline through expression points.
-        PolylineSegment polyline = 4;
-        // An interpolating spline through expression points.
-        SplineSegment spline = 5;
-        // A full circle.
-        CircleSegment circle = 6;
-      }
+      repeated BuiltinAssetConfiguration.CurveExpr segments = 2;
     }
 
     // A polyline through `points`, in order.
@@ -1445,58 +1453,6 @@ message BuiltinAssetConfiguration {
     message LoftSurfaceExpr {
       // The rails, at least three.
       repeated CurveExpr rails = 1 [(buf.validate.field).repeated.min_items = 3];
-    }
-
-    // A single part of the assembly.
-    message Part {
-      // Display label; becomes the materialized child entity's name.
-      string name = 1;
-      // The part's display color.
-      motif.data.style.v1.Color.Srgb color = 2;
-      // Display opacity in [0, 1]; absent = fully opaque.
-      optional float opacity = 3 [(buf.validate.field).float = {
-        gte: 0
-        lte: 1
-      }];
-      // The part's geometry recipe.
-      oneof geometry {
-        // A solid: a planar profile swept along a planar spine, both in `frame`.
-        CurveSweepGeometry curve_sweep = 4;
-        // A solid: a planar profile extruded along `frame`'s `+Z`.
-        CurveExtrudeGeometry curve_extrude = 5;
-        // A vertex marker.
-        PointGeometry point = 6;
-        // Drawn curves (a wire body).
-        LineworkGeometry linework = 7;
-        // A sheet body.
-        SurfaceGeometry surface = 8;
-        // A solid: a planar profile swept along an analytical 3D spine.
-        SweepGeometry sweep = 9;
-      }
-      // The frame embedding a planar recipe into 3D. Required for `curve_sweep`
-      // and `curve_extrude`; analytical geometry carries its own frames, so the
-      // field is ignored for the other kinds.
-      FrameExpr frame = 10;
-    }
-
-    // Sweep an ordered closed profile along an ordered spine, both planar in the
-    // part's frame (`BuiltinAssetConfiguration.CurveSweepExpr` semantics).
-    message CurveSweepGeometry {
-      // The ordered spine segments.
-      repeated SegmentExpr spine = 1;
-      // The ordered profile segments (a closed loop).
-      repeated SegmentExpr profile = 2;
-    }
-
-    // Extrude a closed planar profile along the part frame's `+Z`
-    // (`BuiltinAssetConfiguration.CurveExtrudeExpr` semantics).
-    message CurveExtrudeGeometry {
-      // The closed profile segments.
-      repeated SegmentExpr profile = 1;
-      // The extrusion depth, in meters.
-      ParametricExpression depth_m = 2;
-      // The extrusion start offset along `+Z`, in meters.
-      ParametricExpression depth_start_m = 3;
     }
 
     // A part that bakes to a single vertex at `point`.
