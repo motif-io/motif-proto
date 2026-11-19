@@ -204,11 +204,14 @@ Motif engineers must use their noreply address, with "Keep my email addresses
 private" and "Block command line pushes that expose my email" turned on in
 their GitHub email settings.
 
-GitHub rejects a push when any commit's author or committer email is a Motif
-work address or a machine-generated address, such as one ending in `.internal`
-or `.local` that git creates when no email is configured. A `Co-authored-by`
-trailer naming one of those addresses is rejected too. If a push is rejected,
-set `user.email`, rewrite the email on your branch's commits, and push again:
+`main` rejects any new commit whose author or committer email is a Motif work
+address or a machine-generated address, such as one ending in `.internal` or
+`.local` that git creates when no email is configured, and any commit with a
+`Co-authored-by` trailer naming one of those addresses. Other branches are not
+checked, but a squash merge into `main` adds a `Co-authored-by` trailer for
+each other author of the branch's commits, so a single commit with one of those
+addresses blocks the merge. To fix a branch, set `user.email`, rewrite the email
+on your branch's commits, and force-push:
 
 ```sh
 git rebase --exec 'git commit --amend --no-edit --reset-author' origin/main

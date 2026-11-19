@@ -18,9 +18,11 @@ visible. This applies to all contributors, internal and external:
   addresses private" and "Block command line pushes that expose my email" in
   their GitHub email settings. External contributors should prefer the noreply
   address too; a public email they are comfortable sharing is also fine.
-- Pushes are rejected when any commit's author or committer email is a Motif
-  work address or a machine-generated address (for example one ending in
-  `.internal` or `.local`), or when a `Co-authored-by` trailer names one.
+- `main` rejects new commits whose author or committer email is a Motif work
+  address or a machine-generated address (for example one ending in `.internal`
+  or `.local`), or whose `Co-authored-by` trailer names one. Other branches are
+  not checked, but a squash merge adds a `Co-authored-by` trailer for each other
+  branch commit author, so one such commit on a branch blocks its merge.
 - Do not add `Co-authored-by`, `Made-with`, or other tool/AI attribution
   trailers to commits or PRs.
 - Do not link to private or internal systems (such as private issue trackers)
