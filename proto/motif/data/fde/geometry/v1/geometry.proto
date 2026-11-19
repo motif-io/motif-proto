@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 // Computational geometry hosts: curve-hosted points, point-driven curves,
-// multi-rail surfaces, and two-point bars.
+// multi-rail surfaces, two-point bars, and point-hosted planes.
 package motif.data.fde.geometry.v1;
 
 import "buf/validate/validate.proto";
@@ -202,6 +202,107 @@ message TwoPointBarBehavior {
     (motif.extension.v1.field).data_reference_expected_type = {
       kind: TYPE_MESSAGE
       type_name: "motif.data.fde.geometry.v1.ResolvedBarSweepInputs"
+    }
+  ];
+}
+
+// A planar hosting surface.
+//
+// `surface` is the plane hosted geometry is placed on. When `curve`, `height`,
+// and `coordinate_system` resolve, change propagation rebuilds that plane from
+// them: origin at the curve start, u along the start tangent, v along the
+// height. When they do not resolve, the authored plane is kept. Point hosts
+// write a plane and leave those references unresolved.
+message TrimmedHostingSurface {
+  option (motif.extension.v1.message).component = 231;
+
+  // The hosting plane. Unset decodes as the default plane at the origin.
+  motif.data.geometry.v1.Plane surface = 1;
+
+  // The host curve the plane is rebuilt from.
+  motif.extension.v1.DataReference curve = 2 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.geometry.v1.Curve2"
+    }
+  ];
+
+  // The host height the plane's v extent is rebuilt from, in meters.
+  motif.extension.v1.DataReference height = 3 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}
+  ];
+
+  // The placement frame the curve is lifted into.
+  motif.extension.v1.DataReference coordinate_system = 4 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.geometry.v1.CoordinateSystem3"
+    }
+  ];
+}
+
+// Names the `TrimmedHostingSurface` that makes an entity a host.
+message HostBehavior {
+  option (motif.extension.v1.message).component = 232;
+
+  // The reference is to the whole surface component.
+  option (buf.validate.message).cel = {
+    id: "host_behavior.hosting_surface_path"
+    message: "hosting_surface names the whole TrimmedHostingSurface, so path stays unset"
+    expression: "!has(this.hosting_surface) || !has(this.hosting_surface.path)"
+  };
+
+  // The hosting surface on this entity.
+  motif.extension.v1.DataReference hosting_surface = 1 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.fde.geometry.v1.TrimmedHostingSurface"
+    }
+  ];
+}
+
+// Keeps a `TrimmedHostingSurface` plane attached to a host point.
+//
+// An isometry supplies the origin and rotates the authored axes. A `Point3`
+// supplies the origin only, and the authored axes are used as written.
+message PointHostedPlaneBehavior {
+  option (motif.extension.v1.message).component = 223;
+
+  // A zero cross product is a zero axis or a parallel pair.
+  option (buf.validate.message).cel = {
+    id: "point_hosted_plane_behavior.axes"
+    message: "x_axis and z_axis must be non-zero and not parallel"
+    expression: "this.x_axis.y * this.z_axis.z - this.x_axis.z * this.z_axis.y != 0.0 || this.x_axis.z * this.z_axis.x - this.x_axis.x * this.z_axis.z != 0.0 || this.x_axis.x * this.z_axis.y - this.x_axis.y * this.z_axis.x != 0.0"
+  };
+
+  // Origin, and rotation when the target is an isometry. The component id is
+  // `motif.data.core.v1.Isometry` or `motif.data.model.v1.Point3`, so a single
+  // expected type would reject one of those.
+  // buf:lint:ignore MOTIF_DATA_REFERENCE_MISSING_EXPECTED_TYPE
+  motif.extension.v1.DataReference host_transform = 1 [(buf.validate.field).required = true];
+
+  // Local X of the plane, before the host rotation is applied.
+  motif.data.geometry.v1.Vector3 x_axis = 2 [(buf.validate.field).required = true];
+
+  // Local Z of the plane, before the host rotation is applied.
+  motif.data.geometry.v1.Vector3 z_axis = 3 [(buf.validate.field).required = true];
+
+  // Half-size of the plane domain on both axes, in meters.
+  double half_extent = 4 [(buf.validate.field).double = {
+    gt: 0
+    finite: true
+  }];
+
+  // The `TrimmedHostingSurface` whose plane this behavior rewrites.
+  motif.extension.v1.DataReference output_surface = 5 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.fde.geometry.v1.TrimmedHostingSurface"
     }
   ];
 }
