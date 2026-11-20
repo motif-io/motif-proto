@@ -1,4 +1,4 @@
-# Checks on Motif component type IDs (see README "Choosing a component ID").
+# Checks on Motif component type IDs (see CONTRIBUTING.md "Choosing a Component ID").
 #
 # Gaps in component ID allocations make it difficult to choose new IDs based
 # on the maximum allocated value without wasting IDs in the ID space. This
