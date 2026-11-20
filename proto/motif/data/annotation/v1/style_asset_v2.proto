@@ -30,7 +30,10 @@ message TextStyleAssetV2 {
   optional bool italic = 3;
   // Printed (paper) glyph height in millimeters, held constant across drawing
   // scales. Where the host has no drawing scale it is read as a model height.
-  optional float printed_height_mm = 4 [(buf.validate.field).float = {gt: 0}];
+  optional float printed_height_mm = 4 [(buf.validate.field).float = {
+    gt: 0
+    finite: true
+  }];
   // Text color.
   motif.data.style.v1.StyleColorSource color = 5;
   // Horizontal alignment; UNSPECIFIED leaves it unset.
@@ -72,7 +75,10 @@ message TextAnnotationStyleAssetV2 {
   TextAnnotationLeaderType leader_type = 1;
   // The gap between the text and the shape's boundary on every side, in
   // millimetres on paper, held constant across view scales.
-  optional float padding_mm = 2 [(buf.validate.field).float.gte = 0];
+  optional float padding_mm = 2 [(buf.validate.field).float = {
+    gte: 0
+    finite: true
+  }];
   // The distance between tab stops, in millimetres on paper, held constant
   // across view scales.
   optional float tab_size_mm = 3 [(buf.validate.field).float = {
