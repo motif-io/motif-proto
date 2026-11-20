@@ -317,7 +317,9 @@ message AnalyticalAssetConfiguration {
     }
   }
 
-  // The point with coordinates `local` in `frame`: `origin + x·X + y·Y + z·Z`.
+  // The point at frame-local coordinates `local` in `frame`:
+  // `origin + x*X + y*Y + z*Z`, where `x`, `y`, and `z` are the scalar
+  // components of `local` and `X`, `Y`, and `Z` are the frame's axes.
   message InFrameExpr {
     // The frame.
     FrameNodeExpr frame = 1;
@@ -407,7 +409,7 @@ message AnalyticalAssetConfiguration {
     // The frame embedding the 2D segments into 3D.
     FrameExpr frame = 1;
     // The ordered segments, at least one.
-    repeated SegmentExpr segments = 2;
+    repeated SegmentExpr segments = 2 [(buf.validate.field).repeated.min_items = 1];
   }
 
   // One planar curve segment, built on the fly from expression points at
@@ -622,16 +624,16 @@ message AnalyticalAssetConfiguration {
   // part's frame (`BuiltinAssetConfiguration.CurveSweepExpr` semantics).
   message CurveSweepGeometry {
     // The ordered spine segments.
-    repeated SegmentExpr spine = 1;
+    repeated SegmentExpr spine = 1 [(buf.validate.field).repeated.min_items = 1];
     // The ordered profile segments (a closed loop).
-    repeated SegmentExpr profile = 2;
+    repeated SegmentExpr profile = 2 [(buf.validate.field).repeated.min_items = 1];
   }
 
   // Extrude a closed planar profile along the part frame's `+Z`
   // (`BuiltinAssetConfiguration.CurveExtrudeExpr` semantics).
   message CurveExtrudeGeometry {
     // The closed profile segments.
-    repeated SegmentExpr profile = 1;
+    repeated SegmentExpr profile = 1 [(buf.validate.field).repeated.min_items = 1];
     // The extrusion depth, in meters.
     Expr depth_m = 2;
     // The extrusion start offset along `+Z`, in meters.
@@ -647,7 +649,7 @@ message AnalyticalAssetConfiguration {
   // A part that bakes to a wire of `curves`.
   message LineworkGeometry {
     // The drawn curves, at least one.
-    repeated CurveExpr curves = 1;
+    repeated CurveExpr curves = 1 [(buf.validate.field).repeated.min_items = 1];
   }
 
   // A part that bakes to a sheet of `surface`.
