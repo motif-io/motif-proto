@@ -21,7 +21,17 @@ import "motif/extension/v1/options.proto";
 //      style (ultimately the application default).
 //
 // Own properties shadowed by rule 1 are retained, not cleared: they apply
-// again if the referenced style later unsets the property. Within own
+// again if the referenced style later unsets the property.
+//
+// Each style's properties resolve on their own before the rules compare them.
+// A color style's opacity (StyleColorSource.style) replaces only the opacity
+// field beside that color, in the same properties message; the result is that
+// style's opacity for rules 1 to 3. So when the referenced line style sets
+// opacity 0.3 and no color, and the own properties take their color from a
+// color style with opacity 0.8, the stroke draws in that color at 0.3: the
+// referenced style sets the opacity (rule 1).
+//
+// Within own
 // properties, a nested style reference applies only while the referenced style
 // leaves that whole nested part unset; the nested part's own direct properties
 // still fill whatever the referenced style's part leaves unset.
@@ -50,8 +60,10 @@ import "motif/extension/v1/options.proto";
 message StyleColorSource {
   // A color style asset. Its color, when it sets one, is the color. Its
   // opacity, when it sets one, is the opacity of whatever the color paints (a
-  // line's stroke, a shape's fill) in place of the referencing style's own
-  // opacity. Text has no opacity and ignores it.
+  // line's stroke, a shape's fill) in place of the opacity field beside this
+  // color (LineStyleAssetV2.opacity, ShapeStyleAssetV2.fill_opacity). It does
+  // not outrank an opacity set by a style the part follows; see the top of
+  // this file. Text has no opacity and ignores it.
   StyleAssetReference style = 1;
 
   // Explicitly opts `style` into pinned resolution, as
