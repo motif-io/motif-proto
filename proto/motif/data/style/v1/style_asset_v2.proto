@@ -36,6 +36,14 @@ import "motif/extension/v1/options.proto";
 // are encountered, the V2 component is authoritative; readers must not rewrite
 // data merely on load. A style reference may target an asset carrying either
 // generation of the expected kind.
+//
+// Writers start migrating only once every reader of the data understands V2,
+// including clients that update on their own schedule (native apps, long-lived
+// browser sessions). A reader that knows only the first generation no longer
+// sees a migrated style, so every reference to it dangles and the properties
+// it supplied drop without warning: a graphic style's LineStyleSource.style, a
+// shape style's line_style, a text annotation style's *_style fields. These
+// components carry no reader-version guard; the rollout order is the guard.
 
 // A color taken from a color style asset (ColorStyleAsset), set directly, or
 // both. Nothing set leaves the color unset.
