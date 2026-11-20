@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+// Components that store protobuf schemas within a model, so the model can
+// define component types for its own use alongside the platform's.
 package motif.data.schema.v1;
 
 import "motif/extension/v1/options.proto";
