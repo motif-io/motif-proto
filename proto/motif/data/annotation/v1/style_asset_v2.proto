@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package motif.data.annotation.v1;
+
+import "buf/validate/validate.proto";
+import "motif/data/annotation/v1/annotation.proto";
+import "motif/data/style/v1/style.proto";
+import "motif/data/style/v1/style_asset_v2.proto";
+import "motif/extension/v1/options.proto";
+
+// Second-generation text and text annotation style assets. Parts hold a style
+// reference and their own properties side by side; the resolution rule and the
+// migration from the first-generation components are stated at the top of
+// motif/data/style/v1/style_asset_v2.proto.
+
+// A named, reusable set of text properties: a text style asset. Lives on an
+// asset entity (core.v1.Asset + a name) in any library a model can reach.
+// Supersedes TextStyleAsset.
+//
+// Every field is optional; an unset field leaves that property to whatever
+// applies beneath this style, so a style may specify any subset of properties.
+message TextStyleAssetV2 {
+  option (motif.extension.v1.message).component = 257;
+
+  // Font family name, e.g. "Roboto".
+  optional string font_family = 1;
+  // Bold weight.
+  optional bool bold = 2;
+  // Italic slant.
+  optional bool italic = 3;
+  // Printed (paper) glyph height in millimeters, held constant across drawing
+  // scales. Where the host has no drawing scale it is read as a model height.
+  optional float printed_height_mm = 4 [(buf.validate.field).float = {
+    gt: 0
+    finite: true
+  }];
+  // Text color.
+  motif.data.style.v1.StyleColorSource color = 5;
+  // Horizontal alignment; UNSPECIFIED leaves it unset.
+  Justify justify = 6;
+}
+
+// Text properties for one part of a style: a text style asset, the part's own
+// text properties, or both. Nothing set leaves the part unset.
+message TextStylePart {
+  // A text style asset (TextStyleAssetV2 or TextStyleAsset).
+  motif.data.style.v1.StyleAssetReference style = 1;
+  // The part's own text properties.
+  TextStyleAssetV2 properties = 2;
+}
+
+// Arrowhead properties for one part of a style: an arrowhead style asset, the
+// part's own arrowhead properties, or both. Nothing set leaves the part unset.
+message ArrowheadStylePart {
+  // An arrowhead style asset (ArrowheadStyleAsset).
+  motif.data.style.v1.StyleAssetReference style = 1;
+  // The part's own arrowhead properties.
+  ArrowheadStyleAsset properties = 2;
+}
+
+// A named, reusable look for a whole text annotation: a text annotation style
+// asset. Lives on an asset entity (core.v1.Asset + a name) in any library a
+// model can reach. It sets the leader type, padding and tab size, and takes
+// its text, shape, arrowhead and leader line each from a style asset of that
+// kind, from properties set on this style itself, or both. Supersedes
+// TextAnnotationStyleAsset, whose show_shape_fill and show_shape_border are
+// now the shape's own show_fill and show_border.
+//
+// Every field is optional; an unset field leaves that property to whatever
+// applies beneath this style.
+message TextAnnotationStyleAssetV2 {
+  option (motif.extension.v1.message).component = 255;
+
+  // The leaders' shape. UNSPECIFIED leaves it unset.
+  TextAnnotationLeaderType leader_type = 1;
+  // The gap between the text and the shape's boundary on every side, in
+  // millimetres on paper, held constant across view scales.
+  optional float padding_mm = 2 [(buf.validate.field).float = {
+    gte: 0
+    finite: true
+  }];
+  // The distance between tab stops, in millimetres on paper, held constant
+  // across view scales.
+  optional float tab_size_mm = 3 [(buf.validate.field).float = {
+    gt: 0
+    finite: true
+  }];
+  // The text.
+  TextStylePart text = 4;
+  // The box's fill and border. The leaders draw with its border's line unless
+  // the leader line sets that property.
+  motif.data.style.v1.ShapeStylePart shape = 5;
+  // The leaders' heads.
+  ArrowheadStylePart arrowhead = 6;
+  // The leaders' line. Each property it leaves unset is the shape border's.
+  motif.data.style.v1.LineStylePart leader_line = 7;
+}

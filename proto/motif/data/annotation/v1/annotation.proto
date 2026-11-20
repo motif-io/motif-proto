@@ -863,14 +863,14 @@ message TextAnnotationStyleAsset {
   // The gap between the text and the shape's boundary on every side, in
   // millimetres on paper, held constant across view scales.
   optional float padding_mm = 4 [(buf.validate.field).float.gte = 0];
-  // The text: a text style asset (TextStyleAsset), or text properties set on
-  // this style itself. Neither set leaves the text unset.
+  // The text: a text style asset (TextStyleAsset or TextStyleAssetV2), or text
+  // properties set on this style itself. Neither set leaves the text unset.
   oneof text {
     motif.data.style.v1.StyleAssetReference text_style = 5;
     TextStyleAsset text_properties = 6;
   }
-  // The box's fill and border: a shape style asset
-  // (style.v1.ShapeStyleAsset), or shape properties set on this style itself.
+  // The box's fill and border: a shape style asset (style.v1.ShapeStyleAsset
+  // or style.v1.ShapeStyleAssetV2), or shape properties set on this style itself.
   // Neither set leaves the shape unset. The leaders draw with its border
   // unless the leader line is set.
   oneof shape {
@@ -884,9 +884,9 @@ message TextAnnotationStyleAsset {
     motif.data.style.v1.StyleAssetReference arrowhead_style = 9;
     ArrowheadStyleAsset arrowhead_properties = 10;
   }
-  // The leaders' line: a line style asset (style.v1.LineStyleAsset), or line
-  // properties set on this style itself. Neither set, the leaders draw with
-  // the shape's border.
+  // The leaders' line: a line style asset (style.v1.LineStyleAsset or
+  // style.v1.LineStyleAssetV2), or line properties set on this style itself.
+  // Neither set, the leaders draw with the shape's border.
   oneof leader_line {
     motif.data.style.v1.StyleAssetReference leader_line_style = 11;
     motif.data.style.v1.LineStyleAsset leader_line_properties = 12;

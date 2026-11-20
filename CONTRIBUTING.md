@@ -12,7 +12,9 @@ Schemas live under `proto/`, each file in the directory that mirrors its
 package name (package `motif.data.core.v1` is at `proto/motif/data/core/v1/`).
 Imports use the path relative to `proto/`, e.g.
 `import "motif/extension/v1/options.proto";`. [`buf.md`](buf.md) lists the
-top-level packages.
+top-level packages. Every package ends in a version that complies with buf's
+[`PACKAGE_VERSION_SUFFIX`](https://buf.build/docs/lint/rules/#package_version_suffix)
+lint rule, such as `v1`; `buf lint` checks it.
 
 All schemas form a single
 [buf module](https://buf.build/docs/configuration/v2/buf-yaml) rooted at
@@ -88,6 +90,11 @@ against typos like `600` for `60`. The threshold is set in
 your component IDs based on the current state of `main` due to conflicting
 component IDs merged by other contributors. Your pull request will not be
 accepted until such conflicts are resolved.
+
+The top 10,000 IDs, 2147473648 through 2147483647 (the int32 maximum), are
+reserved for component types a model defines for its own use in a
+`motif.data.schema.v1.ComponentSchema`. Never assign them to a component type
+in this repository. `mise run check-reserved-ids` fails if one does.
 
 ### Once Merged, an ID Is Permanent
 
@@ -225,6 +232,126 @@ message Opacity {
 }
 ```
 
+## Developing a Component Type in a Model
+
+A new component type can be developed and used in a model before it is added to
+this repository. The model stores the type's schema in a
+`motif.data.schema.v1.ComponentSchema` component, and the type is usable only in
+that model. The rules for that schema are in
+[`schema.proto`](proto/motif/data/schema/v1/schema.proto).
+
+1. Write the type in your local checkout of this repository. It stays local:
+   the type is only being developed here, so don't commit its directory or
+   open a pull request for it until it's ready to move into the platform.
+   `.gitignore` ignores `test` version directories under `proto/`, and the
+   build artifacts below go in `.model-schema/`, which is ignored too. While
+   the type exists, `mise run check-reserved-ids` (part of `mise run lint`)
+   fails and names it, as a reminder that it must not be committed.
+
+   - Choose an unstable version of the package the type will join, following
+     buf's [version suffix rules](https://buf.build/docs/lint/rules/#package_version_suffix):
+     for example `motif.graphics.v1test1` in `proto/motif/graphics/v1test1/`
+     for a type headed for `motif.graphics.v1`, or
+     `thirdparty.acme.data.structure.v1test1` for one headed for
+     `thirdparty.acme.data.structure.v1`. An unstable version prevents the type
+     from conflicting with the stable package's files and types, and the type
+     moves into that package by dropping the suffix. A `test` version can be
+     numbered, such as `v1test1`, or named for what you're building, such as
+     `v1testgeolocation`; pick one this repository doesn't already use.
+   - Give the type a component ID from the range reserved for model-defined
+     types, starting at 2147473648 (see
+     [Choosing a Component ID](#choosing-a-component-id)).
+
+2. Build the schema from that directory alone, without its imports, which are
+   read from the platform:
+
+   ```sh
+   mkdir -p .model-schema
+   buf build --path proto/motif/graphics/v1test1 --exclude-imports -o .model-schema/schema.binpb
+   ```
+
+3. Encode it as a `ComponentSchema` value:
+
+   ```sh
+   echo "{\"fileDescriptorSet\":\"$(base64 < .model-schema/schema.binpb | tr -d '\n')\"}" \
+     | buf convert . --type motif.data.schema.v1.ComponentSchema \
+         --from -#format=json --to -#format=binpb \
+     | base64 | tr -d '\n' > .model-schema/value.b64
+   ```
+
+4. Write the value to the model with `motif.api.v1.Persistence/ApplyChangeset`,
+   as component `254` (`ComponentSchema`) on the model entity
+   `00000000-0000-4000-8000-000000000000`. Set `maxKnownVersion` to the model's
+   current version, `Model.changeset_version` in the `ListModels` response, so
+   a schema written since is not overwritten. IDs are bytes, which JSON writes
+   in base64, so the `b64` helper converts each UUID:
+
+   ```sh
+   b64() { echo "$1" | tr -d - | xxd -r -p | base64; }
+
+   PROJECT_ID=<project id>
+   MODEL_ID=<model id>
+   MODEL_VERSION=<current model version>
+
+   cat > .model-schema/changeset.json <<EOF
+   {
+     "projectId": "$(b64 "$PROJECT_ID")",
+     "modelId": "$(b64 "$MODEL_ID")",
+     "maxKnownVersion": $MODEL_VERSION,
+     "changes": [
+       {
+         "entityId": "$(b64 00000000-0000-4000-8000-000000000000)",
+         "components": [{ "typeTag": 254, "value": "$(cat .model-schema/value.b64)" }]
+       }
+     ]
+   }
+   EOF
+
+   buf curl --schema . --protocol grpc \
+     -H "Authorization: Bearer $MOTIF_PAT" -d @.model-schema/changeset.json \
+     https://<persistence endpoint>/motif.api.v1.Persistence/ApplyChangeset
+   ```
+
+   A schema that breaks a rule is refused with `INVALID_ARGUMENT`, and nothing
+   is written. To extend the schema later, build and write it again the same
+   way: each value replaces the last, so it must hold all of the model's types.
+
+   A change follows the same breaking-change rules as a platform change, and
+   `buf breaking` checks it the same way. Before changing the files, build the
+   version the model holds, with its imports, then compare the changed files to
+   it:
+
+   ```sh
+   buf build --path proto/motif/graphics/v1test1 -o .model-schema/previous.binpb   # before changing
+   buf build --path proto/motif/graphics/v1test1 -o .model-schema/current.binpb    # after
+   buf breaking .model-schema/current.binpb --against .model-schema/previous.binpb
+   ```
+
+   The server enforces the part of these rules that protects stored data, so it
+   also accepts some changes `buf breaking` reports, such as renames. For an
+   incompatible change, move the types to the next version,
+   `motif.graphics.v1test2`, with new component IDs, and keep `v1test1` in the
+   set, passing `--path` once for each directory.
+
+5. Generate code for the type in the repository that uses it, which has its own
+   `buf.gen.yaml`. The type is not published to the Buf Schema Registry, so
+   generate from this checkout, limited to the development directory:
+
+   ```sh
+   buf generate ../motif-proto --path ../motif-proto/proto/motif/graphics/v1test1
+   ```
+
+   Then write components of the new type to the model under its reserved ID.
+
+Experiment in a throwaway model: once a model accepts a schema, its types can
+gain fields but not lose them, and the model keeps them.
+
+When the type is ready, move it into its final file and package (drop the
+version's suffix, `v1test1` to `v1`, and remove the directory), assign it a
+platform component ID with `mise run next-id`, and open a pull request. Code
+written against the development type needs only the new package and ID. Data
+written under the reserved ID stays with the development model.
+
 ## Commits and Pull Requests
 
 This repository is public, so treat every commit and pull request as externally
@@ -285,15 +412,15 @@ Format first, then lint before you push:
 
 ```sh
 mise run format   # buf format -w + taplo fmt
-mise run lint     # buf format check, buf lint, buf breaking, taplo check, ID-gap check
+mise run lint     # buf format check, buf lint, buf breaking, taplo check, component ID checks
 ```
 
 `mise run lint` covers everything the pull request checks do:
 [Buf CI](.github/workflows/buf.yaml) (build, lint, format, and breaking-change
 detection, which also publishes the module to the Buf Schema Registry on merge
 to `main`) and the [component ID](.github/workflows/component-ids.yaml) gap
-check. Because `buf breaking` compares against your local `origin/main` ref,
+and reserved-ID checks. Because `buf breaking` compares against your local `origin/main` ref,
 fetch before you trust the result.
 
-Other tasks: `mise run next-id` and `mise run check-id-gaps` (both described
-above), and `mise tasks` to list everything.
+Other tasks: `mise run next-id`, `mise run check-id-gaps` and
+`mise run check-reserved-ids` (all described above), and `mise tasks` to list everything.

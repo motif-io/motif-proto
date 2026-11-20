@@ -36,6 +36,7 @@
 # Data packages owned by the Motif Data Management team.
 /proto/motif/data/document/ @motif-io/motif-data-management
 /proto/motif/data/project/  @motif-io/motif-data-management
+/proto/motif/data/schema/   @motif-io/motif-data-management
 
 # Operation schemas are owned by the Motif Modeling team.
 /proto/motif/data/operation/ @motif-io/motif-modeling

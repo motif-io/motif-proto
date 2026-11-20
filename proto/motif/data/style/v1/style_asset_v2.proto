@@ -1,0 +1,167 @@
+syntax = "proto3";
+
+package motif.data.style.v1;
+
+import "buf/validate/validate.proto";
+import "motif/data/style/v1/style.proto";
+import "motif/extension/v1/options.proto";
+
+// Second-generation line and shape style assets.
+//
+// In the first generation a style took a part (a color, a border) either from
+// another style asset or from properties of its own, never both. Here a part
+// holds a style reference and its own properties side by side, and resolves
+// property by property:
+//
+//   1. A property the referenced style sets, itself or through the styles it
+//      references in turn, comes from the referenced style.
+//   2. A property the referenced style leaves unset comes from the referencing
+//      style's own properties.
+//   3. A property neither sets falls through to whatever applies beneath the
+//      style (ultimately the application default).
+//
+// Own properties shadowed by rule 1 are retained, not cleared: they apply
+// again if the referenced style later unsets the property.
+//
+// Each style's properties resolve on their own before the rules compare them.
+// A color style's opacity (StyleColorSource.style) replaces only the opacity
+// field beside that color, in the same properties message; the result is that
+// style's opacity for rules 1 to 3. So when the referenced line style sets
+// opacity 0.3 and no color, and the own properties take their color from a
+// color style with opacity 0.8, the stroke draws in that color at 0.3: the
+// referenced style sets the opacity (rule 1).
+//
+// Within own properties, a nested style reference (a border's line style, a
+// color's color style) applies only while the referenced style's nested part
+// sets nothing after resolving: a border that yields no line property, a color
+// source that yields no color. What the referenced part has written does not
+// count, so a referenced border that follows a missing line style does not
+// block the own border's line style. A nested reference that does not apply
+// contributes nothing, a color style's opacity included. The nested part's own
+// direct properties still fill whatever the referenced style's part leaves
+// unset.
+//
+// A reference that does not resolve (the asset is missing, or does not carry a
+// style of the expected kind) sets nothing, so every own property applies.
+//
+// Versions: a part's style reference (LineStylePart, ShapeStylePart,
+// annotation.v1.TextStylePart and ArrowheadStylePart) is a StyleAssetReference
+// and follows the latest version, as the first-generation field it replaces
+// does. Only a color can be pinned (StyleColorSource.pin_style), which keeps a
+// line style with an external color usable in a pinned graph, as
+// LineStyleAsset.pin_color_style does.
+//
+// Migration: readers continue to support the first-generation component in
+// existing data and history. On the first persisted change to a style (not a
+// no-op), writers write the V2 component and remove the first-generation one
+// in the same change. New writes must not retain both on one entity. If both
+// are encountered, the V2 component is authoritative; readers must not rewrite
+// data merely on load. A style reference may target an asset carrying either
+// generation of the expected kind.
+//
+// Writers start migrating only once every reader of the data understands V2,
+// including clients that update on their own schedule (native apps, long-lived
+// browser sessions). A reader that knows only the first generation no longer
+// sees a migrated style, so every reference to it dangles and the properties
+// it supplied drop without warning: a graphic style's LineStyleSource.style, a
+// shape style's line_style, a text annotation style's *_style fields. These
+// components carry no reader-version guard; the rollout order is the guard.
+//
+// Converting a text annotation style changes one meaning. In the first
+// generation the leaders take the shape's border only when the leader line is
+// unset as a whole; here they take it property by property. A first-generation
+// style whose leader line sets only some properties draws its leaders
+// differently once converted wherever the border sets the rest.
+
+// A color taken from a color style asset (ColorStyleAsset), set directly, or
+// both. Nothing set leaves the color unset.
+message StyleColorSource {
+  // A color style asset. Its color, when it sets one, is the color. Its
+  // opacity, when it sets one, is the opacity of whatever the color paints (a
+  // line's stroke, a shape's fill) in place of the opacity field beside this
+  // color (LineStyleAssetV2.opacity, ShapeStyleAssetV2.fill_opacity). It does
+  // not outrank an opacity set by a style the part follows; see the top of
+  // this file. Text has no opacity and ignores it.
+  StyleAssetReference style = 1;
+
+  // Explicitly opts `style` into pinned resolution, as
+  // LineStyleAsset.pin_color_style does. Unset or false follows the latest
+  // version. Ignored when `style` is unset.
+  optional bool pin_style = 2;
+
+  // The referencing style's own color: the color when `style` is unset, does
+  // not resolve, or names a color style that sets no color.
+  Color color = 3;
+}
+
+// A named, reusable set of line properties: a line style asset. Lives on an
+// asset entity (core.v1.Asset + a name) in any library a model can reach.
+// Supersedes LineStyleAsset; see the migration note at the top of this file.
+//
+// Every property is optional; an unset one leaves that property to whatever
+// applies beneath this style, so a style may specify any subset of properties.
+message LineStyleAssetV2 {
+  option (motif.extension.v1.message).component = 258;
+
+  // Stroke color.
+  StyleColorSource color = 1;
+  // Stroke opacity, 0 (transparent) to 1 (opaque). Applies unless the color's
+  // style sets an opacity.
+  optional float opacity = 2 [(buf.validate.field).float = {
+    gte: 0
+    lte: 1
+  }];
+  // Stroke weight and pattern, with the meaning LineStyleAsset.line gives
+  // them: an unset `line`, `pen_size` or `pattern` leaves that property unset,
+  // and `width` is written as 0 and ignored.
+  LineStyle line = 3;
+}
+
+// Line properties for one part of a style: a line style asset, the part's own
+// line properties, or both. Nothing set leaves the part unset.
+message LineStylePart {
+  // A line style asset (LineStyleAssetV2 or LineStyleAsset).
+  StyleAssetReference style = 1;
+  // The part's own line properties.
+  LineStyleAssetV2 properties = 2;
+}
+
+// A named, reusable look for a closed 2D shape: its fill and its border. A
+// shape style asset. Lives on an asset entity (core.v1.Asset + a name) in any
+// library a model can reach. The host owns the boundary (for a text
+// annotation, the box around its text); the style only says how to draw it.
+// Supersedes ShapeStyleAsset; see the migration note at the top of this file.
+//
+// Every field is optional; an unset field leaves that property to whatever
+// applies beneath this style.
+message ShapeStyleAssetV2 {
+  option (motif.extension.v1.message).component = 256;
+
+  // Fill color.
+  StyleColorSource fill_color = 1;
+  // Fill opacity, 0 (no fill) to 1 (opaque). Applies unless the fill color's
+  // style sets an opacity.
+  optional float fill_opacity = 2 [(buf.validate.field).float = {
+    gte: 0
+    lte: 1
+  }];
+  // The border's line.
+  LineStylePart border = 3;
+  // Whether the fill is drawn. Hiding it leaves the shape's boundary where it
+  // is. Formerly TextAnnotationStyleAsset.show_shape_fill.
+  optional bool show_fill = 4;
+  // Whether the border is drawn. Hiding it leaves the shape's boundary where
+  // it is, and anything that draws with the border's line (a text annotation's
+  // leaders) keeps that line. Formerly
+  // TextAnnotationStyleAsset.show_shape_border.
+  optional bool show_border = 5;
+}
+
+// Shape properties for one part of a style: a shape style asset, the part's
+// own shape properties, or both. Nothing set leaves the part unset.
+message ShapeStylePart {
+  // A shape style asset (ShapeStyleAssetV2 or ShapeStyleAsset).
+  StyleAssetReference style = 1;
+  // The part's own shape properties.
+  ShapeStyleAssetV2 properties = 2;
+}

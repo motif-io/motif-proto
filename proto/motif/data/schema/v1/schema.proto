@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+// Components that store protobuf schemas within a model, so the model can
+// define component types for its own use alongside the platform's.
+package motif.data.schema.v1;
+
+import "motif/extension/v1/options.proto";
+
+// Component types defined by a model for its own use, making the model
+// self-describing: some of the data it stores is described by schemas it also
+// stores.
+//
+// Lives on the model entity (the model's sentinel entity), and a model holds at
+// most one. The types it defines are usable only in that model; another model
+// cannot read or write them, even with the same component IDs.
+//
+// The rules for the set, enforced when the component is written, and how to
+// choose its packages:
+//
+// - Component IDs. Every component type the set defines takes its ID from the
+//   range reserved for model-defined types, 2147473648 through 2147483647
+//   (the top 10,000 int32 values), which platform component types never use.
+// - Own files only. The set may import any platform file, such as
+//   `motif/extension/v1/options.proto`, but must not include one, edited or
+//   not: every file the platform defines is read from the platform, and a model
+//   cannot change it. Build the set with imports excluded, e.g. with
+//   `buf build --exclude-imports`. A model type that needs a variation of a
+//   platform message defines its own copy of that message, in the model's own
+//   package, and changes the copy.
+// - Packages. A model's files may use any package, but its version should
+//   comply with buf's PACKAGE_VERSION_SUFFIX lint rule
+//   (https://buf.build/docs/lint/rules/#package_version_suffix). A type meant
+//   to move into the platform later is best developed in an unstable version
+//   of the package it will join, such as `motif.graphics.v1test1` in
+//   `motif/graphics/v1test1/` for a type headed for `motif.graphics.v1`: this
+//   prevents it from conflicting with that stable package's files and types,
+//   an incompatible change moves to the next unstable version (`v1test2`),
+//   and the type joins the stable package by dropping the suffix. Avoiding a
+//   package the platform itself uses, unstable or not, is up to the model's
+//   developers. If a model's file or type does collide with one the platform
+//   defines, the platform's definition takes precedence, and the model fails
+//   to load if its types no longer resolve or its data no longer decodes.
+// - Compatible changes. A later version follows the same breaking-change rules
+//   as a platform change; the server checks those that protect stored data, so
+//   it also accepts a few changes `buf breaking` reports, such as renames. For
+//   an incompatible change, move the types to a new version, such as
+//   `motif.graphics.v1test2`, with new component IDs; the earlier types stay
+//   in the set, so data already stored under their IDs still decodes. A schema
+//   that defines component types cannot be deleted.
+message ComponentSchema {
+  option (motif.extension.v1.message).component = 254;
+
+  // A serialized `google.protobuf.FileDescriptorSet` holding the files that
+  // define the model's component types.
+  //
+  // The set is kept as bytes rather than a typed `FileDescriptorSet` so it
+  // passes through clients untouched. Component IDs are custom options, which
+  // protobuf stores as extensions, and a generated decoder that doesn't know
+  // them drops them: decoding and re-encoding a typed set could strip every
+  // component ID.
+  bytes file_descriptor_set = 1;
+}

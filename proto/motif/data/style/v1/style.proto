@@ -225,8 +225,9 @@ message ShapeStyleAsset {
     gte: 0
     lte: 1
   }];
-  // The border: a line style asset (LineStyleAsset), or the line properties set
-  // on this style itself. Neither set leaves the border unset.
+  // The border: a line style asset (LineStyleAsset or LineStyleAssetV2), or the
+  // line properties set on this style itself. Neither set leaves the border
+  // unset.
   oneof border {
     // A line style asset whose color, opacity, weight and pattern the border uses.
     StyleAssetReference line_style = 4;
@@ -238,7 +239,8 @@ message ShapeStyleAsset {
 // A reference from one style asset to another (e.g. a line style's color
 // style). Not a component: embedded in the referencing style.
 // The expected style component is determined by the field using this reference;
-// the target entity must carry that component.
+// the target entity must carry that component, in either generation where a V2
+// component supersedes it (see style_asset_v2.proto).
 // By default the recorded model version is not a pin. LineStyleAsset can
 // explicitly opt its color_style into pinning using pin_color_style. Other
 // legacy references are constrained in graphic styles as documented below.
@@ -340,7 +342,8 @@ message FillStyle {
 // contributes no line properties; inherit all of them.
 message LineStyleSource {
   oneof source {
-    // Must reference an entity carrying LineStyleAsset.
+    // Must reference an entity carrying a line style asset: LineStyleAsset or
+    // LineStyleAssetV2.
     PinnedStyleAssetReference style = 1;
     // Line properties owned by the containing style rather than a named asset.
     // Unflagged legacy color_style references stay within the containing model

@@ -20,6 +20,11 @@ description = "Fail if any gap between component type IDs exceeds the threshold"
 dir = "{{ config_root }}"
 run = "buf build -o -#format=json | jq -r --argjson max 15 -f tools/check-component-id-gaps.jq"
 
+[tasks.check-reserved-ids]
+description = "Fail if a component type uses an ID reserved for types developed in a model"
+dir = "{{ config_root }}"
+run = "buf build -o -#format=json | jq -r -f tools/check-reserved-component-ids.jq"
+
 [tasks.lint]
 description = "Run all linting checks locally (CI uses bufbuild/buf-action)"
 run = [
@@ -28,4 +33,5 @@ run = [
   "buf breaking --against .git#ref=refs/remotes/origin/main",
   "taplo fmt --check",
   "mise run check-id-gaps",
+  "mise run check-reserved-ids",
 ]

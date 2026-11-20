@@ -6,11 +6,16 @@
 # Reads the compiled descriptor JSON on stdin (`buf build -o -#format=json`), so
 # nested messages are included. Pass the threshold with `jq --argjson max <N>`.
 # Run via `mise run check-id-gaps`.
+#
+# IDs in the range reserved for model-defined types (2147473648 and up) are left
+# out, so the gap below that range isn't counted; `mise run check-reserved-ids`
+# reports any type that uses one.
 [
   ..
   | objects
   | select(has("[motif.extension.v1.message]"))
   | .["[motif.extension.v1.message]"].component // empty
+  | select(. < 2147473648)
 ]
 | unique
 | . as $ids
