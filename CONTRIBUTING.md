@@ -12,7 +12,9 @@ Schemas live under `proto/`, each file in the directory that mirrors its
 package name (package `motif.data.core.v1` is at `proto/motif/data/core/v1/`).
 Imports use the path relative to `proto/`, e.g.
 `import "motif/extension/v1/options.proto";`. [`buf.md`](buf.md) lists the
-top-level packages.
+top-level packages. Every package ends in a version that complies with buf's
+[`PACKAGE_VERSION_SUFFIX`](https://buf.build/docs/lint/rules/#package_version_suffix)
+lint rule, such as `v1`; `buf lint` checks it.
 
 All schemas form a single
 [buf module](https://buf.build/docs/configuration/v2/buf-yaml) rooted at
@@ -229,6 +231,121 @@ message Opacity {
   }];
 }
 ```
+
+## Developing a Component Type in a Model
+
+A new component type can be developed and used in a model before it is added to
+this repository. The model stores the type's schema in a
+`motif.data.schema.v1.ComponentSchema` component, and the type is usable only in
+that model. The rules for that schema are in
+[`schema.proto`](proto/motif/data/schema/v1/schema.proto).
+
+1. Write the type in your local checkout of this repository. It stays local:
+   the type is only being developed here, so don't commit its directory or
+   open a pull request for it until it's ready to move into the platform.
+
+   - Choose an unstable version of the package the type will join, following
+     buf's [version suffix rules](https://buf.build/docs/lint/rules/#package_version_suffix):
+     for example `motif.graphics.v1test1` in `proto/motif/graphics/v1test1/`
+     for a type headed for `motif.graphics.v1`, or
+     `thirdparty.acme.data.structure.v1test1` for one headed for
+     `thirdparty.acme.data.structure.v1`. An unstable version prevents the type
+     from conflicting with the stable package's files and types, and the type
+     moves into that package by dropping the suffix. A `test` version can be
+     numbered, such as `v1test1`, or named for what you're building, such as
+     `v1testgeolocation`; pick one this repository doesn't already use.
+   - Give the type a component ID from the range reserved for model-defined
+     types, starting at 2147473648 (see
+     [Choosing a Component ID](#choosing-a-component-id)).
+
+2. Build the schema from that directory alone, without its imports, which are
+   read from the platform:
+
+   ```sh
+   buf build --path proto/motif/graphics/v1test1 --exclude-imports -o schema.binpb
+   ```
+
+3. Encode it as a `ComponentSchema` value:
+
+   ```sh
+   echo "{\"fileDescriptorSet\":\"$(base64 < schema.binpb | tr -d '\n')\"}" \
+     | buf convert . --type motif.data.schema.v1.ComponentSchema \
+         --from -#format=json --to -#format=binpb \
+     | base64 | tr -d '\n' > value.b64
+   ```
+
+4. Write the value to the model with `motif.api.v1.Persistence/ApplyChangeset`,
+   as component `254` (`ComponentSchema`) on the model entity
+   `00000000-0000-4000-8000-000000000000`. Set `maxKnownVersion` to the model's
+   current version, which `ListModels` reports, so a schema written since is
+   not overwritten. IDs are bytes, which JSON writes in base64, so the `b64`
+   helper converts each UUID:
+
+   ```sh
+   b64() { echo "$1" | tr -d - | xxd -r -p | base64; }
+
+   PROJECT_ID=<project id>
+   MODEL_ID=<model id>
+   MODEL_VERSION=<current model version>
+
+   cat > changeset.json <<EOF
+   {
+     "projectId": "$(b64 "$PROJECT_ID")",
+     "modelId": "$(b64 "$MODEL_ID")",
+     "maxKnownVersion": $MODEL_VERSION,
+     "changes": [
+       {
+         "entityId": "$(b64 00000000-0000-4000-8000-000000000000)",
+         "components": [{ "typeTag": 254, "value": "$(cat value.b64)" }]
+       }
+     ]
+   }
+   EOF
+
+   buf curl --schema . --protocol grpc \
+     -H "Authorization: Bearer $MOTIF_PAT" -d @changeset.json \
+     https://<persistence endpoint>/motif.api.v1.Persistence/ApplyChangeset
+   ```
+
+   A schema that breaks a rule is refused with `INVALID_ARGUMENT`, and nothing
+   is written. To extend the schema later, build and write it again the same
+   way: each value replaces the last, so it must hold all of the model's types.
+
+   A change follows the same breaking-change rules as a platform change, and
+   `buf breaking` checks it the same way. Before changing the files, build the
+   version the model holds, with its imports, then compare the changed files to
+   it:
+
+   ```sh
+   buf build --path proto/motif/graphics/v1test1 -o previous.binpb   # before changing
+   buf build --path proto/motif/graphics/v1test1 -o current.binpb    # after
+   buf breaking current.binpb --against previous.binpb
+   ```
+
+   The server enforces the part of these rules that protects stored data, so it
+   also accepts some changes `buf breaking` reports, such as renames. For an
+   incompatible change, move the types to the next version,
+   `motif.graphics.v1test2`, with new component IDs, and keep `v1test1` in the
+   set, passing `--path` once for each directory.
+
+5. Generate code for the type in the repository that uses it, which has its own
+   `buf.gen.yaml`. The type is not published to the Buf Schema Registry, so
+   generate from this checkout, limited to the development directory:
+
+   ```sh
+   buf generate ../motif-proto --path ../motif-proto/proto/motif/graphics/v1test1
+   ```
+
+   Then write components of the new type to the model under its reserved ID.
+
+Experiment in a throwaway model: once a model accepts a schema, its types can
+gain fields but not lose them, and the model keeps them.
+
+When the type is ready, move it into its final file and package (drop the
+version's suffix, `v1test1` to `v1`, and remove the directory), assign it a
+platform component ID with `mise run next-id`, and open a pull request. Code
+written against the development type needs only the new package and ID. Data
+written under the reserved ID stays with the development model.
 
 ## Commits and Pull Requests
 
