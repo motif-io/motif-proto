@@ -1,0 +1,23 @@
+// The messages in this file are unstable APIs. Motif makes no guarantees that
+// these messages will continue to be supported.
+
+syntax = "proto3";
+
+package motif.operations.declarations.v1;
+
+import "buf/validate/validate.proto";
+import "motif/operations/values/v1/value.proto";
+
+// An ordered sequence of concrete values stored in a binding or input default.
+//
+// The enclosing slot declaration supplies the element type and cardinality:
+// ONE requires one member, ZERO_OR_ONE permits zero or one, and MANY permits any
+// number. An empty literal explicitly supplies zero members. When used as an
+// input binding, it suppresses the declaration default; omitting the binding
+// instead requests default resolution. Values are successful data, not errors
+// or references.
+message SlotValue {
+  // Up to 1,000 members in source order, each matching the enclosing slot's
+  // element type.
+  repeated motif.operations.values.v1.Value members = 1 [(buf.validate.field).repeated.max_items = 1000];
+}

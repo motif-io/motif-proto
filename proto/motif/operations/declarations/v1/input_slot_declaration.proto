@@ -1,0 +1,27 @@
+// The messages in this file are unstable APIs. Motif makes no guarantees that
+// these messages will continue to be supported.
+
+syntax = "proto3";
+
+package motif.operations.declarations.v1;
+
+import "buf/validate/validate.proto";
+import "motif/operations/declarations/v1/slot_type.proto";
+import "motif/operations/declarations/v1/slot_value.proto";
+
+// The type and default for one named input slot. Its key in
+// InputDeclarations.slots supplies its name; an InputBinding uses that name to
+// supply values.
+message InputSlotDeclaration {
+  // Short human-readable purpose of the input, at most 160 characters.
+  string description = 1 [(buf.validate.field).string.max_len = 160];
+
+  // Required element type and permitted number of members.
+  SlotType slot_type = 2 [(buf.validate.field).required = true];
+
+  // Value used when no binding targets this input, including during standalone
+  // evaluation of a graph definition. Omit to declare no default. A present
+  // empty literal declares an empty default; it must satisfy slot_type. Bound
+  // sources, even when empty, suppress the default rather than append to it.
+  SlotValue default_value = 3;
+}

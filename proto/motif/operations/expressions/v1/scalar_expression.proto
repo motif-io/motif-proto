@@ -1,0 +1,72 @@
+// The messages in this file are unstable APIs. Motif makes no guarantees that
+// these messages will continue to be supported.
+
+syntax = "proto3";
+
+package motif.operations.expressions.v1;
+
+import "buf/validate/validate.proto";
+
+// An arithmetic expression tree that evaluates to a scalar number.
+//
+// Supported nodes are numeric literals, named variables, negations, and binary
+// operations. Variable values come from the environment explicitly supplied to
+// the evaluator. A missing referenced variable or an unset or unsupported node
+// is an evaluation error.
+message ScalarExpression {
+  oneof expression {
+    option (buf.validate.oneof).required = true;
+
+    // Constant numeric value.
+    double literal = 1;
+
+    // Exact, case-sensitive name in the supplied variable environment, at most
+    // 50 characters. The evaluator determines supported value kinds; a missing
+    // name is an error.
+    string variable = 2 [(buf.validate.field).string = {
+      min_len: 1
+      max_len: 50
+    }];
+
+    // Arithmetic negation of the nested expression.
+    ScalarExpression negate = 3;
+
+    // Arithmetic combination of two expressions.
+    BinaryExpression binary = 4;
+  }
+}
+
+// An arithmetic expression with two operands. Both operands are required and
+// evaluated before the selected operator is applied.
+message BinaryExpression {
+  // Required arithmetic operator. Unspecified and unknown values are invalid.
+  ScalarOperator operator = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+
+  // Left operand.
+  ScalarExpression left = 2 [(buf.validate.field).required = true];
+
+  // Right operand.
+  ScalarExpression right = 3 [(buf.validate.field).required = true];
+}
+
+// The arithmetic operation applied to the left and right operands of a
+// BinaryExpression. Operand order matters for subtraction and division.
+enum ScalarOperator {
+  // No operator selected; invalid for evaluation.
+  SCALAR_OPERATOR_UNSPECIFIED = 0;
+  // Sum of the operands.
+  SCALAR_OPERATOR_ADD = 1;
+  // Left operand minus right operand.
+  SCALAR_OPERATOR_SUBTRACT = 2;
+  // Product of the operands.
+  SCALAR_OPERATOR_MULTIPLY = 3;
+  // Left operand divided by right operand.
+  SCALAR_OPERATOR_DIVIDE = 4;
+  // Smaller of the operands.
+  SCALAR_OPERATOR_MIN = 5;
+  // Larger of the operands.
+  SCALAR_OPERATOR_MAX = 6;
+}

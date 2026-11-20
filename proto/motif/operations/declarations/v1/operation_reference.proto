@@ -1,0 +1,36 @@
+// The messages in this file are unstable APIs. Motif makes no guarantees that
+// these messages will continue to be supported.
+
+syntax = "proto3";
+
+package motif.operations.declarations.v1;
+
+import "buf/validate/validate.proto";
+import "motif/extension/v1/reference.proto";
+
+// An operation definition target with an optional model-version scope.
+//
+// This operation-specific reference keeps definition scoping separate from the
+// references supplying an invocation's inputs. At least one target field must
+// be set. With entity set, an absent model selects a live definition in the
+// owning model; a present model pins the definition to that model version.
+//
+// The entity field is provisionally optional. Selection of a model-level
+// operation is unresolved: it may require an explicit sentinel entity rather
+// than infer a target from model alone. This message does not settle that choice.
+message OperationReference {
+  // Optional definition entity, resolved in model when set, otherwise in the
+  // owning model. Omission is allowed while model-level targeting is unsettled.
+  motif.extension.v1.EntityReference entity = 1;
+
+  // Optional external model version for the definition. This scope applies only
+  // to this reference; input bindings retain their own scope. Whether model-level
+  // targeting also needs an explicit sentinel entity remains an open question.
+  motif.extension.v1.ModelReference model = 2;
+
+  option (buf.validate.message).cel = {
+    id: "operation_reference.target"
+    message: "a definition requires an entity or model target"
+    expression: "has(this.entity) || has(this.model)"
+  };
+}

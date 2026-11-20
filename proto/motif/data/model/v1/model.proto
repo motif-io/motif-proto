@@ -1448,9 +1448,16 @@ message SourceAsset {
 }
 
 // Records the asset definition a copied asset was copied from, in another
-// model or the Standard Library. Set on the root definition of a copy. The
-// copy does not depend on its source, which may later be removed: these
-// references are provenance only and are not followed to load the source.
+// model, the Standard Library, or the same model when the asset was
+// duplicated. Set on every copied top-level definition.
+//
+// It names the immediate source: the source entity and the source model at the
+// version the copy was taken from. A copy of a copy therefore records the copy
+// it was made from, not the original.
+//
+// Provenance only. The source may later be removed, so these references can
+// name an entity that no longer exists. Materialized clones (see
+// `SourceAsset`) do not inherit this component.
 message CopiedFrom {
   option (motif.extension.v1.message).component = 194;
 

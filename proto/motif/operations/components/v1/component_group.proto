@@ -1,0 +1,21 @@
+// The messages in this file are unstable APIs. Motif makes no guarantees that
+// these messages will continue to be supported.
+
+syntax = "proto3";
+
+package motif.operations.components.v1;
+
+import "google/protobuf/any.proto";
+
+// An ordered collection of registered component values, with at most one value
+// of each component message type.
+//
+// Component eligibility comes from schema metadata in the registry. Uniqueness
+// uses the exact, fully qualified message name; different Any.type_url prefixes
+// do not make the same message type distinct. Consumers validate registration,
+// component eligibility, payloads, and uniqueness before accepting the group.
+message ComponentGroup {
+  // Component values in collection order. Each must have a distinct registered
+  // component message type. An empty collection is valid.
+  repeated google.protobuf.Any components = 1;
+}

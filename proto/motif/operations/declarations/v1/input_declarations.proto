@@ -1,0 +1,29 @@
+// The messages in this file are unstable APIs. Motif makes no guarantees that
+// these messages will continue to be supported.
+
+syntax = "proto3";
+
+package motif.operations.declarations.v1;
+
+import "buf/validate/validate.proto";
+import "motif/operations/declarations/v1/input_slot_declaration.proto";
+
+// The named input slots of an operation definition.
+//
+// Each map entry declares the type, cardinality, and optional default for one
+// input slot. OperationDefinition.inputs contains these declarations; each map
+// value is an InputSlotDeclaration. Invocations supply values through
+// InputBinding records that name these slots.
+message InputDeclarations {
+  // Up to 250 input slot contracts. Keys are nonempty, case-sensitive slot names
+  // of at most 50 characters. Map order does not specify argument or display order.
+  map<string, InputSlotDeclaration> slots = 1 [(buf.validate.field).map = {
+    max_pairs: 250
+    keys: {
+      string: {
+        min_len: 1
+        max_len: 50
+      }
+    }
+  }];
+}

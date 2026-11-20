@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+// Persisted calculation values, input bindings, and execution records.
+package thirdparty.bhom.data.calculation.v1;
+
+import "motif/extension/v1/options.proto";
+
+// An anonymous typed BHoM calculation value owned by its Motif entity.
+message CalculationValue {
+  option (motif.extension.v1.message).component = 247;
+
+  // Versioned JSON containing the typed BHoM value, calculation identity, record
+  // hash, and execution receipt.
+  string payload_json = 1;
+}
+
+// Explicit calculation inputs attached to an entity independently of its
+// source object. Bindings contain immutable typed BHoM snapshots and source hashes
+// to check stale inputs before calculation.
+message CalculationBindings {
+  option (motif.extension.v1.message).component = 248;
+
+  // Versioned JSON containing the named input slots and their BHoM snapshots.
+  string bindings_json = 1;
+}
+
+// A complete immutable calculation record shared by its saved output values.
+message CalculationRecord {
+  option (motif.extension.v1.message).component = 249;
+
+  // Versioned JSON containing execution inputs, outputs, method and assembly
+  // identity, source references, and provenance to verify the hash.
+  string record_json = 1;
+}

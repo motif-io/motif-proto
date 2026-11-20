@@ -188,6 +188,32 @@ message Opacity {
 }
 ```
 
+## Your Commit Email
+
+This repository is public, so the author and committer email on every commit
+you push becomes public too. We recommend your GitHub
+[noreply address](https://docs.github.com/en/account-and-profile/how-tos/email-preferences/setting-your-commit-email-address#setting-your-email-address-for-a-single-repository)
+(`<id>+<username>@users.noreply.github.com`); a public address you are
+comfortable sharing is also fine. To set it for this repository only:
+
+```sh
+git config user.email "<id>+<username>@users.noreply.github.com"
+```
+
+Motif engineers must use their noreply address, with "Keep my email addresses
+private" and "Block command line pushes that expose my email" turned on in
+their GitHub email settings.
+
+GitHub rejects a push when any commit's author or committer email is a Motif
+work address or a machine-generated address, such as one ending in `.internal`
+or `.local` that git creates when no email is configured. A `Co-authored-by`
+trailer naming one of those addresses is rejected too. If a push is rejected,
+set `user.email`, rewrite the email on your branch's commits, and push again:
+
+```sh
+git rebase --exec 'git commit --amend --no-edit --reset-author' origin/main
+```
+
 ## Tooling
 
 Tooling is installed through [`mise`](https://mise.jdx.dev/). After

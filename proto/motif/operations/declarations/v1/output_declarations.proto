@@ -1,0 +1,29 @@
+// The messages in this file are unstable APIs. Motif makes no guarantees that
+// these messages will continue to be supported.
+
+syntax = "proto3";
+
+package motif.operations.declarations.v1;
+
+import "buf/validate/validate.proto";
+import "motif/operations/declarations/v1/output_slot_declaration.proto";
+
+// The named output slots of an operation definition.
+//
+// Each map entry declares the type and cardinality of one output slot.
+// OperationDefinition.outputs contains these declarations; each map value is an
+// OutputSlotDeclaration. Scripts produce results under these names, while
+// graph-backed definitions connect internal values through OutputBindings.
+message OutputDeclarations {
+  // Up to 250 output slot contracts. Keys are nonempty, case-sensitive slot names
+  // of at most 50 characters. Map order does not specify result or display order.
+  map<string, OutputSlotDeclaration> slots = 1 [(buf.validate.field).map = {
+    max_pairs: 250
+    keys: {
+      string: {
+        min_len: 1
+        max_len: 50
+      }
+    }
+  }];
+}
