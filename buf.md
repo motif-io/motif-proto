@@ -1,6 +1,7 @@
 # Motif Platform
 
-Protobuf schemas for the Motif platform.
+Protobuf schemas for the Motif platform. Guides and reference for building on
+Motif are at [developers.motif.io](https://developers.motif.io).
 
 ## Overview
 
@@ -10,6 +11,7 @@ Schemas are grouped at a high level into the following packages:
 - **`motif.events.v1`** - Message types for notification events sent by the Motif platform
 - **`motif.extension.v1`** — Custom protobuf options and types used to extend the Motif platform with new Component types
 - **`motif.operations.<subpackage>.v1`** — Operation declarations, bindings, references, and value formats
+- **`thirdparty.<partner>.data.<domain>.v1`** — Partner-owned component types
 
 ## Usage
 
