@@ -28,4 +28,10 @@ run = [
   "buf breaking --against .git#ref=refs/remotes/origin/main",
   "taplo fmt --check",
   "mise run check-id-gaps",
+  "mise run test-model-unit-settings",
 ]
+
+[tasks.test-model-unit-settings]
+description = "Check the compiled model unit symbol wire contract"
+dir = "{{ config_root }}"
+run = "buf build -o -#format=json | jq -e -f tools/test-model-unit-settings.jq"

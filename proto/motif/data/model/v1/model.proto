@@ -157,6 +157,48 @@ enum UnitSymbol {
   UNIT_SYMBOL_MI = 16;
 }
 
+// Symbols used in formatted area labels. Applications determine which symbols
+// are valid for the selected unit.
+enum AreaUnitSymbol {
+  // Preserve the application's legacy area label for the selected unit.
+  AREA_UNIT_SYMBOL_UNSPECIFIED = 0;
+  // Omit the area unit symbol.
+  AREA_UNIT_SYMBOL_NONE = 1;
+  // Square millimeter symbol: mm².
+  AREA_UNIT_SYMBOL_SQUARE_MILLIMETER = 2;
+  // Square centimeter symbol: cm².
+  AREA_UNIT_SYMBOL_SQUARE_CENTIMETER = 3;
+  // Square meter symbol: m².
+  AREA_UNIT_SYMBOL_SQUARE_METER = 4;
+  // Square kilometer symbol: km².
+  AREA_UNIT_SYMBOL_SQUARE_KILOMETER = 5;
+  // Square inch symbol: in².
+  AREA_UNIT_SYMBOL_SQUARE_INCH = 6;
+  // Square foot symbol: ft².
+  AREA_UNIT_SYMBOL_SQUARE_FOOT = 7;
+  // Square yard symbol: yd².
+  AREA_UNIT_SYMBOL_SQUARE_YARD = 8;
+  // Square furlong symbol: fur².
+  AREA_UNIT_SYMBOL_SQUARE_FURLONG = 9;
+  // Acre abbreviation: acre.
+  AREA_UNIT_SYMBOL_ACRE = 10;
+  // Square mile symbol: mi².
+  AREA_UNIT_SYMBOL_SQUARE_MILE = 11;
+}
+
+// Symbols used in formatted angle labels. Applications determine which symbols
+// are valid for the selected unit.
+enum AngleUnitSymbol {
+  // Preserve the application's legacy angle label for the selected unit.
+  ANGLE_UNIT_SYMBOL_UNSPECIFIED = 0;
+  // Omit the angle unit symbol.
+  ANGLE_UNIT_SYMBOL_NONE = 1;
+  // Degree symbol: °.
+  ANGLE_UNIT_SYMBOL_DEGREE = 2;
+  // Radian abbreviation: rad.
+  ANGLE_UNIT_SYMBOL_RADIAN = 3;
+}
+
 // A unit of length.
 enum LengthUnit {
   // Unspecified length unit.
@@ -257,6 +299,12 @@ message ModelUnitSettings {
   // Selected length symbol. Applications validate it against the effective unit
   // and notation when displaying labels.
   UnitSymbol unit_symbol = 5;
+  // Selected area symbol. Applications validate it against the effective unit
+  // when displaying labels. Unspecified preserves legacy formatting.
+  AreaUnitSymbol area_unit_symbol = 6;
+  // Selected angle symbol. Applications validate it against the effective unit
+  // when displaying labels. Unspecified preserves legacy formatting.
+  AngleUnitSymbol angle_unit_symbol = 7;
 }
 
 // Wall-asset compose behavior. Reads the 6 declared sub-parameters (workplane,
