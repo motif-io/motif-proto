@@ -50,5 +50,11 @@ message ComponentSchema {
 
   // A serialized `google.protobuf.FileDescriptorSet` holding the files that
   // define the model's component types.
+  //
+  // The set is kept as bytes rather than a typed `FileDescriptorSet` so it
+  // passes through clients untouched. Component IDs are custom options, which
+  // protobuf stores as extensions, and a generated decoder that doesn't know
+  // them drops them: decoding and re-encoding a typed set could strip every
+  // component ID.
   bytes file_descriptor_set = 1;
 }
