@@ -20,7 +20,7 @@ import "motif/extension/v1/options.proto";
 // Every field is optional; an unset field leaves that property to whatever
 // applies beneath this style, so a style may specify any subset of properties.
 message TextStyleAssetV2 {
-  option (motif.extension.v1.message).component = 242;
+  option (motif.extension.v1.message).component = 257;
 
   // Font family name, e.g. "Roboto".
   optional string font_family = 1;

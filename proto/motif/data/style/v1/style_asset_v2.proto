@@ -105,7 +105,7 @@ message LineStylePart {
 // Every field is optional; an unset field leaves that property to whatever
 // applies beneath this style.
 message ShapeStyleAssetV2 {
-  option (motif.extension.v1.message).component = 241;
+  option (motif.extension.v1.message).component = 256;
 
   // Fill color.
   StyleColorSource fill_color = 1;
