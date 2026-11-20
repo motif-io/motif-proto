@@ -24,8 +24,7 @@ For guides and reference on building with Motif, see
 
 In this repository:
 
-- [buf.md](buf.md) describes the packages, how to depend on the module, and
-  the licensing of third-party schemas.
+- [buf.md](buf.md) describes the packages and how to depend on the module.
 - [CONTRIBUTING.md](CONTRIBUTING.md) covers adding or changing schemas.
 
 The schemas are licensed under the [MIT License](LICENSE).

@@ -14,10 +14,16 @@ Imports use the path relative to `proto/`, e.g.
 `import "motif/extension/v1/options.proto";`. [`buf.md`](buf.md) lists the
 top-level packages.
 
+All schemas form a single
+[buf module](https://buf.build/docs/configuration/v2/buf-yaml) rooted at
+`proto/`, published as one Buf Schema Registry repository. Add a package by
+creating its package-mirrored directory under `proto/`; no `buf.yaml` change
+is needed.
+
 Component types live only in `motif.data.<subpackage>.v1` (for Motif) or
-`thirdparty.<org>.data.<domain>.v1` (for partners). Motif picks the
-`motif.data` subpackage that fits the domain (e.g. `core`, `model`, `view`,
-`style`, `fde`), or adds a new one if none fits.
+`thirdparty.<org>.data.<domain>.v1` (for partners). Motif-owned types go in
+the `motif.data` subpackage that fits the domain (e.g. `core`, `model`,
+`view`, `style`, `fde`), or in a new one if none fits.
 
 ## Adding a Package for Your Organization
 
@@ -180,8 +186,10 @@ Motif message and field options.
 **References are fixed once merged.** The `MOTIF` breaking rules reject adding a
 field that can carry a reference to an existing component type (or to a
 message it contains), retyping a field so that it can, and changing or removing
-a `DataReference` field's expected type. Decide a component's references before
-it merges; to add one later, define a new component type.
+a `DataReference` field's expected type (the
+`MOTIF_DATA_REFERENCE_EXPECTED_TYPE_CHANGED` rule). Decide a component's
+references before it merges; to add one later, or to reference a different
+type, define a new component type.
 
 ### Deprecating Message Types and Fields
 
@@ -222,8 +230,8 @@ message Opacity {
 This repository is public, so treat every commit and pull request as externally
 visible:
 
-- Do not add `Co-authored-by`, `Made-with`, or other tool/AI attribution
-  trailers to commits or pull requests.
+- Do not manually add `Co-authored-by`, `Made-with`, or other tool/AI
+  attribution trailers to commits or pull requests.
 - Do not link to private or internal systems (such as private issue trackers)
   or paste internal-only URLs or ticket IDs in commit messages or pull request
   descriptions.
