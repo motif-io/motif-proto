@@ -44,6 +44,13 @@ import "motif/extension/v1/options.proto";
 // A reference that does not resolve (the asset is missing, or does not carry a
 // style of the expected kind) sets nothing, so every own property applies.
 //
+// Versions: a part's style reference (LineStylePart, ShapeStylePart,
+// annotation.v1.TextStylePart and ArrowheadStylePart) is a StyleAssetReference
+// and follows the latest version, as the first-generation field it replaces
+// does. Only a color can be pinned (StyleColorSource.pin_style), which keeps a
+// line style with an external color usable in a pinned graph, as
+// LineStyleAsset.pin_color_style does.
+//
 // Migration: readers continue to support the first-generation component in
 // existing data and history. On the first persisted change to a style (not a
 // no-op), writers write the V2 component and remove the first-generation one
