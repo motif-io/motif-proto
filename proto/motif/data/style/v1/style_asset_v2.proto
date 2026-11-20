@@ -31,10 +31,15 @@ import "motif/extension/v1/options.proto";
 // color style with opacity 0.8, the stroke draws in that color at 0.3: the
 // referenced style sets the opacity (rule 1).
 //
-// Within own
-// properties, a nested style reference applies only while the referenced style
-// leaves that whole nested part unset; the nested part's own direct properties
-// still fill whatever the referenced style's part leaves unset.
+// Within own properties, a nested style reference (a border's line style, a
+// color's color style) applies only while the referenced style's nested part
+// sets nothing after resolving: a border that yields no line property, a color
+// source that yields no color. What the referenced part has written does not
+// count, so a referenced border that follows a missing line style does not
+// block the own border's line style. A nested reference that does not apply
+// contributes nothing, a color style's opacity included. The nested part's own
+// direct properties still fill whatever the referenced style's part leaves
+// unset.
 //
 // A reference that does not resolve (the asset is missing, or does not carry a
 // style of the expected kind) sets nothing, so every own property applies.
