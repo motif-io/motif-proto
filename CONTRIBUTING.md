@@ -282,9 +282,9 @@ that model. The rules for that schema are in
 4. Write the value to the model with `motif.api.v1.Persistence/ApplyChangeset`,
    as component `254` (`ComponentSchema`) on the model entity
    `00000000-0000-4000-8000-000000000000`. Set `maxKnownVersion` to the model's
-   current version, which `ListModels` reports, so a schema written since is
-   not overwritten. IDs are bytes, which JSON writes in base64, so the `b64`
-   helper converts each UUID:
+   current version, `Model.changeset_version` in the `ListModels` response, so
+   a schema written since is not overwritten. IDs are bytes, which JSON writes
+   in base64, so the `b64` helper converts each UUID:
 
    ```sh
    b64() { echo "$1" | tr -d - | xxd -r -p | base64; }
