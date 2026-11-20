@@ -101,7 +101,7 @@ message StyleColorSource {
 // Every property is optional; an unset one leaves that property to whatever
 // applies beneath this style, so a style may specify any subset of properties.
 message LineStyleAssetV2 {
-  option (motif.extension.v1.message).component = 254;
+  option (motif.extension.v1.message).component = 258;
 
   // Stroke color.
   StyleColorSource color = 1;
