@@ -94,7 +94,7 @@ accepted until such conflicts are resolved.
 The top 10,000 IDs, 2147473648 through 2147483647 (the int32 maximum), are
 reserved for component types a model defines for its own use in a
 `motif.data.schema.v1.ComponentSchema`. Never assign them to a component type
-in this repository.
+in this repository. `mise run check-reserved-ids` fails if one does.
 
 ### Once Merged, an ID Is Permanent
 
@@ -243,6 +243,10 @@ that model. The rules for that schema are in
 1. Write the type in your local checkout of this repository. It stays local:
    the type is only being developed here, so don't commit its directory or
    open a pull request for it until it's ready to move into the platform.
+   `.gitignore` ignores `test` version directories under `proto/`, and the
+   build artifacts below go in `.model-schema/`, which is ignored too. While
+   the type exists, `mise run check-reserved-ids` (part of `mise run lint`)
+   fails and names it, as a reminder that it must not be committed.
 
    - Choose an unstable version of the package the type will join, following
      buf's [version suffix rules](https://buf.build/docs/lint/rules/#package_version_suffix):
@@ -262,16 +266,17 @@ that model. The rules for that schema are in
    read from the platform:
 
    ```sh
-   buf build --path proto/motif/graphics/v1test1 --exclude-imports -o schema.binpb
+   mkdir -p .model-schema
+   buf build --path proto/motif/graphics/v1test1 --exclude-imports -o .model-schema/schema.binpb
    ```
 
 3. Encode it as a `ComponentSchema` value:
 
    ```sh
-   echo "{\"fileDescriptorSet\":\"$(base64 < schema.binpb | tr -d '\n')\"}" \
+   echo "{\"fileDescriptorSet\":\"$(base64 < .model-schema/schema.binpb | tr -d '\n')\"}" \
      | buf convert . --type motif.data.schema.v1.ComponentSchema \
          --from -#format=json --to -#format=binpb \
-     | base64 | tr -d '\n' > value.b64
+     | base64 | tr -d '\n' > .model-schema/value.b64
    ```
 
 4. Write the value to the model with `motif.api.v1.Persistence/ApplyChangeset`,
@@ -288,7 +293,7 @@ that model. The rules for that schema are in
    MODEL_ID=<model id>
    MODEL_VERSION=<current model version>
 
-   cat > changeset.json <<EOF
+   cat > .model-schema/changeset.json <<EOF
    {
      "projectId": "$(b64 "$PROJECT_ID")",
      "modelId": "$(b64 "$MODEL_ID")",
@@ -296,14 +301,14 @@ that model. The rules for that schema are in
      "changes": [
        {
          "entityId": "$(b64 00000000-0000-4000-8000-000000000000)",
-         "components": [{ "typeTag": 254, "value": "$(cat value.b64)" }]
+         "components": [{ "typeTag": 254, "value": "$(cat .model-schema/value.b64)" }]
        }
      ]
    }
    EOF
 
    buf curl --schema . --protocol grpc \
-     -H "Authorization: Bearer $MOTIF_PAT" -d @changeset.json \
+     -H "Authorization: Bearer $MOTIF_PAT" -d @.model-schema/changeset.json \
      https://<persistence endpoint>/motif.api.v1.Persistence/ApplyChangeset
    ```
 
@@ -317,9 +322,9 @@ that model. The rules for that schema are in
    it:
 
    ```sh
-   buf build --path proto/motif/graphics/v1test1 -o previous.binpb   # before changing
-   buf build --path proto/motif/graphics/v1test1 -o current.binpb    # after
-   buf breaking current.binpb --against previous.binpb
+   buf build --path proto/motif/graphics/v1test1 -o .model-schema/previous.binpb   # before changing
+   buf build --path proto/motif/graphics/v1test1 -o .model-schema/current.binpb    # after
+   buf breaking .model-schema/current.binpb --against .model-schema/previous.binpb
    ```
 
    The server enforces the part of these rules that protects stored data, so it
@@ -407,15 +412,15 @@ Format first, then lint before you push:
 
 ```sh
 mise run format   # buf format -w + taplo fmt
-mise run lint     # buf format check, buf lint, buf breaking, taplo check, ID-gap check
+mise run lint     # buf format check, buf lint, buf breaking, taplo check, component ID checks
 ```
 
 `mise run lint` covers everything the pull request checks do:
 [Buf CI](.github/workflows/buf.yaml) (build, lint, format, and breaking-change
 detection, which also publishes the module to the Buf Schema Registry on merge
 to `main`) and the [component ID](.github/workflows/component-ids.yaml) gap
-check. Because `buf breaking` compares against your local `origin/main` ref,
+and reserved-ID checks. Because `buf breaking` compares against your local `origin/main` ref,
 fetch before you trust the result.
 
-Other tasks: `mise run next-id` and `mise run check-id-gaps` (both described
-above), and `mise tasks` to list everything.
+Other tasks: `mise run next-id`, `mise run check-id-gaps` and
+`mise run check-reserved-ids` (all described above), and `mise tasks` to list everything.

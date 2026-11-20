@@ -4,3 +4,9 @@
 
 # JetBrains IDEs
 .idea/
+
+# Developing a component type in a model (CONTRIBUTING.md): the type uses a test
+# version (v1test1, v1testgeolocation) and is never committed, and the schema's
+# build artifacts go in .model-schema/.
+/proto/**/v[0-9]*test*/
+/.model-schema/
