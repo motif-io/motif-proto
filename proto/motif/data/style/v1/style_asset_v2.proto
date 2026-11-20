@@ -66,6 +66,12 @@ import "motif/extension/v1/options.proto";
 // it supplied drop without warning: a graphic style's LineStyleSource.style, a
 // shape style's line_style, a text annotation style's *_style fields. These
 // components carry no reader-version guard; the rollout order is the guard.
+//
+// Converting a text annotation style changes one meaning. In the first
+// generation the leaders take the shape's border only when the leader line is
+// unset as a whole; here they take it property by property. A first-generation
+// style whose leader line sets only some properties draws its leaders
+// differently once converted wherever the border sets the rest.
 
 // A color taken from a color style asset (ColorStyleAsset), set directly, or
 // both. Nothing set leaves the color unset.
