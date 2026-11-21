@@ -95,3 +95,57 @@ message TextAnnotationStyleAssetV2 {
   // The leaders' line. Each property it leaves unset is the shape border's.
   motif.data.style.v1.LineStylePart leader_line = 7;
 }
+
+// The style assets a placed text annotation draws with. Lives beside
+// TextAnnotation on the annotation entity, which carries no reference of its
+// own. The annotation takes its whole look from one text annotation style or,
+// when it follows none, each of its text, box, leader heads and leader line
+// from a style asset of that kind; choosing a whole style replaces any
+// per-part choice.
+//
+// Resolution follows the rule stated at the top of
+// motif/data/style/v1/style_asset_v2.proto, with the annotation's own
+// properties (TextAnnotation, TextBlockV2 and the entity's Color and
+// LineStyle) as the layer beneath: a property the referenced style sets,
+// itself or through the styles it references in turn, comes from that style,
+// and every other property is the annotation's own. Own values shadowed this
+// way are retained, not cleared, and apply again once the style unsets the
+// property or the reference stops resolving. A reference that does not
+// resolve sets nothing. References follow the latest library version, as
+// StyleAssetReference does; a color style a referenced style pins stays
+// pinned.
+//
+// Nothing set draws the annotation with its own properties; a writer removes
+// the component instead.
+message TextAnnotationStyleSource {
+  option (motif.extension.v1.message).component = 248;
+
+  oneof source {
+    // One text annotation style (TextAnnotationStyleAssetV2 or
+    // TextAnnotationStyleAsset) governing the whole annotation.
+    motif.data.style.v1.StyleAssetReference style = 1;
+    // A style per part, for an annotation that follows no whole style.
+    TextAnnotationStyleParts parts = 2;
+  }
+}
+
+// One style asset per part of a text annotation's look. Each is optional; an
+// unset part leaves that part to the annotation's own properties.
+message TextAnnotationStyleParts {
+  // The text (TextStyleAssetV2 or TextStyleAsset).
+  motif.data.style.v1.StyleAssetReference text = 1;
+  // The box's fill and border (ShapeStyleAssetV2 or ShapeStyleAsset). The
+  // leaders draw with its border's line unless the leader line sets that
+  // property.
+  motif.data.style.v1.StyleAssetReference shape = 2;
+  // The leaders' heads (ArrowheadStyleAsset).
+  motif.data.style.v1.StyleAssetReference arrowhead = 3;
+  // The leaders' line (LineStyleAssetV2 or LineStyleAsset). Each property it
+  // leaves unset is the shape border's.
+  motif.data.style.v1.StyleAssetReference leader_line = 4;
+  // The box border's line (LineStyleAssetV2 or LineStyleAsset). It applies only
+  // while the shape style's border sets no line property, itself or through
+  // the line style it references; the leaders then draw with it as they do
+  // with any border.
+  motif.data.style.v1.StyleAssetReference border_line = 5;
+}
