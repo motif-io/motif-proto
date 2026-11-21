@@ -3,31 +3,12 @@ syntax = "proto3";
 package motif.data.annotation.v1;
 
 import "buf/validate/validate.proto";
+import "motif/data/annotation/v1/annotation.proto";
 import "motif/data/annotation/v1/style_asset_v2.proto";
 import "motif/data/model/v1/model.proto";
 import "motif/data/style/v1/style.proto";
 import "motif/data/style/v1/style_asset_v2.proto";
 import "motif/extension/v1/options.proto";
-
-// The shape of the leader connecting a moved label to its dimension line.
-// Showing the leader is a property of the placed dimension.
-enum DimensionStyleLeaderType {
-  DIMENSION_STYLE_LEADER_TYPE_UNSPECIFIED = 0;
-  DIMENSION_STYLE_LEADER_TYPE_STRAIGHT = 1;
-  DIMENSION_STYLE_LEADER_TYPE_SHOULDER = 2;
-}
-
-// How a dimension style selects the units used in its label.
-enum DimensionStyleUnitPolicy {
-  // The style supplies no unit policy.
-  DIMENSION_STYLE_UNIT_POLICY_UNSPECIFIED = 0;
-  // Use the containing model's units and precision.
-  DIMENSION_STYLE_UNIT_POLICY_USE_MODEL = 1;
-  // Use the style's imperial unit settings.
-  DIMENSION_STYLE_UNIT_POLICY_IMPERIAL = 2;
-  // Use the style's metric unit settings.
-  DIMENSION_STYLE_UNIT_POLICY_METRIC = 3;
-}
 
 // A named, reusable style for permanent dimensions. Lives on an asset entity
 // (core.v1.Asset and a name). Unset fields leave the corresponding properties
