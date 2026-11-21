@@ -17,7 +17,10 @@ import "motif/extension/v1/options.proto";
 // Text, line and arrowhead parts use the V2 property resolution rules in
 // motif/data/style/v1/style_asset_v2.proto. Their direct links opt into pinned
 // resolution: an unqualified link resolves in this asset's model snapshot, and
-// a link naming a model uses that model's recorded version.
+// a link naming a model uses that model's recorded version. When the inline
+// text or line follows a color in this model, writers set its pin_style flag.
+// Copying the dimension style can then qualify that color to the source
+// snapshot while preserving the same effective color and opacity.
 message DimensionStyleAsset {
   option (motif.extension.v1.message).component = 262;
 
