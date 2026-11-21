@@ -152,4 +152,9 @@ message TextAnnotationStyleParts {
   // The leaders' line (LineStyleAssetV2 or LineStyleAsset). Each property it
   // leaves unset is the shape border's.
   motif.data.style.v1.StyleAssetReference leader_line = 4;
+  // The box border's line (LineStyleAssetV2 or LineStyleAsset). It applies only
+  // while the shape style's border sets no line property, itself or through
+  // the line style it references; the leaders then draw with it as they do
+  // with any border.
+  motif.data.style.v1.StyleAssetReference border_line = 5;
 }
