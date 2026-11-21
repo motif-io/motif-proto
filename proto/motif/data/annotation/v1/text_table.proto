@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package motif.data.annotation.v1;
 
+import "motif/data/style/v1/style.proto";
 import "motif/data/style/v1/table.proto";
 import "motif/extension/v1/options.proto";
 
@@ -24,6 +25,12 @@ message TextTable {
   // How the table prints. Unset uses the reader's defaults for the model's
   // units.
   motif.data.style.v1.TableStyle style = 4;
+
+  // A table style asset (`TableStyleAsset`) the table follows. Each property
+  // the asset sets replaces the one `style` gives; `style` keeps the table's
+  // own, which apply again where the asset stops setting them. Unset, or not
+  // resolving, the table prints with `style` alone.
+  motif.data.style.v1.StyleAssetReference style_asset = 5;
 }
 
 // One body row of a text table.

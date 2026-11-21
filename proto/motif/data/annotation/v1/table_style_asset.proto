@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package motif.data.annotation.v1;
+
+import "motif/data/annotation/v1/style_asset_v2.proto";
+import "motif/data/style/v1/style_asset_v2.proto";
+import "motif/extension/v1/options.proto";
+
+// A named, reusable look for a table: a table style asset. Lives on an asset
+// entity (core.v1.Asset + a name) in any library a model can reach. A
+// schedule (`motif.data.view.v1.ScheduleDefinition`) or a text table
+// (`TextTable`) follows one through its `style_asset`.
+//
+// Each part's text and shape resolve as style_asset_v2.proto describes. What
+// they yield lays over the table's own `motif.data.style.v1.TableStyle`:
+//
+//   - text: the font, weight, slant and color of the part's text; the printed
+//     height is the part's text size and the justification its alignment;
+//   - shape: the part's fill (none when the fill is hidden) and its rules,
+//     from the border's line (none when the border is hidden).
+//
+// A property a part leaves unset is the table's own. Every part is optional.
+message TableStyleAsset {
+  option (motif.extension.v1.message).component = 262;
+
+  // The title row.
+  TableStyleAssetPart title = 1;
+
+  // The column headers and the column group labels.
+  TableStyleAssetPart header = 2;
+
+  // Data rows, group lines, subtotals and the total.
+  TableStyleAssetPart body = 3;
+}
+
+// The text and the shape of one part of a table style.
+message TableStyleAssetPart {
+  // The part's text.
+  TextStylePart text = 1;
+
+  // The part's fill and rules.
+  motif.data.style.v1.ShapeStylePart shape = 2;
+}

@@ -18,6 +18,7 @@ import "motif/data/external/v1/categories.proto";
 import "motif/data/filter/v1/filter.proto";
 import "motif/data/geometry/v1/geometry.proto";
 import "motif/data/model/v1/model.proto";
+import "motif/data/style/v1/style.proto";
 import "motif/data/style/v1/table.proto";
 import "motif/extension/v1/options.proto";
 
@@ -95,6 +96,13 @@ message ScheduleDefinition {
   // What a cell of a collapsed row shows where its elements differ. Unset
   // shows `<varies>`.
   optional string varies_text = 14;
+
+  // A table style asset (`motif.data.annotation.v1.TableStyleAsset`) the
+  // schedule follows. Each property the asset sets replaces the one `style`
+  // gives; `style` keeps the schedule's own, which apply again where the
+  // asset stops setting them. Unset, or not resolving, the schedule prints
+  // with `style` alone.
+  motif.data.style.v1.StyleAssetReference style_asset = 15;
 }
 
 // A schedule's own filter: written into the definition, or a saved filter
@@ -162,9 +170,65 @@ message ScheduleColumn {
   motif.data.style.v1.TableAlignment alignment = 8 [(buf.validate.field).enum.defined_only = true];
 
   // The unit, notation and precision a length column prints and aggregates
-  // in, and reads a typed number with no unit in. Unset inherits the model's
-  // unit settings; ignored on other kinds.
+  // in, and reads a typed number with no unit in. Fractional notation rounds
+  // to the nearest 1/precision inch. Unset, or with
+  // `length_format.follow_model` set, the column prints in the model's unit
+  // settings; ignored on other kinds.
   motif.data.model.v1.LengthUnitGroup length_units = 9;
+
+  // How a length column prints beyond its units: rounding to an increment,
+  // the symbol and the display options. Unset prints `length_units` with
+  // the unit's default symbol and no display option; ignored on other kinds.
+  ScheduleLengthFormat length_format = 10;
+}
+
+// How a length column prints, beyond `ScheduleColumn.length_units`.
+message ScheduleLengthFormat {
+  // The column prints in the model's unit settings. `length_units` and the
+  // other fields are kept, and apply again once this is cleared.
+  bool follow_model = 1;
+
+  // Rounds to the nearest multiple of this, in the unit of `length_units`,
+  // in place of its precision, printing as many decimals as the increment
+  // has (at most 6). Decimal notation only; ignored with fractional.
+  optional double increment = 2 [(buf.validate.field).double = {
+    gt: 0
+    finite: true
+  }];
+
+  // What follows a value in decimal notation. Unspecified takes the unit's
+  // default: the mark for feet and inches, the abbreviation for every other
+  // unit. Ignored with fractional notation, whose marks are fixed.
+  ScheduleLengthSymbol symbol = 3 [(buf.validate.field).enum.defined_only = true];
+
+  // Drops zeros at the end of a decimal part, then a lone decimal point.
+  bool suppress_trailing_zeros = 4;
+
+  // Feet and inches print without the feet while they are 0: `6 1/4"`.
+  bool suppress_zero_feet = 5;
+
+  // A positive value prints with `+`. A value that rounds to zero prints
+  // no sign.
+  bool show_plus = 6;
+
+  // The whole part prints with a comma every three digits.
+  bool digit_grouping = 7;
+
+  // No space before an abbreviation, and none around the `-` between feet
+  // and inches: `3764mm`, `12'-4 3/16"`.
+  bool suppress_spaces = 8;
+}
+
+// What follows a length printed in decimal notation.
+enum ScheduleLengthSymbol {
+  // The unit's default.
+  SCHEDULE_LENGTH_SYMBOL_UNSPECIFIED = 0;
+  // Nothing.
+  SCHEDULE_LENGTH_SYMBOL_NONE = 1;
+  // The foot (') or inch (") mark. Feet and inches only.
+  SCHEDULE_LENGTH_SYMBOL_MARK = 2;
+  // The unit's abbreviation: ft, in, yd, mi, mm, cm, m or km.
+  SCHEDULE_LENGTH_SYMBOL_ABBREVIATION = 3;
 }
 
 // What a column's footer and group closing lines show, over the elements of
