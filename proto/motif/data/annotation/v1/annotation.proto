@@ -170,12 +170,11 @@ message ArrowheadStyleAsset {
 
 // A persisted dimension annotation.
 //
-// Only the source grain persists: definition anchors and the placement rule
-// (style reference and per-view presence are reserved extensions). Lifecycle is
-// not persisted — existing in persisted data IS the permanent lifecycle; the
-// loader stamps it and the commit path guarantees it. Derived geometry
-// (resolved points, part meshes, labels) is regenerated client-side and never
-// enters changesets.
+// Only the authored data persists: definition anchors, the placement rule and
+// local styling. Shared style relationships live in DimensionStyleSource.
+// A persisted dimension has a permanent lifecycle. The loader stamps it and
+// the commit path guarantees it. Clients regenerate derived geometry
+// (resolved points, part meshes, labels) from the authored data.
 // A reader that cannot interpret the kind or placement arm must not rewrite
 // this component or treat it as an empty annotation.
 message Dimension {
@@ -640,6 +639,26 @@ message DimensionSource {
   }
 }
 
+// The shape of the leader connecting a moved label to its dimension line.
+// Showing the leader is a property of the placed dimension.
+enum DimensionStyleLeaderType {
+  DIMENSION_STYLE_LEADER_TYPE_UNSPECIFIED = 0;
+  DIMENSION_STYLE_LEADER_TYPE_STRAIGHT = 1;
+  DIMENSION_STYLE_LEADER_TYPE_SHOULDER = 2;
+}
+
+// How a dimension style selects the units used in its label.
+enum DimensionStyleUnitPolicy {
+  // The style supplies no unit policy.
+  DIMENSION_STYLE_UNIT_POLICY_UNSPECIFIED = 0;
+  // Use the containing model's units and precision.
+  DIMENSION_STYLE_UNIT_POLICY_USE_MODEL = 1;
+  // Use the style's imperial unit settings.
+  DIMENSION_STYLE_UNIT_POLICY_IMPERIAL = 2;
+  // Use the style's metric unit settings.
+  DIMENSION_STYLE_UNIT_POLICY_METRIC = 3;
+}
+
 // A dimension's look: label text, the linework, the sizes that position the
 // parts, and the units the value is displayed in.
 //
@@ -651,13 +670,8 @@ message DimensionSource {
 // Sizes are millimeters measured on the printed page, so a dimension holds its
 // printed size across view scales.
 //
-// The text and line properties are grouped rather than flattened because the
-// intended end state is a composed style, where each group is either given
-// inline (as here) or referenced as a shared style asset. Grouping now is what
-// makes that additive later: a single field can be moved into a `oneof`
-// alongside a reference without breaking the wire format, as long as only one
-// arm is ever set. A reference to a whole dimension style is field 10, and
-// arrives as a plain field with documented precedence for the same reason.
+// Authored values remain on the dimension when a style is assigned. Shared
+// style relationships are stored separately in DimensionStyleSource.
 message DimensionStyle {
   // Label text style.
   message Text {
@@ -666,10 +680,12 @@ message DimensionStyle {
     // Em size, millimeters on paper — the ordinary meaning of a "12 pt" text
     // size, not the cap height.
     optional float size = 2;
-    // 3 reserved: font (motif.data.style.v1.Font), once more than one family
-    // is available to choose from.
-    // 4 reserved: width factor (horizontal glyph scale), once the text stack
-    // can render one.
+    // The family, weight and slant are independently editable.
+    optional string font_family = 5;
+    optional bool bold = 6;
+    optional bool italic = 7;
+    // Horizontal alignment. UNSPECIFIED inherits the label default.
+    Justify justify = 8;
   }
 
   // Style of the dimension line, the extension lines, and the terminators,
@@ -680,15 +696,20 @@ message DimensionStyle {
     // Stroke weight. A pen size of 0 means the renderer draws a
     // screen-constant hairline.
     motif.data.style.v1.LineStyle weight = 2;
-    // 3 reserved: dash pattern, once the renderer honors one on this stroke.
+    // Stroke opacity from transparent to opaque. Unset inherits the default.
+    optional float opacity = 4 [(buf.validate.field).float = {
+      gte: 0
+      lte: 1
+      finite: true
+    }];
   }
 
   // Label text.
   Text text = 1;
   // Linework.
   Line line = 2;
-  // 3 reserved: terminator style (tick vs arrow, and its size), grouped like
-  // Text and Line so that it too can gain a shared-style reference.
+  // Locally authored terminator shape, size, angle and pen.
+  ArrowheadStyleAsset arrowhead = 3;
 
   // Gap between the dimension line and the label.
   optional float text_offset = 4;
@@ -709,9 +730,10 @@ message DimensionStyle {
   // Unset inherits the model's unit settings.
   motif.data.model.v1.AngleUnitGroup angle_units = 9;
 
-  // 10 reserved: a reference to a shared dimension style asset. When it
-  // arrives it takes precedence over every field above, per the composed-style
-  // model where referencing a dimension style takes the whole style from it.
+  // The local leader shape. Showing the leader remains a placement choice.
+  DimensionStyleLeaderType leader_type = 11;
+  // An explicit USE_MODEL follows the model even with stored unit settings.
+  DimensionStyleUnitPolicy unit_policy = 12;
 }
 
 // Rich-text content + styling for a text annotation. Box geometry stays in
