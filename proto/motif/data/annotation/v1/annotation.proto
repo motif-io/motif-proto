@@ -675,17 +675,28 @@ enum DimensionStyleUnitPolicy {
 message DimensionStyle {
   // Label text style.
   message Text {
+    // Sparse overrides of the base font's individual attributes. If a base
+    // font is supplied, it provides the family, weight and slant. Present
+    // overrides replace just their own attribute. An omitted bold preserves
+    // the base font's exact weight. Without a base font, omitted attributes
+    // inherit the dimension defaults. Linked styles still govern the
+    // properties they supply.
+    optional string font_family = 5;
+    // Explicit false selects regular (400) and true selects bold (700).
+    optional bool bold = 6;
+    optional bool italic = 7;
+    // Horizontal alignment. UNSPECIFIED inherits the label default.
+    Justify justify = 8;
+
     // Text color.
     motif.data.style.v1.Color color = 1;
     // Em size, millimeters on paper — the ordinary meaning of a "12 pt" text
     // size, not the cap height.
     optional float size = 2;
-    // The family, weight and slant are independently editable.
-    optional string font_family = 5;
-    optional bool bold = 6;
-    optional bool italic = 7;
-    // Horizontal alignment. UNSPECIFIED inherits the label default.
-    Justify justify = 8;
+    // 3 reserved: font (motif.data.style.v1.Font), once more than one family
+    // is available to choose from.
+    // 4 reserved: width factor (horizontal glyph scale), once the text stack
+    // can render one.
   }
 
   // Style of the dimension line, the extension lines, and the terminators,
