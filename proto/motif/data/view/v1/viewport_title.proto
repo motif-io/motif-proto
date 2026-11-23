@@ -12,7 +12,9 @@ import "motif/extension/v1/options.proto";
 // view; the title's TagTarget identifies that same view. The containing sheet is
 // reached through the viewport's Member relationship. These relationships, the
 // title asset, and the text's data bindings are stored in their own components.
-// This component does not copy the view name, detail number, sheet number, or scale.
+// The source view name, detail number, sheet number, and scale are resolved
+// from their sources. An authored title override changes only the displayed
+// title, not the source view name.
 //
 // An absent component does not request a title. Removing or hiding a title does
 // not change the source view. Placement and dimensions are in paper space and
@@ -29,26 +31,56 @@ message ViewportTitle {
   // Whether the title displays the containing sheet's number.
   bool show_sheet_number = 3;
 
-  // Horizontal offset in paper meters from the default title origin. Positive
+  // Legacy horizontal offset in paper meters from the default title origin. Positive
   // values move toward the viewport's local right edge. The default origin is
   // aligned with the viewport's lower-left corner, 0.01 meters below it.
-  double offset_x = 4 [(buf.validate.field).double.finite = true];
+  double offset_x = 4 [
+    deprecated = true,
+    (buf.validate.field).double.finite = true
+  ];
 
-  // Vertical offset in paper meters from the default title origin described by
-  // offset_x. Positive values move toward the viewport's local top edge.
-  double offset_y = 5 [(buf.validate.field).double.finite = true];
+  // Legacy vertical offset in paper meters from the same default title origin.
+  // Positive values move toward the viewport's local top edge.
+  double offset_y = 5 [
+    deprecated = true,
+    (buf.validate.field).double.finite = true
+  ];
 
   // Horizontal distance in paper meters from the title origin to the rule's
-  // endpoint. Unset means the viewport's paper width; resizing the viewport then
-  // updates the rule automatically. A present value is fixed until changed.
+  // endpoint. Unset means the rule length is determined by the title layout.
+  // A present value is fixed until changed.
   optional double rule_length = 6 [(buf.validate.field).double = {
     gt: 0
     finite: true
   }];
 
-  // Text height in paper meters. Unset means 0.003 meters (3 millimeters).
-  optional double text_height = 7 [(buf.validate.field).double = {
-    gt: 0
+  // Legacy text height in paper meters. Unset means 0.003 meters (3 millimeters).
+  optional double text_height = 7 [
+    deprecated = true,
+    (buf.validate.field).double = {
+      gt: 0
+      finite: true
+    }
+  ];
+
+  // Vertical padding in paper meters from the viewport's lower edge to the
+  // title's default position. Unset preserves the legacy vertical placement.
+  optional double top_padding = 8 [(buf.validate.field).double = {
+    gte: 0
     finite: true
   }];
+
+  // Horizontal padding in paper meters from the viewport's local left edge to
+  // the title's default position. Unset preserves the legacy horizontal placement.
+  optional double side_padding = 9 [(buf.validate.field).double = {
+    gte: 0
+    finite: true
+  }];
+
+  // Whether the title's horizontal rule is displayed. Unset means true.
+  optional bool show_line = 10;
+
+  // Authored display text in place of the resolved source view name. Unset
+  // means the title continues to display the live source view name.
+  optional string title_override = 11;
 }
