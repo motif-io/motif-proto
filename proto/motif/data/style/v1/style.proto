@@ -446,12 +446,12 @@ message GeometryStyleSource {
 // pinned resolution policy.
 //
 // Readers support GraphicStyleAsset in existing models and history. If both
-// components occur on one asset, GraphicStyleAssetV2 is authoritative.
-// Writers enable V2 only after readers of the data understand it. A writer
-// may keep a style with only custom properties in GraphicStyleAsset. When
-// upgrading a style to V2, write the new component and remove GraphicStyleAsset
+// components occur on one asset, GraphicStyleAssetWithChannelSources is
+// authoritative. Writers enable the new component only after readers support
+// it. A writer may keep a style with only custom properties in GraphicStyleAsset.
+// When upgrading a style, write the new component and remove GraphicStyleAsset
 // in the same change on the same entity, preserving every binding to the asset.
-message GraphicStyleAssetV2 {
+message GraphicStyleAssetWithChannelSources {
   option (motif.extension.v1.message).component = 259;
 
   // The lowest reader version that understands every field used by this style.
@@ -480,9 +480,9 @@ message GraphicStyleBinding {
   // reference follows edits to that filter and does not name a live selection.
   motif.extension.v1.EntityReference filter = 2 [(buf.validate.field).required = true];
 
-  // An entity carrying GraphicStyleAsset or GraphicStyleAssetV2. An external
-  // style is pinned to its model version. An unset model means the model
-  // containing this binding list.
+  // An entity carrying GraphicStyleAsset or GraphicStyleAssetWithChannelSources.
+  // An external style is pinned to its model version. An unset model means the
+  // model containing this binding list.
   PinnedStyleAssetReference style = 3 [(buf.validate.field).required = true];
 }
 

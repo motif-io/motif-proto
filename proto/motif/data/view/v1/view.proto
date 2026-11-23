@@ -500,8 +500,8 @@ message ViewFilterRules {
 
     // The style that the selected elements are drawn with. The target entity
     // carries `motif.data.style.v1.GraphicStyleAsset` or
-    // `motif.data.style.v1.GraphicStyleAssetV2`. An unset `model` means the
-    // model that holds the view.
+    // `motif.data.style.v1.GraphicStyleAssetWithChannelSources`. An unset
+    // `model` means the model that holds the view.
     motif.data.style.v1.PinnedStyleAssetReference style = 4;
   }
 }
