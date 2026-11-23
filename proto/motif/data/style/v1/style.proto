@@ -381,8 +381,9 @@ message GeometryStyle {
 // then the legacy outline-style group's Color or LineStyle for cut strokes.
 // Cut fill first uses CapFillStyle. For each property still unset, use the
 // style from ViewFilterRules, then the model graphic style, source
-// Color/LineStyle, ViewStyle defaults, and application defaults, in that
-// order. Annotations skip ViewStyle defaults.
+// Color/LineStyle, the applicable view defaults (ViewStyle for cut, ModelEdges
+// for projection strokes), and application defaults, in that order.
+// Annotations skip both view defaults.
 // Bindings may select sources by filters; a Color/LineStyle component on a
 // source is a fallback, not by itself an explicit override. An authored override
 // must be represented in the higher-priority override layer to win over a bound

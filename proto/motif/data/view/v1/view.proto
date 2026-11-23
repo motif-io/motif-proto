@@ -441,14 +441,22 @@ message VisibilityRules {
 // then the legacy outline-style group's Color or LineStyle for cut strokes.
 // Each property still unset falls through to the first matching
 // ViewFilterRules rule that sets a style, the model graphic style, the source
-// style, ViewStyle defaults, then application defaults. Annotations skip
-// ViewStyle defaults.
+// style, the applicable view defaults (ViewStyle for cut, ModelEdges for
+// projection), then application defaults. Annotations skip both view defaults.
 //
 // Writers put every new per-element stroke edit here and create no outline-style
-// groups. An edit or reset to the cut stroke clears all legacy outline styling
-// for that source and view in the same edit. A reset of all stroke overrides
-// for an element includes the cut stroke. Resetting a property removes it so
-// it inherits.
+// groups. On a partial cut edit or reset, carry forward the legacy color, valid
+// pen index, and pattern wherever the property is untouched by the edit and
+// unset in the override. When carrying forward a pattern from LineStyle, use
+// explicit "Solid" for an absent pattern or empty pattern name.
+// A legacy fixed width without a valid pen index falls back to inheritance.
+// A reset removes the requested property or stroke so it inherits. A reset
+// of all stroke overrides for an element includes the cut stroke.
+//
+// In the same cut edit or reset, delete the legacy outline-style group for
+// that source and view. If the group carries other persisted data, remove
+// only its outline Color and LineStyle components. Projection-only edits and
+// resets apply only to the projection override.
 // Per-element cap fills are resolved separately through CapFillStyle.
 message ViewGraphicOverrides {
   option (motif.extension.v1.message).component = 259;
@@ -489,8 +497,11 @@ message ViewGraphicElementOverride {
   // The lowest reader version that understands this entry, including its
   // nested fields. Writers raise it when using a newer entry field or variant.
   // A reader below this version skips this entry and still applies supported
-  // entries. It may edit other entries only if it preserves this entry's bytes
-  // unchanged. Version 0 covers the initial entry fields.
+  // entries. The skipped entry still counts toward the one-entry-per-source
+  // limit, and the reader treats that source's view-local stroke overrides as
+  // read-only, including during bulk edits and resets. It may edit other
+  // entries only if it preserves this entry's bytes unchanged. Version 0
+  // covers the initial entry fields.
   uint32 min_reader_version = 3;
 }
 
