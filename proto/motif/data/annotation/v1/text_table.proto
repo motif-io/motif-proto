@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package motif.data.annotation.v1;
 
+import "buf/validate/validate.proto";
 import "motif/data/style/v1/style.proto";
 import "motif/data/style/v1/table.proto";
 import "motif/extension/v1/options.proto";
@@ -31,6 +32,19 @@ message TextTable {
   // own, which apply again where the asset stops setting them. Unset, or not
   // resolving, the table prints with `style` alone.
   motif.data.style.v1.StyleAssetReference style_asset = 5;
+
+  // How each column prints, in header order. A column past the end sizes to
+  // its text and aligns left; entries past the column count are ignored.
+  repeated TextTableColumn columns = 6;
+}
+
+// How one column of a text table prints.
+message TextTableColumn {
+  // Printed width in paper meters. Unset sizes the column to its text.
+  optional double width = 1 [(buf.validate.field).double.gt = 0];
+
+  // Horizontal alignment of the column's cells. Unspecified aligns left.
+  motif.data.style.v1.TableAlignment alignment = 2 [(buf.validate.field).enum.defined_only = true];
 }
 
 // One body row of a text table.
