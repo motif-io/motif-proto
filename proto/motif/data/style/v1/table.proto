@@ -77,6 +77,13 @@ message TablePartStyle {
   // The room between the part's rules and its text. Unset uses
   // `TableStyle.cell_padding_x` and `cell_padding_y`.
   TablePadding padding = 5;
+
+  // A shape style the part follows. Must reference an entity carrying
+  // `motif.data.annotation.v1.ShapeStyleAsset`. Its fill and its border's
+  // color, pen and pattern apply over `fill` and `rules`, which keep the
+  // part's own for when it stops following. A reader that cannot resolve it
+  // prints the part's own and must not write the reference back.
+  PinnedStyleAssetReference shape_style = 6;
 }
 
 // The text properties of a table part: from a text style asset, or its own.
