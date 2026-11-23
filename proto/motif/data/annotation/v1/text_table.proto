@@ -3,14 +3,14 @@ syntax = "proto3";
 package motif.data.annotation.v1;
 
 import "buf/validate/validate.proto";
-import "motif/data/style/v1/style.proto";
 import "motif/data/style/v1/table.proto";
 import "motif/extension/v1/options.proto";
 
 // A table of typed text, such as a key, a legend or general notes: an
 // annotation that owns its cells and reads nothing from the model. Lives on
 // an entity that is a `Member` of a sheet or a drafting view, whose paper
-// `Transform` is the table's top-left corner.
+// `Transform` is the table's top-left corner. How it prints is
+// `motif.data.style.v1.TableAppearance`, a component of the same entity.
 message TextTable {
   option (motif.extension.v1.message).component = 246;
 
@@ -23,19 +23,9 @@ message TextTable {
   // The body, top to bottom.
   repeated TextTableRow rows = 3;
 
-  // How the table prints. Unset uses the reader's defaults for the model's
-  // units.
-  motif.data.style.v1.TableStyle style = 4;
-
-  // A table style asset (`TableStyleAsset`) the table follows. Each property
-  // the asset sets replaces the one `style` gives; `style` keeps the table's
-  // own, which apply again where the asset stops setting them. Unset, or not
-  // resolving, the table prints with `style` alone.
-  motif.data.style.v1.StyleAssetReference style_asset = 5;
-
   // How each column prints, in header order. A column past the end sizes to
   // its text and aligns left; entries past the column count are ignored.
-  repeated TextTableColumn columns = 6;
+  repeated TextTableColumn columns = 4;
 }
 
 // How one column of a text table prints.

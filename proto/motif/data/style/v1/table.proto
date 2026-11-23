@@ -4,9 +4,36 @@ package motif.data.style.v1;
 
 import "buf/validate/validate.proto";
 import "motif/data/style/v1/style.proto";
+import "motif/extension/v1/options.proto";
 
-// How a printed table looks: a schedule's or a text table's. Lengths are
-// paper meters. A plain embedded message, not a standalone component.
+// How a schedule (`motif.data.view.v1.ScheduleDefinition`) or a text table
+// (`motif.data.annotation.v1.TextTable`) prints: its own look, and the style
+// assets it follows. Lives on the entity carrying the table.
+//
+// Every style asset the table's look references is in here, apart from the
+// table's content. A later kind of style a table follows (a column's, a
+// summary row's, a column group's) is a reference this component cannot add
+// once it is published, and comes with a new version of this component
+// alone: the tables themselves, and what reads them, stay as they are. A
+// reader that does not know that version prints the table with its
+// defaults.
+message TableAppearance {
+  option (motif.extension.v1.message).component = 263;
+
+  // The table's own look. Unset uses the reader's defaults for the model's
+  // units.
+  TableStyle style = 1;
+
+  // A table style asset (`motif.data.annotation.v1.TableStyleAsset`) the
+  // table follows. Each property the asset sets replaces the one `style`
+  // gives; `style` keeps the table's own, which apply again where the asset
+  // stops setting them. Unset, or not resolving, the table prints with
+  // `style` alone.
+  StyleAssetReference style_asset = 2;
+}
+
+// How a printed table looks. Lengths are paper meters. Embedded in
+// `TableAppearance`.
 message TableStyle {
   // Height of the title text.
   double title_size = 1 [(buf.validate.field).double.gt = 0];

@@ -14,19 +14,15 @@ package motif.data.view.v1;
 
 import "buf/validate/validate.proto";
 import "google/protobuf/empty.proto";
-import "motif/data/external/v1/categories.proto";
 import "motif/data/filter/v1/filter.proto";
 import "motif/data/geometry/v1/geometry.proto";
 import "motif/data/model/v1/model.proto";
-import "motif/data/style/v1/style.proto";
 import "motif/data/style/v1/table.proto";
 import "motif/extension/v1/options.proto";
 
-// What a schedule lists and how its table is arranged and printed. Lives on
-// the schedule's view.
-//
-// The rows are the entities of the containing model that are of one of
-// `categories`, pass `source` and `filter`, and are not `hidden`.
+// What a schedule lists and how its table is arranged. Lives on the
+// schedule's view. How the table prints is `motif.data.style.v1.TableAppearance`,
+// a component of the same entity.
 //
 // A reader that meets a part it does not know (an unknown field, oneof arm
 // or enum value, here or in a filter) cannot rebuild the table as written.
@@ -34,95 +30,64 @@ import "motif/extension/v1/options.proto";
 message ScheduleDefinition {
   option (motif.extension.v1.message).component = 244;
 
-  // Elements of any of these categories, never their asset definitions,
-  // which carry the same category. Empty narrows nothing: every entity
-  // `source` and `filter` pass is listed, asset definitions included.
-  repeated motif.data.external.v1.RevitCategory categories = 1 [(buf.validate.field).repeated.items.enum = {
-    defined_only: true
-    not_in: [0]
-  }];
-
-  // The kind of entity a schedule no category describes is about, such as
-  // `has_component` of `motif.data.view.v1.Sheet` for a sheet list. Set by
-  // the kind of schedule, not by its user. Unset narrows nothing.
-  motif.data.filter.v1.FilterExpression source = 2;
-
-  // The user's filter. Unset narrows nothing.
-  ScheduleRowFilter filter = 3;
-
-  // Elements hidden from this schedule: they list in no row, whatever the
-  // other fields pick. Hiding is the schedule's alone, and the element stays
-  // in the model and in every other view. Each names an entity of the
-  // schedule's own model: `entity` set and `model` unset.
-  repeated motif.data.filter.v1.FilterTarget hidden = 4 [(buf.validate.field).repeated.max_items = 100000];
+  // The rows: the entities of the containing model that this matches. One
+  // filter holds the whole pick, so that a schedule lists what a view with
+  // the same filter shows. Writers put its parts under one `all`, in this
+  // order, leaving out the parts that pick nothing:
+  //
+  //   - the categories, as `not has_component` of `motif.data.core.v1.Asset`
+  //     (elements, never the asset definitions that carry their category)
+  //     followed by a condition that the element's Revit category is one of
+  //     them;
+  //   - what kind of entity a schedule no category describes is about, set by
+  //     the kind of schedule rather than its user, such as `has_component`
+  //     of `motif.data.view.v1.Sheet` for a sheet list;
+  //   - the user's filter, written in, or a `saved_filter` node, so that
+  //     editing that saved filter changes every schedule that names it;
+  //   - the elements hidden from the schedule, as `not` of an `entities`
+  //     node naming entities of the schedule's own model.
+  //
+  // A reader lists the rows of any expression it can read, and may show an
+  // expression of another shape as the user's filter alone. Unset lists
+  // every entity of the model.
+  motif.data.filter.v1.FilterExpression filter = 1;
 
   // In display order, hidden columns included.
-  repeated ScheduleColumn columns = 5;
+  repeated ScheduleColumn columns = 2;
 
   // Applied in sequence after the group columns; ties fall through to the
   // next key, then to the reader's stable order.
-  repeated SortKey sort = 6;
+  repeated SortKey sort = 3;
 
   // Grouping, outermost level first. Group columns sort ahead of `sort` so
   // that each group's rows stay together.
-  repeated GroupLevel groups = 7;
+  repeated GroupLevel groups = 4;
 
   // Rows equal in the sort and group columns (in every printed column when
   // there are none) collapse into one row, which shows `varies_text` where
   // its elements differ. False gives every element its own row.
-  bool collapse_rows = 8;
+  bool collapse_rows = 5;
 
   // The table closes with a row carrying the row count and each aggregated
   // column's result. Off, no group closes with a subtotal line either.
-  bool footer = 9;
+  bool footer = 6;
 
   // Every group closes without its closing line, whatever its level asks:
   // the schedule shows no subtotals. The table's own footer is unaffected.
-  bool hide_group_footers = 10;
+  bool hide_group_footers = 7;
 
   // Labels printed in rows above the column headers, each over a run of
   // columns. Groups nest or stand apart; a group spanning the same columns as
   // an earlier one sits under it.
-  repeated ColumnGroup column_groups = 11;
-
-  // How the table prints. Unset uses the reader's defaults for the model's
-  // units.
-  motif.data.style.v1.TableStyle style = 12;
+  repeated ColumnGroup column_groups = 8;
 
   // What a cell shows where its element has no such property. Unset shows
   // `-`.
-  optional string not_applicable_text = 13;
+  optional string not_applicable_text = 9;
 
   // What a cell of a collapsed row shows where its elements differ. Unset
   // shows `<varies>`.
-  optional string varies_text = 14;
-
-  // A table style asset (`motif.data.annotation.v1.TableStyleAsset`) the
-  // schedule follows. Each property the asset sets replaces the one `style`
-  // gives; `style` keeps the schedule's own, which apply again where the
-  // asset stops setting them. Unset, or not resolving, the schedule prints
-  // with `style` alone.
-  motif.data.style.v1.StyleAssetReference style_asset = 15;
-}
-
-// A schedule's own filter: written into the definition, or a saved filter
-// it names, so that editing that saved filter changes every schedule that
-// names it.
-message ScheduleRowFilter {
-  oneof filter {
-    option (buf.validate.oneof).required = true;
-
-    // Written into the definition.
-    motif.data.filter.v1.FilterExpression expression = 1;
-
-    // An entity of the schedule's own model carrying
-    // `motif.data.filter.v1.SavedFilter`: `entity` set. A set `model` is
-    // reserved for a saved filter of another model; a reader that cannot
-    // apply one reads the definition as one it does not know. A saved filter
-    // that is missing or unreadable lists no rows; it does not list every
-    // entity.
-    motif.data.filter.v1.FilterTarget saved_filter = 2;
-  }
+  optional string varies_text = 10;
 }
 
 // A label over the printed columns from `first_column_id` to

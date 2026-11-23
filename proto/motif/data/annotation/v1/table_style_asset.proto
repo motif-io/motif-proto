@@ -9,7 +9,8 @@ import "motif/extension/v1/options.proto";
 // A named, reusable look for a table: a table style asset. Lives on an asset
 // entity (core.v1.Asset + a name) in any library a model can reach. A
 // schedule (`motif.data.view.v1.ScheduleDefinition`) or a text table
-// (`TextTable`) follows one through its `style_asset`.
+// (`TextTable`) follows one through the `style_asset` of its
+// `motif.data.style.v1.TableAppearance`.
 //
 // Each part's text and shape resolve as style_asset_v2.proto describes. What
 // they yield lays over the table's own `motif.data.style.v1.TableStyle`:
