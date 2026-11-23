@@ -435,32 +435,48 @@ message VisibilityRules {
   }
 }
 
-// Sparse graphic exceptions owned by one view. This component does not change
-// model styles, source entities, visibility, or other views. A missing property
-// inherits from the next applicable resolution layer; resetting an exception
-// removes the property or entry instead of copying the inherited value.
+// Sparse per-element stroke overrides. Lives on the view entity.
 //
-// Element exceptions take precedence over styles selected by ViewFilterRules.
-// Unset properties inherit from the first matching view filter rule that sets
-// a style, then from the model graphic style and the applicable source, legacy
-// view, and built-in fallbacks. Annotations skip legacy view defaults. Cap fill
-// remains in its existing view and element components.
+// Resolve each stroke property independently. Use the element override first,
+// then the legacy outline-style group's Color or LineStyle for cut strokes.
+// Each property still unset falls through to the first matching
+// ViewFilterRules rule that sets a style, the model graphic style, the source
+// style, ViewStyle defaults, then application defaults. Annotations skip
+// ViewStyle defaults.
+//
+// Writers put every new per-element stroke edit here and create no outline-style
+// groups. When editing or resetting a cut stroke, move any untouched legacy
+// cut properties that are unset here into the cut override and clear the
+// legacy outline style for that source and view in the same edit. Convert a
+// legacy LineStyle without a pen to an explicit paper width and an unset
+// legacy pattern to "Solid". A projection-only edit leaves legacy cut styling
+// in place. Resetting a property removes it so it inherits. Resetting the
+// whole cut stroke or element also clears the associated legacy outline style.
+// Per-element cap fills are resolved separately through CapFillStyle.
 message ViewGraphicOverrides {
   option (motif.extension.v1.message).component = 259;
 
-  // The lowest reader version that understands every field and variant in
-  // this component, including nested messages. Writers raise it when using a
-  // newer field or variant. A reader below it must not apply or rewrite this
-  // component, including when copying a view. Version 0 covers this schema.
+  option (buf.validate.message).cel = {
+    id: "view_graphic_overrides.unique_sources"
+    message: "each source entity may have at most one graphic override in a view"
+    expression: "this.elements.map(element, element.source.entity_id).unique()"
+  };
+
+  // The lowest reader version that understands the component-level fields.
+  // Writers raise it when using a new component-level field or variant.
+  // A reader below this version skips the component and leaves its bytes
+  // unchanged. When copying a view within the same model, the reader may copy
+  // the component bytes verbatim. Version 0 covers the initial component
+  // fields.
   uint32 min_reader_version = 1;
 
   // Field 2 was used for filter bindings in an earlier draft.
   reserved 2;
   reserved "bindings";
 
-  // At most one entry per source entity. Writers remove empty deltas. Entries
-  // refer to stable entity IDs; replacing an entity with a new ID does not
-  // transfer its exception.
+  // At most one entry per source entity. Readers ignore entries whose source
+  // no longer exists. Writers remove empty deltas and may remove entries for
+  // deleted sources. An entry stays tied to its original entity ID.
   repeated ViewGraphicElementOverride elements = 3;
 }
 
@@ -472,6 +488,13 @@ message ViewGraphicElementOverride {
 
   // Properties set for this source in the containing view.
   ViewGraphicDelta delta = 2 [(buf.validate.field).required = true];
+
+  // The lowest reader version that understands this entry, including its
+  // nested fields. Writers raise it when using a newer entry field or variant.
+  // A reader below this version skips this entry and still applies supported
+  // entries. It may edit other entries only if it preserves this entry's bytes
+  // unchanged. Version 0 covers the initial entry fields.
+  uint32 min_reader_version = 3;
 }
 
 // Independent sparse stroke exceptions for cut and projection graphics.
@@ -486,11 +509,21 @@ message ViewGraphicDelta {
 
 // Independently optional stroke properties. An absent property inherits.
 message ViewGraphicStroke {
-  // Pen-table index; an unset pen inherits.
-  optional uint32 pen_size = 1 [(buf.validate.field).uint32 = {
-    gte: 1
-    lte: 16
-  }];
+  // How to determine stroke width. An unset weight inherits.
+  oneof weight {
+    // Pen-table index resolved at the view's scale.
+    uint32 pen_size = 1 [(buf.validate.field).uint32 = {
+      gte: 1
+      lte: 16
+    }];
+
+    // Explicit on-paper width, in millimeters, for legacy strokes that use a
+    // fixed width.
+    float width_mm = 5 [(buf.validate.field).float = {
+      gt: 0
+      finite: true
+    }];
+  }
 
   // Explicit color. Black is a value and is distinct from an unset color.
   motif.data.style.v1.Color color = 2;

@@ -377,12 +377,12 @@ message GeometryStyle {
 //
 // This schema defines the asset only; it does not attach it to an entity,
 // category, or view. When a binding applies the asset, resolve each property
-// independently in this order (first set wins): per-(source, view) override
-// (ViewGraphicOverrides, outline Color/LineStyle, or CapFillStyle), style from
-// ViewFilterRules, model graphic style, source Color/LineStyle, ViewStyle
-// default, application default. For example, a cut cap uses an explicit
-// CapFillStyle.color before this style's cut fill, then source Color, then
-// ViewStyle.fill_color. Defining an asset alone changes no appearance.
+// independently. Stroke properties first use the ViewGraphicOverrides entry,
+// then the legacy outline-style group's Color or LineStyle for cut strokes.
+// Cut fill first uses CapFillStyle. For each property still unset, use the
+// style from ViewFilterRules, then the model graphic style, source
+// Color/LineStyle, ViewStyle defaults, and application defaults, in that
+// order. Annotations skip ViewStyle defaults.
 // Bindings may select sources by filters; a Color/LineStyle component on a
 // source is a fallback, not by itself an explicit override. An authored override
 // must be represented in the higher-priority override layer to win over a bound
