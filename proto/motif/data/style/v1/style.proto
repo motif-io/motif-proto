@@ -452,7 +452,7 @@ message GeometryStyleSource {
 // When upgrading a style, write the new component and remove GraphicStyleAsset
 // in the same change on the same entity, preserving every binding to the asset.
 message GraphicStyleAssetWithChannelSources {
-  option (motif.extension.v1.message).component = 259;
+  option (motif.extension.v1.message).component = 260;
 
   // The lowest reader version that understands every field used by this style.
   // Writers raise it when using fields or variants introduced by newer readers.
