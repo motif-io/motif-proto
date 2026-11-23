@@ -82,7 +82,34 @@ message FilterNode {
     // unreadable, or that reaches itself through these nodes, makes the filter
     // fail; it does not match nothing.
     uint32 saved_filter = 9;
+    // Matches entities that are a part, at any depth, of an entity that the
+    // node matches. Parts come from asset structure only: the content of a
+    // definition is a part of each placement of that definition, and a
+    // placement that is itself content of a definition is a part of that
+    // definition's placements in turn. Membership in a group, level, storey
+    // or assembly, and hosting, make no part. An entity is never a part of
+    // itself. Readers follow at least 8 definitions up from an entity.
+    FilterNode parts_of = 10;
+    // Matches entities that have a part, at any depth, that the node
+    // matches: the reverse of `parts_of`. An entity never contains itself.
+    FilterNode containers_of = 11;
+    // Matches entities that reach an entity the node matches by following a
+    // link property up, one hop at a time.
+    FilterDescendantsOf descendants_of = 12;
   }
+}
+
+// A `descendants_of` node: the link to follow and what to look for along it.
+message FilterDescendantsOf {
+  // A property whose value is a link to another entity, such as the group an
+  // entity is a member of. Each hop reads it on the entity that the previous
+  // hop reached.
+  FilterProperty link = 1 [(buf.validate.field).required = true];
+  // Matches when an entity reached after 1 to 8 hops matches this node. The
+  // walk stops at a missing link, an entity that is not loaded, or an entity
+  // it has reached before, and keeps a match found before it stops. An entity
+  // never matches through itself.
+  FilterNode node = 2 [(buf.validate.field).required = true];
 }
 
 // The nodes of an `all` or an `any`.
