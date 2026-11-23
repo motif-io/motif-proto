@@ -651,7 +651,11 @@ enum DimensionStyleLeaderType {
 enum DimensionStyleUnitPolicy {
   // The style supplies no unit policy.
   DIMENSION_STYLE_UNIT_POLICY_UNSPECIFIED = 0;
-  // Use the containing model's units and precision.
+  // Use the containing model's units and precision for each measurement
+  // unless a higher style layer supplies that measurement's unit group. A
+  // group must have a supported unit and notation to apply. USE_MODEL takes
+  // precedence over groups on the same or lower layers. Resolve length and
+  // angle independently.
   DIMENSION_STYLE_UNIT_POLICY_USE_MODEL = 1;
   // Use the style's imperial unit settings.
   DIMENSION_STYLE_UNIT_POLICY_IMPERIAL = 2;
@@ -677,16 +681,26 @@ message DimensionStyle {
   message Text {
     // Sparse overrides of the base font's individual attributes. If a base
     // font is supplied, it provides the family, weight and slant. Present
-    // overrides replace just their own attribute. An omitted bold preserves
-    // the base font's exact weight. Without a base font, omitted attributes
-    // inherit the dimension defaults. Linked styles still govern the
-    // properties they supply.
+    // overrides replace just their own attribute. An omitted font_weight and
+    // bold preserve the base font's exact weight. Without a base font, omitted
+    // attributes inherit the dimension defaults. Linked styles still govern
+    // the properties they supply.
     optional string font_family = 5;
-    // Explicit false selects regular (400) and true selects bold (700).
+    // If font_weight is unset, false selects regular (400) and true selects
+    // bold (700). When font_weight is set, writers also set bold to true at
+    // 600 or more and false otherwise for older readers.
     optional bool bold = 6;
     optional bool italic = 7;
     // Horizontal alignment. UNSPECIFIED inherits the label default.
     Justify justify = 8;
+    // Font weight on the CSS / OS/2 usWeightClass scale from 1 to 1000.
+    // A linked style's weight, from its font_weight or bold, takes precedence
+    // over either local field. Within the local style, font_weight takes
+    // precedence over bold.
+    optional uint32 font_weight = 9 [(buf.validate.field).uint32 = {
+      gte: 1
+      lte: 1000
+    }];
 
     // Text color.
     motif.data.style.v1.Color color = 1;
@@ -743,7 +757,8 @@ message DimensionStyle {
 
   // The local leader shape. Showing the leader remains a placement choice.
   DimensionStyleLeaderType leader_type = 11;
-  // An explicit USE_MODEL follows the model even with stored unit settings.
+  // The local unit policy. See DimensionStyleUnitPolicy for precedence with
+  // unit groups from a linked style.
   DimensionStyleUnitPolicy unit_policy = 12;
 }
 
@@ -840,9 +855,11 @@ enum ListKind {
 message TextStyleAsset {
   option (motif.extension.v1.message).component = 189;
 
-  // Font family name, e.g. "Roboto".
+  // Font family id (see style.v1.Font.family), e.g. "Roboto" or "Inter".
   optional string font_family = 1;
-  // Bold weight.
+  // Bold weight. When font_weight is set, bold mirrors it (true for a weight
+  // of 600 or more), so readers that predate font_weight still draw regular
+  // or bold.
   optional bool bold = 2;
   // Italic slant.
   optional bool italic = 3;
@@ -860,6 +877,13 @@ message TextStyleAsset {
   }
   // Horizontal alignment; UNSPECIFIED leaves it unset.
   Justify justify = 6;
+
+  // Font weight on the CSS / OS/2 usWeightClass scale: 400 regular, 500
+  // medium, 600 semibold, 700 bold. Takes precedence over bold when set.
+  optional uint32 font_weight = 9 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 1000
+  }];
 
   // Formerly list_kind: lists belong to the text, not its style.
   reserved 7;

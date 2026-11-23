@@ -50,12 +50,14 @@ message DimensionStyleAsset {
     gte: 0
     finite: true
   }];
-  // An explicit USE_MODEL applies the model's units even if lower style
-  // layers supply a unit override. UNSPECIFIED leaves the policy unset.
+  // The unit policy for length and angle. UNSPECIFIED leaves the policy unset.
+  // See DimensionStyleUnitPolicy for precedence between layers.
   DimensionStyleUnitPolicy unit_policy = 6;
-  // The linear label's unit, notation and precision under Imperial or Metric.
+  // The linear label's unit, notation and precision. With no policy set,
+  // this group still overrides lower layers for length.
   motif.data.model.v1.LengthUnitGroup length_units = 7;
-  // The angular label's unit, notation and precision under Imperial or Metric.
+  // The angular label's unit, notation and precision. With no policy set,
+  // this group still overrides lower layers for angle.
   motif.data.model.v1.AngleUnitGroup angle_units = 8;
   // The label text.
   TextStylePart text = 9;

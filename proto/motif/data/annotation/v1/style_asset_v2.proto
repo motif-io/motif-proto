@@ -24,7 +24,9 @@ message TextStyleAssetV2 {
 
   // Font family name, e.g. "Roboto".
   optional string font_family = 1;
-  // Bold weight.
+  // Legacy weight. If font_weight is unset, false selects regular (400) and
+  // true selects bold (700). When font_weight is set, writers also set bold
+  // to true at 600 or more and false otherwise for older readers.
   optional bool bold = 2;
   // Italic slant.
   optional bool italic = 3;
@@ -38,6 +40,13 @@ message TextStyleAssetV2 {
   motif.data.style.v1.StyleColorSource color = 5;
   // Horizontal alignment; UNSPECIFIED leaves it unset.
   Justify justify = 6;
+  // Font weight on the CSS / OS/2 usWeightClass scale from 1 to 1000.
+  // The highest-priority layer supplying font_weight or bold controls the
+  // weight. Within that layer, font_weight takes precedence over bold.
+  optional uint32 font_weight = 7 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 1000
+  }];
 }
 
 // Text properties for one part of a style: a text style asset, the part's own
