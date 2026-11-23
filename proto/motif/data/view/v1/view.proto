@@ -498,8 +498,10 @@ message ViewFilterRules {
     // A value the reader does not know makes the rule unreadable.
     ViewFilterVisibility visibility = 3;
 
-    // The `motif.data.style.v1.GraphicStyleAsset` that the selected elements
-    // are drawn with; an unset `model` means the model that holds the view.
+    // The style that the selected elements are drawn with. The target entity
+    // carries `motif.data.style.v1.GraphicStyleAsset` or
+    // `motif.data.style.v1.GraphicStyleAssetV2`. An unset `model` means the
+    // model that holds the view.
     motif.data.style.v1.PinnedStyleAssetReference style = 4;
   }
 }

@@ -353,9 +353,9 @@ message LineStyleSource {
   }
 }
 
-// The appearance of geometry: linework and fill. Not a component: embedded in
-// GraphicStyleAsset for cut and projection appearance. Every property is
-// optional and inherits independently from whatever applies beneath this style.
+// The linework and fill embedded in GraphicStyleAsset and GeometryStyleSource.
+// Every property is optional and inherits independently from whatever applies
+// beneath this style.
 message GeometryStyle {
   // Line properties, set directly or taken from a line style asset. Unset
   // leaves pen, color, opacity, and pattern unset so they inherit.
@@ -419,6 +419,55 @@ message GraphicStyleAsset {
   GeometryStyle projection = 3;
 }
 
+// The source of fill and linework for one graphic style channel. Each property
+// the source leaves unset inherits independently through the graphic style
+// cascade. An unset source, including an unknown variant, contributes nothing.
+message GeometryStyleSource {
+  oneof source {
+    // Fill and linework owned by the graphic style. Each can still reference
+    // its own color or line style through GeometryStyle.
+    GeometryStyle properties = 1;
+
+    // An asset carrying ShapeStyleAsset or ShapeStyleAssetV2. Resolve the
+    // Shape's fill color, fill opacity, and border line properties using its
+    // own style composition rules. These are the only Shape properties the
+    // channel uses. A missing asset or an asset of the wrong kind contributes
+    // no properties.
+    //
+    // Apply the pinned resolution policy throughout the Shape's dependencies,
+    // including its fill color and border line and their references.
+    PinnedStyleAssetReference shape_style = 2;
+  }
+}
+
+// A named graphic style with a selectable source for each geometry channel.
+// It has the same role and resolution precedence as GraphicStyleAsset.
+// All references reached from either source use PinnedStyleAssetReference's
+// pinned resolution policy.
+//
+// Readers support GraphicStyleAsset in existing models and history. If both
+// components occur on one asset, GraphicStyleAssetV2 is authoritative.
+// Writers enable V2 only after readers of the data understand it. A writer
+// may keep a style with only custom properties in GraphicStyleAsset. When
+// upgrading a style to V2, write the new component and remove GraphicStyleAsset
+// in the same change on the same entity, preserving every binding to the asset.
+message GraphicStyleAssetV2 {
+  option (motif.extension.v1.message).component = 259;
+
+  // The lowest reader version that understands every field used by this style.
+  // Writers raise it when using fields or variants introduced by newer readers.
+  // A reader below this version renders the properties it understands read-only.
+  // Version 0 covers the properties and shape_style sources in both channels.
+  uint32 min_reader_version = 1;
+
+  // Cut-plane linework and fill. Unset leaves both unset so they inherit.
+  GeometryStyleSource cut = 2;
+
+  // Projection linework and surface fill, including room plan fill.
+  // Annotations use the line properties. Unset leaves each property unset.
+  GeometryStyleSource projection = 3;
+}
+
 // An ordered filter-to-style binding on a model. Not a component by itself.
 message GraphicStyleBinding {
   // The lowest reader version that understands every field in this binding.
@@ -431,8 +480,9 @@ message GraphicStyleBinding {
   // reference follows edits to that filter and does not name a live selection.
   motif.extension.v1.EntityReference filter = 2 [(buf.validate.field).required = true];
 
-  // One GraphicStyleAsset. An external style is pinned to its model version;
-  // an unset model means the model containing this binding list.
+  // An entity carrying GraphicStyleAsset or GraphicStyleAssetV2. An external
+  // style is pinned to its model version. An unset model means the model
+  // containing this binding list.
   PinnedStyleAssetReference style = 3 [(buf.validate.field).required = true];
 }
 
