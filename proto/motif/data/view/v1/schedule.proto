@@ -30,26 +30,13 @@ import "motif/extension/v1/options.proto";
 message ScheduleDefinition {
   option (motif.extension.v1.message).component = 244;
 
-  // The rows: the entities of the containing model that this matches. One
-  // filter holds the whole pick, so that a schedule lists what a view with
-  // the same filter shows. Writers put its parts under one `all`, in this
-  // order, leaving out the parts that pick nothing:
-  //
-  //   - the categories, as `not has_component` of `motif.data.core.v1.Asset`
-  //     (elements, never the asset definitions that carry their category)
-  //     followed by a condition that the element's Revit category is one of
-  //     them;
-  //   - what kind of entity a schedule no category describes is about, set by
-  //     the kind of schedule rather than its user, such as `has_component`
-  //     of `motif.data.view.v1.Sheet` for a sheet list;
-  //   - the user's filter, written in, or a `saved_filter` node, so that
-  //     editing that saved filter changes every schedule that names it;
-  //   - the elements hidden from the schedule, as `not` of an `entities`
-  //     node naming entities of the schedule's own model.
-  //
-  // A reader lists the rows of any expression it can read, and may show an
-  // expression of another shape as the user's filter alone. Unset lists
-  // every entity of the model.
+  // The rows: the entities of the containing model that this matches,
+  // every entity when unset. It is the whole pick, with no other field
+  // narrowing it, so a schedule lists what a view with the same filter
+  // shows; a saved filter it names (a `saved_filter` node) changes every
+  // schedule that names it. Elements hidden from the schedule are `not` of
+  // an `entities` node naming entities of the schedule's own model, written
+  // last under a top `all`, so a reader can show them apart from the rest.
   motif.data.filter.v1.FilterExpression filter = 1;
 
   // In display order, hidden columns included.
