@@ -464,6 +464,8 @@ message ModelContent {
 
   oneof action {
     HistoryEnrichmentFinished history_enrichment_finished = 10;
+    // A milestone in the model was created, changed or removed.
+    MilestoneChanged milestone_changed = 11;
   }
 }
 
@@ -675,6 +677,27 @@ message HistoryEnrichmentFinished {
   // One CLIENT summary, followed by DERIVED exactly when the version has
   // derived changes.
   repeated StageSummary stage_summaries = 5 [(buf.validate.field).repeated.max_items = 2];
+}
+
+// A milestone in the model was created, changed or removed, recording a new
+// revision. `NotificationEnvelope.occurred_at` is when that revision was
+// recorded.
+//
+// Every subscriber to the model receives this event, including for private
+// milestones, so it carries only the milestone's id and revision. To see what
+// changed, call `motif.api.v1.Persistence` `GetMilestone`; NOT_FOUND means the
+// milestone was removed or the recipient cannot read it. The model's history
+// index (`ListChangesetsIndex`) may also have changed.
+//
+// Delivery is best effort: events can be missed, repeated or arrive out of
+// order. Compare `revision` with the revision already held, and re-read
+// milestones after reconnecting.
+message MilestoneChanged {
+  // The milestone that changed, a 16-byte UUID. Required.
+  bytes milestone_id = 1 [(buf.validate.field).bytes.len = 16];
+
+  // The milestone's revision after the change. Required.
+  int32 revision = 2 [(buf.validate.field).int32.gt = 0];
 }
 
 // A project stopped being visible to the recipient: deleted, or the recipient's
