@@ -80,10 +80,12 @@ message TableStyle {
 // How one part of a table reads and draws. Every field is optional: unset
 // takes the table's default.
 //
-// A part's text and rules take their properties from a style asset or
-// from properties of their own, as `LineStyleSource` does. A reader that
-// cannot resolve a referenced style, or a color style, prints those
-// properties at the table's defaults and must not write the style back.
+// A part's text and rules may follow a style asset and keep properties of
+// their own beside it: each property the style sets applies over the
+// part's own, and the part's own apply where the style sets none, or once
+// the part stops following it. A reader that cannot resolve a referenced
+// style, or a color style, prints the part's own properties and must not
+// write the style back.
 message TablePartStyle {
   // The part's text. Unset is regular text in the table's ink.
   TableTextSource text = 1;
@@ -99,7 +101,7 @@ message TablePartStyle {
   // The part's rules. Unset properties take the table's: its ink,
   // `TableStyle.rule_pen` and a solid line. A rule's width comes from its
   // pen only.
-  LineStyleSource rules = 4;
+  TableRulesSource rules = 4;
 
   // The room between the part's rules and its text. Unset uses
   // `TableStyle.cell_padding_x` and `cell_padding_y`.
@@ -113,19 +115,31 @@ message TablePartStyle {
   PinnedStyleAssetReference shape_style = 6;
 }
 
-// The text properties of a table part: from a text style asset, or its own.
-// An unset source, including a future variant this reader does not know,
-// leaves every text property at the table's default.
+// The text properties of a table part: a text style asset it follows, and
+// its own. Neither set leaves every text property at the table's default.
 message TableTextSource {
-  oneof source {
-    // Must reference an entity carrying `motif.data.annotation.v1.TextStyleAsset`.
-    // Its font, weight, slant and color apply. Its height and justification do
-    // not: a table sizes text by part and aligns it by part and column.
-    PinnedStyleAssetReference style = 1;
+  // Must reference an entity carrying `motif.data.annotation.v1.TextStyleAsset`.
+  // Its font, weight, slant and color apply over `properties`. Its height
+  // and justification do not: a table sizes text by part and aligns it by
+  // part and column.
+  PinnedStyleAssetReference style = 1;
 
-    // Text properties owned by the table.
-    TableTextProperties properties = 2;
-  }
+  // Text properties owned by the table, for what `style` leaves unset and
+  // for when the part stops following it.
+  TableTextProperties properties = 2;
+}
+
+// The line properties of a table part's rules: a line style asset they
+// follow, and their own. The fields carry `LineStyleSource`'s numbers, so a
+// rule stored as either reads the same.
+message TableRulesSource {
+  // Must reference an entity carrying a line style asset: LineStyleAsset or
+  // LineStyleAssetV2. Its color, pen and pattern apply over `properties`.
+  PinnedStyleAssetReference style = 1;
+
+  // Line properties owned by the table, for what `style` leaves unset and
+  // for when the rules stop following it.
+  LineStyleAsset properties = 2;
 }
 
 // A table part's own text properties. Every field is optional; unset takes
