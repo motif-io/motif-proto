@@ -22,7 +22,7 @@ import "motif/extension/v1/options.proto";
 //
 // A property a part leaves unset is the table's own. Every part is optional.
 message TableStyleAsset {
-  option (motif.extension.v1.message).component = 262;
+  option (motif.extension.v1.message).component = 265;
 
   // The title row.
   TableStyleAssetPart title = 1;

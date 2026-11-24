@@ -18,7 +18,7 @@ import "motif/extension/v1/options.proto";
 // reader that does not know that version prints the table with its
 // defaults.
 message TableAppearance {
-  option (motif.extension.v1.message).component = 263;
+  option (motif.extension.v1.message).component = 266;
 
   // The table's own look. Unset uses the reader's defaults for the model's
   // units.
