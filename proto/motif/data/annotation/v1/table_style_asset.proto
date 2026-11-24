@@ -9,16 +9,15 @@ import "motif/extension/v1/options.proto";
 // A named, reusable look for a table: a table style asset. Lives on an asset
 // entity (core.v1.Asset + a name) in any library a model can reach. A
 // schedule (`motif.data.view.v1.ScheduleDefinition`) or a text table
-// (`TextTable`) follows one through the `style_asset` of its
-// `motif.data.style.v1.TableAppearance`.
+// (`TextTable`) follows one through the `style_asset` of its `TableAppearance`.
 //
-// Each part's text and shape resolve as style_asset_v2.proto describes. What
-// they yield lays over the table's own `motif.data.style.v1.TableStyle`:
-//
-//   - text: the font, weight, slant and color of the part's text; the printed
-//     height is the part's text size and the justification its alignment;
-//   - shape: the part's fill (none when the fill is hidden) and its rules,
-//     from the border's line (none when the border is hidden).
+// Each part resolves as a `TablePartStyle` does, and yields the same
+// properties: the text's font, weight, slant, color, printed height and
+// justification, and the shape's fill and rules. What it yields lays over
+// the table's own part. Its part links opt into pinned resolution
+// as `DimensionStyleAsset`'s do: an unqualified link resolves in this
+// asset's model snapshot, and a link naming a model uses that model's
+// recorded version.
 //
 // A property a part leaves unset is the table's own. Every part is optional.
 message TableStyleAsset {

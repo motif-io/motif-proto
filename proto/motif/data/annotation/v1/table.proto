@@ -1,0 +1,157 @@
+syntax = "proto3";
+
+package motif.data.annotation.v1;
+
+import "buf/validate/validate.proto";
+import "motif/data/annotation/v1/style_asset_v2.proto";
+import "motif/data/style/v1/style.proto";
+import "motif/data/style/v1/style_asset_v2.proto";
+import "motif/extension/v1/options.proto";
+
+// How a schedule (`motif.data.view.v1.ScheduleDefinition`) or a text table
+// (`TextTable`) prints: its own look, and the style assets it follows. Lives on the entity carrying the table.
+//
+// Every style asset the table's look references is in here, apart from the
+// table's content. A later kind of style a table follows (a column's, a
+// summary row's, a column group's) is a reference this component cannot add
+// once it is published, and comes with a new version of this component
+// alone: the tables themselves, and what reads them, stay as they are. A
+// reader that does not know that version prints the table with its
+// defaults.
+//
+// Every style link in here, `style_asset` and each part's text, shape,
+// border line and color links, opts into pinned resolution as
+// `DimensionStyleAsset`'s links do: an unqualified
+// link resolves in the model holding the table, and a link naming a model
+// uses that model's recorded version. Editing a library style changes no
+// table until the table's link moves to the new version.
+message TableAppearance {
+  option (motif.extension.v1.message).component = 266;
+
+  // The table's own look. Unset uses the reader's defaults for the model's
+  // units.
+  TableStyle style = 1;
+
+  // A table style asset (`TableStyleAsset`) the
+  // table follows. Each property the asset sets replaces the one `style`
+  // gives; `style` keeps the table's own, which apply again where the asset
+  // stops setting them. Unset, or not resolving, the table prints with
+  // `style` alone.
+  motif.data.style.v1.PinnedStyleAssetReference style_asset = 2;
+}
+
+// How a printed table looks. Lengths are paper meters. Embedded in
+// `TableAppearance`.
+message TableStyle {
+  // Height of the title text, for a title part whose text sets no printed
+  // height.
+  double title_size = 1 [(buf.validate.field).double.gt = 0];
+
+  // Height of the column header text, for a header part whose text sets no
+  // printed height.
+  double header_size = 2 [(buf.validate.field).double.gt = 0];
+
+  // Height of the body text, for a body part whose text sets no printed
+  // height.
+  double body_size = 3 [(buf.validate.field).double.gt = 0];
+
+  // Horizontal padding between a cell's rule and its text, for a part that
+  // sets none of its own.
+  double cell_padding_x = 4 [(buf.validate.field).double.gte = 0];
+
+  // Vertical padding above and below a line of text, for a part that sets
+  // none of its own.
+  double cell_padding_y = 5 [(buf.validate.field).double.gte = 0];
+
+  // Pen index of the grid rules, as `motif.data.style.v1.LineStyle.pen_size`,
+  // for a part whose rules set none.
+  uint32 rule_pen = 6 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 16
+  }];
+
+  // Whether the header row has a filled background when the header part
+  // sets no fill of its own.
+  bool header_fill = 7;
+
+  // The title row does not print and takes no room.
+  bool hide_title = 8;
+
+  // The column headers, and the column group labels over them, do not print
+  // and take no room.
+  bool hide_header = 9;
+
+  // The title row.
+  TablePartStyle title = 10;
+
+  // The column headers and the column group labels.
+  TablePartStyle header = 11;
+
+  // Data rows, group lines, subtotals and the total.
+  TablePartStyle body = 12;
+}
+
+// How one part of a table reads and draws. A table's own part and a part of
+// a table style asset (`TableStyleAssetPart`) are
+// built from the same pieces and resolve the same way, as
+// motif/data/style/v1/style_asset_v2.proto describes: a property a part's
+// style sets applies over the part's own, and the part's own apply where the
+// style sets none, or once the part stops following it. A property neither
+// sets is the table's default. A reader that cannot resolve a referenced
+// style, or a color style, prints the part's own properties and must not
+// write the style back.
+//
+// What each piece yields for the part:
+//
+//   - text: the font, weight, slant and color of the part's text. Its
+//     printed height, in millimeters on paper (a thousandth of that in the
+//     paper meters `TableStyle` uses), is the part's text height, and its
+//     justification is the part's alignment, `JUSTIFY_JUSTIFIED` aligning
+//     left. `TableAlignment` says how a part's alignment and a column's
+//     combine.
+//   - shape: the cells' fill (none when the fill is hidden) and the part's
+//     rules, from the border's line (none when the border is hidden). A
+//     rule's width comes from its pen only. Unset rule properties take the
+//     table's: its ink, `TableStyle.rule_pen` and a solid line.
+message TablePartStyle {
+  // The part's text. Unset is regular text in the table's ink, sized by
+  // `TableStyle`.
+  TextStylePart text = 1;
+
+  // The cells' background and the part's rules. An unset fill fills the
+  // header grey when `TableStyle.header_fill` is set, and leaves the title
+  // and the body clear.
+  motif.data.style.v1.ShapeStylePart shape = 2;
+
+  // The room between the part's rules and its text. Unset uses
+  // `TableStyle.cell_padding_x` and `cell_padding_y`.
+  TablePadding padding = 3;
+}
+
+// The room left between a cell's rules and its text, in paper meters.
+message TablePadding {
+  // To the left and to the right of the text.
+  double x = 1 [(buf.validate.field).double.gte = 0];
+
+  // Above and below a line of text.
+  double y = 2 [(buf.validate.field).double.gte = 0];
+}
+
+// Horizontal alignment of a table column's cells.
+//
+// The title takes the title part's alignment, centered when it sets none. A
+// header cell takes the header part's alignment, else its column's. A body
+// cell takes its column's alignment when the column sets one, whatever the
+// body part's alignment, so a body text style's justification never moves a
+// column aligned on purpose; a column that sets none takes the body part's
+// alignment, else the column's default.
+enum TableAlignment {
+  // The default for where the alignment applies.
+  TABLE_ALIGNMENT_UNSPECIFIED = 0;
+  // Left.
+  TABLE_ALIGNMENT_LEFT = 1;
+  // Centered.
+  TABLE_ALIGNMENT_CENTER = 2;
+  // Right.
+  TABLE_ALIGNMENT_RIGHT = 3;
+}

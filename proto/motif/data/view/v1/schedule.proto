@@ -14,15 +14,15 @@ package motif.data.view.v1;
 
 import "buf/validate/validate.proto";
 import "google/protobuf/empty.proto";
+import "motif/data/annotation/v1/table.proto";
 import "motif/data/filter/v1/filter.proto";
 import "motif/data/geometry/v1/geometry.proto";
 import "motif/data/model/v1/model.proto";
-import "motif/data/style/v1/table.proto";
 import "motif/extension/v1/options.proto";
 
 // What a schedule lists and how its table is arranged. Lives on the
-// schedule's view. How the table prints is `motif.data.style.v1.TableAppearance`,
-// a component of the same entity.
+// schedule's view. How the table prints is
+// `motif.data.annotation.v1.TableAppearance`, a component of the same entity.
 //
 // A reader that meets a part it does not know (an unknown field, oneof arm
 // or enum value, here or in a filter) cannot rebuild the table as written.
@@ -37,6 +37,9 @@ message ScheduleDefinition {
   // schedule that names it. Elements hidden from the schedule are `not` of
   // an `entities` node naming entities of the schedule's own model, written
   // last under a top `all`, so a reader can show them apart from the rest.
+  // With nothing hidden, a writer nests a filter of that shape itself (an
+  // `all` whose last child is such a `not`) one level down, under another
+  // `all`, so it does not read back as the hidden list.
   motif.data.filter.v1.FilterExpression filter = 1;
 
   // In display order, hidden columns included.
@@ -117,9 +120,11 @@ message ScheduleColumn {
   // Printed width in paper meters. Unset sizes the column to its content.
   optional double width = 7 [(buf.validate.field).double.gt = 0];
 
-  // Horizontal alignment of the column's cells. Unspecified uses the kind's
-  // default: right for numbers and lengths, left otherwise.
-  motif.data.style.v1.TableAlignment alignment = 8 [(buf.validate.field).enum.defined_only = true];
+  // Horizontal alignment of the column's cells, ahead of the body part's
+  // (see `motif.data.annotation.v1.TableAlignment`). Unspecified takes the
+  // body part's, else the kind's default: right for numbers and lengths,
+  // left otherwise.
+  motif.data.annotation.v1.TableAlignment alignment = 8 [(buf.validate.field).enum.defined_only = true];
 
   // The unit, notation and precision a length column prints and aggregates
   // in, and reads a typed number with no unit in. Fractional notation rounds
