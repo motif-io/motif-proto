@@ -86,9 +86,9 @@ service Persistence {
   // malformed request, including an unknown time_zone, or a page_token or
   // parent_group_key that came from a different query. NOT_FOUND when
   // around_version is not a version of the model, or when GetMilestone would
-  // return NOT_FOUND for around_milestone_id. FAILED_PRECONDITION when the
-  // around_version or around_milestone_id target exists but the filter
-  // excludes it, or it is not inside parent_group_key.
+  // return NOT_FOUND for around_history_bookmark_id. FAILED_PRECONDITION when
+  // the around_version or around_history_bookmark_id target exists but the
+  // filter excludes it, or it is not inside parent_group_key.
   rpc ListChangesetsIndex(ListChangesetsIndexRequest) returns (ListChangesetsIndexResponse);
 
   // Creates a milestone: a named pointer to one version of a model. See
@@ -119,7 +119,7 @@ service Persistence {
   // listed.
   //
   // Requires view access to the model. Errors: INVALID_ARGUMENT for an invalid
-  // page_size or page_token.
+  // page_size or before.
   rpc ListMilestones(ListMilestonesRequest) returns (ListMilestonesResponse);
 
   // Changes a milestone's name, description or target version, recording a
@@ -151,7 +151,7 @@ service Persistence {
   //
   // Errors: NOT_FOUND when the milestone does not exist in the model or the
   // caller cannot read it, as for GetMilestone. INVALID_ARGUMENT for an invalid
-  // page_size or page_token.
+  // page_size or before_revision.
   rpc ListMilestoneRevisions(ListMilestoneRevisionsRequest) returns (ListMilestoneRevisionsResponse);
 
   // Streams the diff between two model-history cursor positions.
@@ -1234,7 +1234,7 @@ message TraverseReferencesResponse {
 // it hides all of them.
 //
 // To jump to a version or milestone, set around_version or
-// around_milestone_id instead of page_token:
+// around_history_bookmark_id instead of page_token:
 //
 // 1. Request the days. The response's focus_group_path lists the keys of the
 //    groups containing the target, the day first, and the page contains that
@@ -1265,11 +1265,11 @@ message ListChangesetsIndexRequest {
   HistoryIndexFilter filter = 4;
 
   // The day or repeated-edit group to list the entries of. Omit to list days.
-  optional string parent_group_key = 5 [(buf.validate.field).string.min_len = 1];
+  optional bytes parent_group_key = 5 [(buf.validate.field).bytes.min_len = 1];
 
   // Maximum entries to return, 1 to 500. Server chooses a default. The server
   // may return fewer, for example to keep the response within its size limit;
-  // only an absent next_page_token means there are no more.
+  // only an empty next_page_token means there are no more.
   optional uint32 page_size = 6 [(buf.validate.field).uint32 = {
     gte: 1
     lte: 500
@@ -1279,14 +1279,14 @@ message ListChangesetsIndexRequest {
   // order.
   oneof start {
     // A next_page_token or previous_page_token from an earlier response.
-    string page_token = 7 [(buf.validate.field).string.min_len = 1];
+    bytes page_token = 7 [(buf.validate.field).bytes.min_len = 1];
 
     // Start at the page containing this version.
     int32 around_version = 8 [(buf.validate.field).int32.gt = 0];
 
     // Start at the page containing the version this milestone currently
     // points to.
-    bytes around_milestone_id = 9 [(buf.validate.field).bytes.len = 16];
+    bytes around_history_bookmark_id = 9 [(buf.validate.field).bytes.len = 16];
   }
 }
 
@@ -1324,12 +1324,12 @@ message HistoryIndexFilter {
   // pointing to them.
   bool milestones_only = 5;
 
-  // Whether entity_id also matches changesets in which only system changes
-  // touched the entity. System changes are a version's derived changes
+  // Whether entity_id also matches changesets in which only system updates
+  // touched the entity. System updates are a version's system changes
   // (Changeset.derived_changes), applied after the author's changes. Defaults
   // to true. When false, a changeset matches entity_id only if the author's
   // changes include the entity. Has no effect without entity_id.
-  optional bool include_system_changes = 6;
+  optional bool include_system_updates = 6;
 }
 
 // One page of a model's history index.
@@ -1337,20 +1337,20 @@ message ListChangesetsIndexResponse {
   // Days, or the entries of parent_group_key, in the requested order.
   repeated HistoryIndexEntry entries = 1;
 
-  // Token for the next page in the requested order. Absent on the last page.
-  optional string next_page_token = 2;
+  // Token for the next page in the requested order. Empty on the last page.
+  bytes next_page_token = 2;
 
-  // Token for the page before this one. Absent on the first page.
-  optional string previous_page_token = 3;
+  // Token for the page before this one. Empty on the first page.
+  bytes previous_page_token = 3;
 
-  // The version that around_version or around_milestone_id resolved to. Set
-  // only when the request used one of them.
+  // The version that around_version or around_history_bookmark_id resolved
+  // to. Set only when the request used one of them.
   optional int32 focused_version = 4 [(buf.validate.field).int32.gt = 0];
 
   // Keys of the groups that contain focused_version, the day first. Set only
   // when focused_version is set, and always the full path, whichever level was
   // requested.
-  repeated string focus_group_path = 5 [(buf.validate.field).repeated.items.string.min_len = 1];
+  repeated bytes focus_group_path = 5 [(buf.validate.field).repeated.items.bytes.min_len = 1];
 }
 
 // One entry in the history index: a group, or a single changeset.
@@ -1371,7 +1371,7 @@ message HistoryIndexEntry {
 // A group of changesets that can be expanded.
 message HistoryIndexGroup {
   // Identifies the group as parent_group_key in a later request.
-  string group_key = 1 [(buf.validate.field).string.min_len = 1];
+  bytes group_key = 1 [(buf.validate.field).bytes.min_len = 1];
 
   // Number of changesets in the group that match the filter.
   uint32 matching_changeset_count = 2 [(buf.validate.field).uint32.gt = 0];
@@ -1447,9 +1447,9 @@ message HistoryIndexRepeatedEdits {
   // filter excludes.
   google.protobuf.Timestamp last_edit_at = 7 [(buf.validate.field).required = true];
 
-  // True when any matching changeset in the run also has system changes
+  // True when any matching changeset in the run also has system updates
   // (ChangesetListItem.has_derived).
-  bool has_system_changes = 8;
+  bool has_system_updates = 8;
 }
 
 // One changeset in the history index.
@@ -1471,7 +1471,7 @@ message HistoryIndexChangeset {
 // description and other details.
 message HistoryIndexMilestone {
   // The milestone's id.
-  bytes milestone_id = 1 [(buf.validate.field).bytes.len = 16];
+  bytes history_bookmark_id = 1 [(buf.validate.field).bytes.len = 16];
 
   // The milestone's current revision.
   int32 revision = 2 [(buf.validate.field).int32.gt = 0];
@@ -1495,7 +1495,7 @@ message HistoryIndexMilestone {
 // One move of a milestone away from the changeset it is listed on.
 message HistoryIndexMilestoneMove {
   // The milestone that was moved.
-  bytes milestone_id = 1 [(buf.validate.field).bytes.len = 16];
+  bytes history_bookmark_id = 1 [(buf.validate.field).bytes.len = 16];
 
   // The milestone revision that made the move.
   int32 revision = 2 [(buf.validate.field).int32.gt = 0];
@@ -1559,7 +1559,7 @@ message Milestone {
   bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
 
   // The milestone's id. Never reused, and kept after the milestone is removed.
-  bytes milestone_id = 2 [(buf.validate.field).bytes.len = 16];
+  bytes history_bookmark_id = 2 [(buf.validate.field).bytes.len = 16];
 
   // This revision's number: 1 when the milestone is created, then one higher
   // for each change. Counts changes to this milestone only; unrelated to model
@@ -1659,7 +1659,7 @@ message GetMilestoneRequest {
   bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
 
   // The milestone's id.
-  bytes milestone_id = 2 [(buf.validate.field).bytes.len = 16];
+  bytes history_bookmark_id = 2 [(buf.validate.field).bytes.len = 16];
 }
 
 // The requested milestone.
@@ -1668,20 +1668,33 @@ message GetMilestoneResponse {
   Milestone milestone = 1 [(buf.validate.field).required = true];
 }
 
+// A position in a model's milestone list, which is ordered by creation time,
+// newest first.
+message MilestoneCursor {
+  // The creation time (Milestone.created_at) of the milestone at this
+  // position.
+  google.protobuf.Timestamp created_at = 1 [(buf.validate.field).required = true];
+
+  // The id of the milestone at this position, which orders milestones created
+  // at the same time.
+  bytes history_bookmark_id = 2 [(buf.validate.field).bytes.len = 16];
+}
+
 // Requests a page of a model's milestones.
 message ListMilestonesRequest {
   // Target model id. Globally unique across projects.
   bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
 
   // Maximum milestones to return, 1 to 500. Defaults to 100.
-  optional uint32 page_size = 2 [(buf.validate.field).uint32 = {
+  optional int32 page_size = 2 [(buf.validate.field).int32 = {
     gte: 1
     lte: 500
   }];
 
-  // Token from a previous ListMilestonesResponse. Milestones created after the
-  // first page was read are not returned on later pages.
-  optional string page_token = 3 [(buf.validate.field).string.min_len = 1];
+  // Return the milestones after this position. Omit for the first page; for
+  // later pages, send next_before from the previous response. Milestones
+  // created after the first page was read are not returned on later pages.
+  MilestoneCursor before = 3;
 }
 
 // A page of a model's milestones.
@@ -1689,8 +1702,12 @@ message ListMilestonesResponse {
   // The current revision of each milestone, most recently created first.
   repeated Milestone milestones = 1;
 
-  // Present when another page is available.
-  optional string next_page_token = 2;
+  // True when another page is available.
+  bool has_more = 2;
+
+  // The position of the last milestone on this page; send it as before to
+  // get the next page. Set only when has_more is true.
+  MilestoneCursor next_before = 3;
 }
 
 // Requests a change to a milestone. Set only the fields to change.
@@ -1699,7 +1716,7 @@ message UpdateMilestoneRequest {
   bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
 
   // The milestone's id.
-  bytes milestone_id = 2 [(buf.validate.field).bytes.len = 16];
+  bytes history_bookmark_id = 2 [(buf.validate.field).bytes.len = 16];
 
   // The revision the change is based on, normally the one last read. If the
   // milestone has changed since, the update is rejected with ABORTED: read it
@@ -1731,7 +1748,7 @@ message RemoveMilestoneRequest {
   bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
 
   // The milestone's id.
-  bytes milestone_id = 2 [(buf.validate.field).bytes.len = 16];
+  bytes history_bookmark_id = 2 [(buf.validate.field).bytes.len = 16];
 }
 
 // The removed milestone.
@@ -1746,16 +1763,17 @@ message ListMilestoneRevisionsRequest {
   bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
 
   // The milestone's id.
-  bytes milestone_id = 2 [(buf.validate.field).bytes.len = 16];
+  bytes history_bookmark_id = 2 [(buf.validate.field).bytes.len = 16];
 
   // Maximum revisions to return, 1 to 500. Defaults to 100.
-  optional uint32 page_size = 3 [(buf.validate.field).uint32 = {
+  optional int32 page_size = 3 [(buf.validate.field).int32 = {
     gte: 1
     lte: 500
   }];
 
-  // Token from a previous ListMilestoneRevisionsResponse.
-  optional string page_token = 4 [(buf.validate.field).string.min_len = 1];
+  // Return the revisions numbered below this one. Omit for the first page; for
+  // later pages, send next_before_revision from the previous response.
+  optional int32 before_revision = 4 [(buf.validate.field).int32.gt = 0];
 }
 
 // A page of a milestone's revisions.
@@ -1764,6 +1782,10 @@ message ListMilestoneRevisionsResponse {
   // change did, such as moving the milestone from one version to another.
   repeated Milestone revisions = 1;
 
-  // Present when another page is available.
-  optional string next_page_token = 2;
+  // True when another page is available.
+  bool has_more = 2;
+
+  // The number of the last revision on this page; send it as before_revision
+  // to get the next page. Set only when has_more is true.
+  optional int32 next_before_revision = 3 [(buf.validate.field).int32.gt = 0];
 }

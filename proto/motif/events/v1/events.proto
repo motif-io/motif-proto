@@ -694,7 +694,7 @@ message HistoryEnrichmentFinished {
 // milestones after reconnecting.
 message MilestoneChanged {
   // The milestone that changed, a 16-byte UUID. Required.
-  bytes milestone_id = 1 [(buf.validate.field).bytes.len = 16];
+  bytes history_bookmark_id = 1 [(buf.validate.field).bytes.len = 16];
 
   // The milestone's revision after the change. Required.
   int32 revision = 2 [(buf.validate.field).int32.gt = 0];
