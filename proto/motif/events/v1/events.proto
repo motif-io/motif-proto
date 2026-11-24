@@ -683,15 +683,13 @@ message HistoryEnrichmentFinished {
 // revision. `NotificationEnvelope.occurred_at` is when that revision was
 // recorded.
 //
-// Every subscriber to the model receives this event, including for private
-// milestones, so it carries only the milestone's id and revision. To see what
-// changed, call `motif.api.v1.Persistence` `GetMilestone`; NOT_FOUND means the
-// milestone was removed or the recipient cannot read it. The model's history
-// index (`ListChangesetsIndex`) may also have changed.
+// Sent for public and private milestones alike, so it carries only the
+// milestone's id and revision; the milestone itself is returned by
+// `motif.api.v1.Persistence` `GetMilestone`. The model's history index
+// (`ListChangesetsIndex`) may also have changed.
 //
 // Delivery is best effort: events can be missed, repeated or arrive out of
-// order. Compare `revision` with the revision already held, and re-read
-// milestones after reconnecting.
+// order.
 message MilestoneChanged {
   // The milestone that changed, a 16-byte UUID. Required.
   bytes history_bookmark_id = 1 [(buf.validate.field).bytes.len = 16];

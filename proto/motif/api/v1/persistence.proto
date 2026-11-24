@@ -82,76 +82,59 @@ service Persistence {
   // expanded. Supports filters, either sort order, and jumping straight to a
   // version or milestone. See ListChangesetsIndexRequest.
   //
-  // Requires view access to the model. Errors: INVALID_ARGUMENT for a
-  // malformed request, including an unknown time_zone, or a page_token or
-  // parent_group_key that came from a different query. NOT_FOUND when
-  // around_version is not a version of the model, or when GetMilestone would
-  // return NOT_FOUND for around_history_bookmark_id. FAILED_PRECONDITION when
-  // the around_version or around_history_bookmark_id target exists but the
-  // filter excludes it, or it is not inside parent_group_key.
+  // Errors: INVALID_ARGUMENT for a malformed request, including an unknown
+  // time_zone, or a page_token or parent_group_key that came from a different
+  // query. NOT_FOUND when around_version is not a version of the model, or when
+  // GetMilestone would return NOT_FOUND for around_history_bookmark_id.
+  // FAILED_PRECONDITION when the around_version or around_history_bookmark_id
+  // target exists but the filter excludes it, or it is not inside
+  // parent_group_key.
   rpc ListChangesetsIndex(ListChangesetsIndexRequest) returns (ListChangesetsIndexResponse);
 
   // Creates a milestone: a named pointer to one version of a model. See
   // Milestone.
   //
-  // Requires edit access to the model. Errors: INVALID_ARGUMENT for a
-  // malformed request, including an invalid name or description.
-  // ALREADY_EXISTS when the name is taken (see CreateMilestoneRequest.name).
-  // FAILED_PRECONDITION when the model is deleted, or target_version is higher
-  // than the model's current version.
-  //
-  // If the call fails without a response, such as with DEADLINE_EXCEEDED or
-  // UNAVAILABLE, the milestone may still have been created. Check
-  // ListMilestones before retrying; a retry that returns ALREADY_EXISTS may
-  // mean the first attempt succeeded.
+  // Errors: INVALID_ARGUMENT for a malformed request, including an invalid
+  // name or description. ALREADY_EXISTS when the name is taken (see
+  // CreateMilestoneRequest.name). FAILED_PRECONDITION when the model is
+  // deleted, or target_version is higher than the model's current version.
   rpc CreateMilestone(CreateMilestoneRequest) returns (CreateMilestoneResponse);
 
   // Gets a milestone's current state.
   //
-  // Errors: NOT_FOUND when the milestone does not exist in the model, has been
-  // removed, or the caller cannot read it, including when the caller has no
-  // view access to the model (see MilestoneVisibility). These cases are
-  // deliberately not distinguished.
+  // Errors: NOT_FOUND when the milestone does not exist in the model or has
+  // been removed.
   rpc GetMilestone(GetMilestoneRequest) returns (GetMilestoneResponse);
 
-  // Lists the milestones in a model that the caller can read: every public
-  // milestone, plus the caller's own private ones. Removed milestones are not
-  // listed.
+  // Lists a model's milestones: its public milestones and the caller's own
+  // private ones. Removed milestones are not listed.
   //
-  // Requires view access to the model. Errors: INVALID_ARGUMENT for an invalid
-  // page_size or before.
+  // Errors: INVALID_ARGUMENT for an invalid page_size or before.
   rpc ListMilestones(ListMilestonesRequest) returns (ListMilestonesResponse);
 
   // Changes a milestone's name, description or target version, recording a
   // new revision. Fields left unset keep their current values.
   //
-  // Requires edit access to the model. Errors: NOT_FOUND as for GetMilestone;
-  // PERMISSION_DENIED only when the caller can read the milestone but not
-  // change it. ABORTED when expected_revision is not the milestone's current
-  // revision, even when the request would change nothing; the revision is
-  // checked before anything else in the request. INVALID_ARGUMENT,
-  // ALREADY_EXISTS and FAILED_PRECONDITION as for CreateMilestone.
-  //
-  // If the call fails without a response, call GetMilestone to see whether the
-  // change was applied before retrying.
+  // Errors: NOT_FOUND as for GetMilestone. ABORTED when expected_revision is
+  // not the milestone's current revision, even when the request would change
+  // nothing; the revision is checked before anything else in the request.
+  // INVALID_ARGUMENT, ALREADY_EXISTS and FAILED_PRECONDITION as for
+  // CreateMilestone.
   rpc UpdateMilestone(UpdateMilestoneRequest) returns (UpdateMilestoneResponse);
 
   // Removes a milestone. Its name becomes available for reuse, and its
   // revisions stay readable through ListMilestoneRevisions. Removing a
   // milestone that is already removed succeeds and returns it unchanged.
   //
-  // Requires edit access to the model. Errors: NOT_FOUND when the milestone
-  // does not exist in the model or the caller cannot read it; PERMISSION_DENIED
-  // only when the caller can read it but not change it. FAILED_PRECONDITION
-  // when the model is deleted.
+  // Errors: NOT_FOUND when the milestone does not exist in the model.
+  // FAILED_PRECONDITION when the model is deleted.
   rpc RemoveMilestone(RemoveMilestoneRequest) returns (RemoveMilestoneResponse);
 
   // Lists every revision of a milestone, newest first, including the revisions
   // of a removed milestone.
   //
-  // Errors: NOT_FOUND when the milestone does not exist in the model or the
-  // caller cannot read it, as for GetMilestone. INVALID_ARGUMENT for an invalid
-  // page_size or before_revision.
+  // Errors: NOT_FOUND when the milestone does not exist in the model.
+  // INVALID_ARGUMENT for an invalid page_size or before_revision.
   rpc ListMilestoneRevisions(ListMilestoneRevisionsRequest) returns (ListMilestoneRevisionsResponse);
 
   // Streams the diff between two model-history cursor positions.
@@ -1209,12 +1192,12 @@ message TraverseReferencesResponse {
 //
 // The index has up to three levels:
 //
-// 1. Days. One group per calendar day in time_zone that has at least one
-//    changeset matching the filter. Omit parent_group_key to list days.
-// 2. A day's entries: its changesets and repeated-edit groups. Send the day's
-//    group_key as parent_group_key.
-// 3. A repeated-edit group's changesets. Send the group's group_key as
-//    parent_group_key.
+// 1. Days: one group per calendar day in time_zone that has at least one
+//    changeset matching the filter. Listed when parent_group_key is unset.
+// 2. A day's entries: its changesets and repeated-edit groups. Listed when
+//    parent_group_key is the day's group_key.
+// 3. A repeated-edit group's changesets. Listed when parent_group_key is the
+//    group's group_key.
 //
 // Days are ordered by date, and the entries within a day by version, newest
 // first unless oldest_first is set.
@@ -1225,25 +1208,22 @@ message TraverseReferencesResponse {
 // changeset is listed on its own, never in a run, when it makes more than one
 // kind of change or changes entities with different classifications, has no
 // known classification (including while its semantic history is not yet
-// available), was made by RevertToVersion, or has a milestone the caller can
-// read pointing to it. The server limits the length of a run; a longer run is
-// split into consecutive groups.
+// available), was made by RevertToVersion, or has a milestone visible to the
+// caller pointing to it. The server limits the length of a run; a longer run
+// is split into consecutive groups.
 //
 // Runs are formed from the whole history and then filtered: a run keeps its
 // boundaries when the filter hides some of its changesets, and is omitted when
 // it hides all of them.
 //
-// To jump to a version or milestone, set around_version or
-// around_history_bookmark_id instead of page_token:
-//
-// 1. Request the days. The response's focus_group_path lists the keys of the
-//    groups containing the target, the day first, and the page contains that
-//    day.
-// 2. For each key in focus_group_path, request again with that key as
-//    parent_group_key and around_version set to the first response's
-//    focused_version. Each page contains the next group on the path; the last
-//    page contains the target changeset.
-// 3. Use the response's page tokens to page in either direction from there.
+// A request with around_version or around_history_bookmark_id returns the page
+// containing that target. When parent_group_key is unset, focused_version is
+// the target version, focus_group_path holds the keys of the groups
+// containing it, the day first, and the page contains that day. With
+// parent_group_key set to a key on that path and around_version set to
+// focused_version, the page contains the next group on the path, or the
+// target changeset when the key is the innermost group. The response's page
+// tokens continue from that page in either direction.
 //
 // Every request reads current data, so results can change between pages, for
 // example when a milestone moves. Page tokens and group keys are valid only in
@@ -1264,7 +1244,7 @@ message ListChangesetsIndexRequest {
   // Which changesets to list. Unset lists every changeset.
   HistoryIndexFilter filter = 4;
 
-  // The day or repeated-edit group to list the entries of. Omit to list days.
+  // The day or repeated-edit group whose entries are listed. Unset lists days.
   optional bytes parent_group_key = 5 [(buf.validate.field).bytes.min_len = 1];
 
   // Maximum entries to return, 1 to 500. Server chooses a default. The server
@@ -1309,18 +1289,17 @@ message HistoryIndexFilter {
   }];
 
   // Changesets recorded at or after this time (ChangesetListItem.created_at).
-  // This is an exact instant, not a calendar date: to start at the beginning of
-  // a day, send the first instant of that day in the request's time_zone.
+  // An exact instant, independent of time_zone.
   google.protobuf.Timestamp from_inclusive = 2;
 
-  // Changesets recorded before this time. To include all of a day, send the
-  // first instant of the following day in the request's time_zone.
+  // Changesets recorded before this time. An exact instant, independent of
+  // time_zone.
   google.protobuf.Timestamp to_exclusive = 3;
 
   // Changesets that changed this entity.
   optional bytes entity_id = 4 [(buf.validate.field).bytes.len = 16];
 
-  // Only changesets that have at least one milestone the caller can read
+  // Only changesets that have at least one milestone visible to the caller
   // pointing to them.
   bool milestones_only = 5;
 
@@ -1359,8 +1338,8 @@ message HistoryIndexEntry {
   oneof kind {
     option (buf.validate.oneof).required = true;
 
-    // A day or a repeated-edit group. List its entries by sending its
-    // group_key as parent_group_key.
+    // A day or a repeated-edit group. Its entries are listed when
+    // parent_group_key is its group_key.
     HistoryIndexGroup group = 1;
 
     // A single changeset.
@@ -1402,14 +1381,13 @@ message HistoryIndexDay {
     }
   }];
 
-  // Milestones the caller can read that point to the day's matching
+  // Milestones visible to the caller that point to the day's matching
   // changesets, in the requested version order. The server limits how many are
-  // listed; when fewer than matching_milestone_count are listed, expand the day
-  // to see the rest.
+  // listed; the day's entries include all of them.
   repeated HistoryIndexMilestone milestone_preview = 3;
 
-  // Number of milestones the caller can read that point to the day's matching
-  // changesets.
+  // Number of milestones visible to the caller that point to the day's
+  // matching changesets.
   uint32 matching_milestone_count = 4;
 }
 
@@ -1459,16 +1437,16 @@ message HistoryIndexChangeset {
   // changeset is still returned.
   ChangesetListItem changeset = 1 [(buf.validate.field).required = true];
 
-  // Milestones the caller can read that point to this changeset.
+  // Milestones visible to the caller that point to this changeset.
   repeated HistoryIndexMilestone milestones = 2;
 
-  // One entry for each time a milestone the caller can read was moved from
+  // One entry for each time a milestone visible to the caller was moved from
   // this changeset to another version.
   repeated HistoryIndexMilestoneMove milestone_moves = 3;
 }
 
-// A milestone as listed in the history index. Call GetMilestone for its
-// description and other details.
+// A milestone as listed in the history index: a subset of its Milestone
+// fields.
 message HistoryIndexMilestone {
   // The milestone's id.
   bytes history_bookmark_id = 1 [(buf.validate.field).bytes.len = 16];
@@ -1513,15 +1491,11 @@ enum MilestoneVisibility {
   // Invalid.
   MILESTONE_VISIBILITY_UNSPECIFIED = 0;
 
-  // Anyone with view access to the model can read the milestone, and anyone
-  // with edit access can change or remove it.
+  // Visible to all users of the model.
   MILESTONE_VISIBILITY_PUBLIC = 1;
 
-  // Only the user who created the milestone can read it. They need view access
-  // to the model to read it, and edit access to change or remove it. No other
-  // user can read it, including owners of the model or project, although its
-  // id and revision number appear in MilestoneChanged events sent to every
-  // subscriber to the model.
+  // Visible only to the user who created it. Its id and revision number still
+  // appear in MilestoneChanged events.
   MILESTONE_VISIBILITY_PRIVATE = 2;
 }
 
@@ -1600,9 +1574,8 @@ message Milestone {
   // changed the milestone.
   bytes actor_user_id = 11 [(buf.validate.field).bytes.len = 16];
 
-  // Set when the request that made this revision was authenticated with a
-  // Motif-issued access token; identifies the client application that used it.
-  // Opaque; recorded for attribution only, and never used to grant access.
+  // Identifies the client application that made this revision, when known.
+  // Opaque; recorded for attribution only.
   optional string actor_client_id = 12 [(buf.validate.field).string.min_len = 1];
 
   // When this revision was made. On the current revision, this is when the
@@ -1632,7 +1605,7 @@ message CreateMilestoneRequest {
   // A taken name returns ALREADY_EXISTS.
   string name = 2 [(buf.validate.field).string.min_len = 1];
 
-  // A longer description, up to 500 characters. Omit or leave empty for none.
+  // A longer description, up to 500 characters. Empty means none.
   optional string description = 3 [(buf.validate.field).string.max_len = 500];
 
   // The model version to point to. Must not be higher than the model's current
@@ -1691,9 +1664,8 @@ message ListMilestonesRequest {
     lte: 500
   }];
 
-  // Return the milestones after this position. Omit for the first page; for
-  // later pages, send next_before from the previous response. Milestones
-  // created after the first page was read are not returned on later pages.
+  // Lists the milestones after this position, such as next_before from a
+  // previous response. Unset starts with the most recently created milestone.
   MilestoneCursor before = 3;
 }
 
@@ -1705,8 +1677,8 @@ message ListMilestonesResponse {
   // True when another page is available.
   bool has_more = 2;
 
-  // The position of the last milestone on this page; send it as before to
-  // get the next page. Set only when has_more is true.
+  // The position of the last milestone on this page. Set only when has_more
+  // is true.
   MilestoneCursor next_before = 3;
 }
 
@@ -1718,9 +1690,8 @@ message UpdateMilestoneRequest {
   // The milestone's id.
   bytes history_bookmark_id = 2 [(buf.validate.field).bytes.len = 16];
 
-  // The revision the change is based on, normally the one last read. If the
-  // milestone has changed since, the update is rejected with ABORTED: read it
-  // again and retry. Required.
+  // The revision the change is based on. When it is not the milestone's current
+  // revision, the update is rejected with ABORTED. Required.
   int32 expected_revision = 3 [(buf.validate.field).int32.gt = 0];
 
   // A new name, under the rules of CreateMilestoneRequest.name. A name cannot
@@ -1771,21 +1742,20 @@ message ListMilestoneRevisionsRequest {
     lte: 500
   }];
 
-  // Return the revisions numbered below this one. Omit for the first page; for
-  // later pages, send next_before_revision from the previous response.
+  // Lists the revisions numbered below this one, such as next_before_revision
+  // from a previous response. Unset starts with the newest revision.
   optional int32 before_revision = 4 [(buf.validate.field).int32.gt = 0];
 }
 
 // A page of a milestone's revisions.
 message ListMilestoneRevisionsResponse {
-  // Revisions, newest first. Compare consecutive revisions to see what each
-  // change did, such as moving the milestone from one version to another.
+  // Revisions, newest first.
   repeated Milestone revisions = 1;
 
   // True when another page is available.
   bool has_more = 2;
 
-  // The number of the last revision on this page; send it as before_revision
-  // to get the next page. Set only when has_more is true.
+  // The number of the last revision on this page. Set only when has_more is
+  // true.
   optional int32 next_before_revision = 3 [(buf.validate.field).int32.gt = 0];
 }
