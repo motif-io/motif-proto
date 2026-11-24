@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package motif.data.annotation.v1;
+
+import "buf/validate/validate.proto";
+import "motif/data/annotation/v1/annotation.proto";
+import "motif/data/annotation/v1/style_asset_v2.proto";
+import "motif/data/model/v1/model.proto";
+import "motif/data/style/v1/style.proto";
+import "motif/data/style/v1/style_asset_v2.proto";
+import "motif/extension/v1/options.proto";
+
+// A named, reusable style for permanent dimensions. Lives on an asset entity
+// (core.v1.Asset and a name). Unset fields leave the corresponding properties
+// to the placed dimension's own style and its defaults.
+//
+// Text, line and arrowhead parts use the V2 property resolution rules in
+// motif/data/style/v1/style_asset_v2.proto. Their direct links opt into pinned
+// resolution: an unqualified link resolves in this asset's model snapshot, and
+// a link naming a model uses that model's recorded version. When the inline
+// text or line follows a live color in this model, writers leave its model
+// unset and set pin_style. A copy into another model can then qualify the
+// color to the source snapshot and preserve its effective color and opacity.
+// An explicitly pinned historical color always keeps its recorded model version.
+message DimensionStyleAsset {
+  option (motif.extension.v1.message).component = 262;
+
+  // The shape of the leader. UNSPECIFIED leaves it unset.
+  DimensionStyleLeaderType leader_type = 1;
+  // Gap from the dimension line to the label, in millimeters on paper.
+  optional float text_offset_mm = 2 [(buf.validate.field).float = {
+    gte: 0
+    finite: true
+  }];
+  // How far a linear dimension line runs past the witness lines, in
+  // millimeters on paper.
+  optional float dimension_line_extension_mm = 3 [(buf.validate.field).float = {
+    gte: 0
+    finite: true
+  }];
+  // Gap from the measured point to the start of a witness line, in
+  // millimeters on paper.
+  optional float witness_line_offset_mm = 4 [(buf.validate.field).float = {
+    gte: 0
+    finite: true
+  }];
+  // How far a witness line runs past the dimension line, in millimeters on
+  // paper.
+  optional float witness_line_extension_mm = 5 [(buf.validate.field).float = {
+    gte: 0
+    finite: true
+  }];
+  // The unit policy for length and angle. UNSPECIFIED leaves the policy unset.
+  // See DimensionStyleUnitPolicy for precedence between layers.
+  DimensionStyleUnitPolicy unit_policy = 6;
+  // The linear label's unit, notation and precision. With no policy set,
+  // this group still overrides lower layers for length.
+  motif.data.model.v1.LengthUnitGroup length_units = 7;
+  // The angular label's unit, notation and precision. With no policy set,
+  // this group still overrides lower layers for angle.
+  motif.data.model.v1.AngleUnitGroup angle_units = 8;
+  // The label text.
+  TextStylePart text = 9;
+  // The dimension line, witness lines and leaders.
+  motif.data.style.v1.LineStylePart line = 10;
+  // The dimension terminators.
+  ArrowheadStylePart arrowhead = 11;
+}
+
+// The style relationships of a permanent dimension, stored beside Dimension
+// on the same entity. The dimension takes its styling from either a whole
+// dimension style asset or individual style assets for its parts. A followed
+// style governs the properties it supplies. The locally authored
+// Dimension.style values remain stored and supply the remaining properties.
+// An absent component or unset source uses local styling for every property.
+// Writers omit this component when the dimension has no style links.
+message DimensionStyleSource {
+  option (motif.extension.v1.message).component = 263;
+
+  oneof source {
+    // One DimensionStyleAsset governing the whole dimension.
+    motif.data.style.v1.PinnedStyleAssetReference style = 1;
+    // Independent links for a dimension without a whole style.
+    DimensionStyleParts parts = 2;
+  }
+}
+
+// The optional style asset for each part of a permanent dimension. An unset
+// part uses the dimension's own styling for that part.
+message DimensionStyleParts {
+  // A text style asset (TextStyleAssetV2 or TextStyleAsset).
+  motif.data.style.v1.PinnedStyleAssetReference text = 1;
+  // A line style asset (LineStyleAssetV2 or LineStyleAsset).
+  motif.data.style.v1.PinnedStyleAssetReference line = 2;
+  // An arrowhead style asset (ArrowheadStyleAsset).
+  motif.data.style.v1.PinnedStyleAssetReference arrowhead = 3;
+}
