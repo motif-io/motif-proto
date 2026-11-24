@@ -1342,11 +1342,6 @@ message ListMilestoneRevisionsResponse {
 // authorizes and reads fresh data. Refresh after edits, milestone moves or late
 // semantic enrichment. Pages do not retain a cross-request snapshot.
 message ListChangesetsIndexRequest {
-  option (buf.validate.message).cel = {
-    id: "history_index.root_focus"
-    message: "focus requests must start at the root"
-    expression: "(!has(this.around_version) && !has(this.around_history_bookmark_id)) || !has(this.parent_group_key)"
-  };
   bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
   // Required IANA timezone, used for calendar dates and daylight-saving rules.
   string time_zone = 2 [(buf.validate.field).string.min_len = 1];
@@ -1355,7 +1350,8 @@ message ListChangesetsIndexRequest {
   // Omit for day groups. Use a returned day or repeated-edit group key to
   // expand it. Keys are opaque and scoped to reader, model and query.
   optional bytes parent_group_key = 5 [(buf.validate.field).bytes.min_len = 1];
-  // Defaults to 100. Bounds entries, including when seeking.
+  // Defaults to 100. Bounds entries, including when seeking. If the response
+  // exceeds the message-size limit, request a smaller page.
   optional uint32 page_size = 6 [(buf.validate.field).uint32 = {
     gte: 1
     lte: 500
@@ -1364,6 +1360,8 @@ message ListChangesetsIndexRequest {
     // Use either continuation from the response with the identical query and
     // parent. Mismatched tokens return INVALID_ARGUMENT.
     bytes page_token = 7 [(buf.validate.field).bytes.min_len = 1];
+    // Repeat a focus start when expanding each ancestor group to seek directly
+    // to the child page containing the next group or target version.
     int32 around_version = 8 [(buf.validate.field).int32.gt = 0];
     bytes around_history_bookmark_id = 9 [(buf.validate.field).bytes.len = 16];
   }
@@ -1404,7 +1402,9 @@ message ListChangesetsIndexResponse {
   // nonexistent versions and removed/inaccessible milestones return NOT_FOUND.
   optional int32 focused_version = 4 [(buf.validate.field).int32.gt = 0];
   // Outer to inner expandable groups leading to focused_version. The returned
-  // root page contains the first group; expand each group in turn.
+  // root page contains the first group. On expansion with the same focus, the
+  // page contains the next descendant or target. An unrelated parent returns
+  // FAILED_PRECONDITION.
   repeated bytes focus_group_path = 5;
 }
 
@@ -1531,6 +1531,8 @@ message ListChangesetAuthorsResponse {
   // Ordered by changeset count descending, then UUID bytes ascending.
   repeated ChangesetAuthor authors = 1;
   // Empty when complete. Each page authorizes and reads current state.
+  // Mismatched tokens return INVALID_ARGUMENT. Counts changing between pages
+  // can require a refresh to converge.
   bytes next_page_token = 2;
 }
 
