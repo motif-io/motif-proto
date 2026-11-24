@@ -106,8 +106,7 @@ service Persistence {
   // been removed.
   rpc GetMilestone(GetMilestoneRequest) returns (GetMilestoneResponse);
 
-  // Lists a model's milestones: its public milestones and the caller's own
-  // private ones. Removed milestones are not listed.
+  // Lists a model's milestones. Removed milestones are not listed.
   //
   // Errors: INVALID_ARGUMENT for an invalid page_size or before.
   rpc ListMilestones(ListMilestonesRequest) returns (ListMilestonesResponse);
@@ -1208,9 +1207,9 @@ message TraverseReferencesResponse {
 // changeset is listed on its own, never in a run, when it makes more than one
 // kind of change or changes entities with different classifications, has no
 // known classification (including while its semantic history is not yet
-// available), was made by RevertToVersion, or has a milestone visible to the
-// caller pointing to it. The server limits the length of a run; a longer run
-// is split into consecutive groups.
+// available), was made by RevertToVersion, or has a milestone pointing to it.
+// The server limits the length of a run; a longer run is split into
+// consecutive groups.
 //
 // Runs are formed from the whole history and then filtered: a run keeps its
 // boundaries when the filter hides some of its changesets, and is omitted when
@@ -1299,8 +1298,7 @@ message HistoryIndexFilter {
   // Changesets that changed this entity.
   optional bytes entity_id = 4 [(buf.validate.field).bytes.len = 16];
 
-  // Only changesets that have at least one milestone visible to the caller
-  // pointing to them.
+  // Only changesets that have at least one milestone pointing to them.
   bool milestones_only = 5;
 
   // Whether entity_id also matches changesets in which only system updates
@@ -1381,13 +1379,12 @@ message HistoryIndexDay {
     }
   }];
 
-  // Milestones visible to the caller that point to the day's matching
-  // changesets, in the requested version order. The server limits how many are
-  // listed; the day's entries include all of them.
+  // Milestones that point to the day's matching changesets, in the requested
+  // version order. The server limits how many are listed; the day's entries
+  // include all of them.
   repeated HistoryIndexMilestone milestone_preview = 3;
 
-  // Number of milestones visible to the caller that point to the day's
-  // matching changesets.
+  // Number of milestones that point to the day's matching changesets.
   uint32 matching_milestone_count = 4;
 }
 
@@ -1437,11 +1434,11 @@ message HistoryIndexChangeset {
   // changeset is still returned.
   ChangesetListItem changeset = 1 [(buf.validate.field).required = true];
 
-  // Milestones visible to the caller that point to this changeset.
+  // Milestones that point to this changeset.
   repeated HistoryIndexMilestone milestones = 2;
 
-  // One entry for each time a milestone visible to the caller was moved from
-  // this changeset to another version.
+  // One entry for each time a milestone was moved from this changeset to
+  // another version.
   repeated HistoryIndexMilestoneMove milestone_moves = 3;
 }
 
@@ -1485,17 +1482,16 @@ message HistoryIndexMilestoneMove {
   bytes actor_user_id = 4 [(buf.validate.field).bytes.len = 16];
 }
 
-// Who can see a milestone. Set when the milestone is created and never
-// changes.
+// Whether a milestone is public or private. Set when the milestone is created
+// and never changes.
 enum MilestoneVisibility {
   // Invalid.
   MILESTONE_VISIBILITY_UNSPECIFIED = 0;
 
-  // Visible to all users of the model.
+  // A public milestone.
   MILESTONE_VISIBILITY_PUBLIC = 1;
 
-  // Visible only to the user who created it. Its id and revision number still
-  // appear in MilestoneChanged events.
+  // A private milestone.
   MILESTONE_VISIBILITY_PRIVATE = 2;
 }
 

@@ -683,10 +683,9 @@ message HistoryEnrichmentFinished {
 // revision. `NotificationEnvelope.occurred_at` is when that revision was
 // recorded.
 //
-// Sent for public and private milestones alike, so it carries only the
-// milestone's id and revision; the milestone itself is returned by
-// `motif.api.v1.Persistence` `GetMilestone`. The model's history index
-// (`ListChangesetsIndex`) may also have changed.
+// Carries only the milestone's id and revision; the milestone itself is
+// returned by `motif.api.v1.Persistence` `GetMilestone`. The model's history
+// index (`ListChangesetsIndex`) may also have changed.
 //
 // Delivery is best effort: events can be missed, repeated or arrive out of
 // order.
