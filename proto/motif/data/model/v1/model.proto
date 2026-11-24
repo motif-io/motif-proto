@@ -1314,6 +1314,135 @@ message HostedBehavior {
   }];
 }
 
+// An asset that owns the elements collected into it.
+//
+// Not an `AssetVariantGroup`, and not a per-(source, view) style group. The
+// asset also carries `motif.data.core.v1.Asset` and
+// `motif.data.core.v1.AssignedName`. Each collected element carries
+// `motif.data.core.v1.Member` at this entity. An instance carries
+// `motif.data.core.v1.Instance` at this entity, and that instance's
+// `motif.data.core.v1.Isometry` is its placement. One nested inside another
+// is an `Instance` of its own `CollectedElements`, not a copy of the nested
+// elements.
+//
+// `origin` is the placement origin, in meters, in the same coordinates as the
+// members. The writer sets it when the collection is created and does not
+// change it when the members change. Placing an instance maps this point
+// through the instance isometry. The origin is not stored on the instance.
+//
+// A host in the member tree of the collection the element is a `Member` of
+// stays on that element's `HostedBehavior`, so every instance of that
+// collection shares it. The member tree is that collection's direct members
+// and the members of every `CollectedElements` nested inside it. A host
+// outside that tree is an `InstanceExternalHosts` entry. The element's
+// mating face is then `CollectedMemberMatingFace`. Which instances carry
+// the entry, and what the writer refuses, are stated on
+// `InstanceExternalHosts`.
+message CollectedElements {
+  option (motif.extension.v1.message).component = 226;
+
+  // Placement origin, in meters. Required.
+  motif.data.geometry.v1.Point3 origin = 1 [(buf.validate.field).required = true];
+}
+
+// The face a collected element mates to a host outside the member tree of
+// the collection that element is a `Member` of.
+//
+// Lives on the element. The face is part of the element, so changing it
+// changes every instance. It is not a per-instance binding. A host in that
+// member tree uses `HostedBehavior.mating_reference` instead. What the
+// writer refuses is stated on `InstanceExternalHosts`.
+message CollectedMemberMatingFace {
+  option (motif.extension.v1.message).component = 227;
+
+  // The element's own `ReferenceGeometry` (target = this element) and, in the
+  // path, the entry that mates to the host. Required.
+  motif.extension.v1.DataReference mating_reference = 1 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.model.v1.ReferenceGeometry"
+    }
+  ];
+}
+
+// External host bindings for one instance of a `CollectedElements`.
+//
+// Lives on the instance. Absent when that instance has no external host.
+// Each entry seats one element on a host outside the member tree of the
+// collection that element is a `Member` of. The seat uses the same host
+// face, parametric coordinate, angle, and host frame as `HostedBehavior`.
+// The mating face stays on `CollectedMemberMatingFace`, and the resolved
+// placement is not stored: those two are the difference from
+// `HostedBehavior`.
+//
+// A host outside the placed collection's member tree is an entry on that
+// placed instance. `member` may name an element nested inside it. Each
+// placed instance has its own entry, so repairing one leaves the others
+// alone. A host in an enclosing collection, and outside the member tree of
+// the collection the element is a `Member` of, is an entry on every instance
+// whose collection member tree contains the element and not the host and
+// that has no such instance further out. Each of those instances has its own
+// entry. Placements of the collection that contains one of them share that
+// instance's entry, because the instance entity is part of that definition.
+//
+// A home is each placed instance, when the host is outside that collection's
+// member tree, and each of those instances, when the host is in an enclosing
+// collection. The writer refuses an entry on this instance unless this
+// instance is one of those homes, a second entry for the same member on this
+// instance, an entry whose member also carries `HostedBehavior`, an entry
+// whose host is in the member tree of the collection the member is a
+// `Member` of, a member that is not in this collection's member tree, and
+// `HostedBehavior` and `CollectedMemberMatingFace` on the same element. A
+// reader that finds both faces does not choose one. The member carries
+// `CollectedMemberMatingFace`.
+message InstanceExternalHosts {
+  option (motif.extension.v1.message).component = 228;
+
+  // One entry per externally hosted member of this instance. At least one.
+  repeated ExternalHostBinding bindings = 1 [(buf.validate.field).repeated.min_items = 1];
+}
+
+// One element of a `CollectedElements`, seated on a host outside the member
+// tree of the collection that element is a `Member` of.
+message ExternalHostBinding {
+  // The element this entry seats. It is in this instance's collection member
+  // tree: a direct member, or a member of a collection nested inside it.
+  // Required.
+  motif.extension.v1.EntityReference member = 1 [(buf.validate.field).required = true];
+
+  // The host face: the host's `ReferenceGeometry` (target = the host entity)
+  // and, in the path, the entry that is the face. Required.
+  motif.extension.v1.DataReference host_surface = 2 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.model.v1.ReferenceGeometry"
+    }
+  ];
+
+  // Parametric coordinate on `host_surface`. Required.
+  motif.extension.v1.DataReference parametric_coordinate = 3 [
+    (buf.validate.field).required = true,
+    (motif.extension.v1.field).data_reference_expected_type = {
+      kind: TYPE_MESSAGE
+      type_name: "motif.data.geometry.v1.Point2"
+    }
+  ];
+
+  // Same as `HostedBehavior.angle_about_face_normal`, except this field has
+  // no older payload. Unset means no rotation.
+  motif.extension.v1.DataReference angle_about_face_normal = 4 [(motif.extension.v1.field).data_reference_expected_type = {kind: TYPE_DOUBLE}];
+
+  // Same as `HostedBehavior.host_frame_transform`. `this_entity` would name
+  // the instance that carries this binding, not the host, so that rejection
+  // stands. This field has no older payload.
+  motif.extension.v1.DataReference host_frame_transform = 5 [(motif.extension.v1.field).data_reference_expected_type = {
+    kind: TYPE_MESSAGE
+    type_name: "motif.data.core.v1.Isometry"
+  }];
+}
+
 // A behavior which subtracts one profile solid from a target geometry.
 //
 // Regeneration reads the target geometry, builds a profile solid from the
