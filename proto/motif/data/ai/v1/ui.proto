@@ -8,7 +8,7 @@ import "buf/validate/validate.proto";
 import "motif/extension/v1/options.proto";
 import "motif/extension/v1/reference.proto";
 
-// A persisted UI: a durable, replayable surface (A2UI) that a user saved for
+// A persisted UI: a durable, replayable surface that a user saved for
 // reuse. Unless it is explicitly saved, an agent-authored UI stays trapped in
 // the thread that created it and cannot be reused anywhere else.
 //
@@ -26,8 +26,8 @@ import "motif/extension/v1/reference.proto";
 // A canonical UI is stored as an entity in a dedicated, `Hidden`-marked library
 // model (the same pattern as `AgentSkill`), conventionally composed with:
 //   - `AssignedName` — the UI's display name,
-//   - `Representation` — the UI body: a normalized, replayable A2UI message
-//     bundle (`MIME_TYPE_JSON`), not the raw token stream.
+//   - `Representation` — the UI body in the declared body format, not the raw
+//     token stream.
 // Readers should tolerate the absence of either. Editing a UI uploads a new
 // representation and updates the pointer; existing revisions stay readable, and
 // model-local instances remain pinned to the revision they reference.
@@ -51,6 +51,21 @@ message Ui {
   // What the UI shows and when it is useful, in one or two sentences. Shown in
   // UI catalogs; not parsed from the body.
   string description = 3 [(buf.validate.field).string.max_len = 1024];
+
+  // How the body assembles surfaces. Unspecified is reserved for legacy UIs;
+  // readers must validate their bodies rather than infer composition from links.
+  UiComposition composition = 4 [(buf.validate.field).enum.defined_only = true];
+
+  // An extensible, normalized purpose, such as report, dashboard, or tool.
+  // Purpose does not grant capabilities or declare workflow ownership.
+  string purpose = 5 [(buf.validate.field).string = {
+    max_len: 64
+    pattern: "^([a-z][a-z0-9]*(-[a-z0-9]+)*)?$"
+  }];
+
+  // The representation's envelope format, independently of rendering runtime.
+  // Unspecified is reserved for legacy bodies and must never imply HTML.
+  UiBodyFormat body_format = 6 [(buf.validate.field).enum.defined_only = true];
 }
 
 // The runtime a persisted UI targets. Finer distinctions within a runtime (e.g.
@@ -64,8 +79,64 @@ enum UiRuntime {
   UI_RUNTIME_UNSPECIFIED = 0;
   // A declarative, replayable A2UI message bundle rendered by the host.
   UI_RUNTIME_A2UI = 1;
-  // TODO: UI_RUNTIME_IFRAME_HTML, for a sandboxed-iframe HTML runtime, once that
-  // runtime clears its own security review and feature gate.
+  // HTML rendered in an isolated iframe through the host's capability bridge.
+  UI_RUNTIME_IFRAME_HTML = 2;
+}
+
+// The structural contract of a persisted UI, independent of its purpose.
+enum UiComposition {
+  // Legacy composition requiring body validation.
+  UI_COMPOSITION_UNSPECIFIED = 0;
+  // One reusable surface.
+  UI_COMPOSITION_SINGLE_SURFACE = 1;
+  // A workflow's role-specific surfaces.
+  UI_COMPOSITION_WORKFLOW_BUNDLE = 2;
+}
+
+// The versioned envelope stored in the UI's representation.
+enum UiBodyFormat {
+  // Legacy format requiring body validation.
+  UI_BODY_FORMAT_UNSPECIFIED = 0;
+  // A replayable A2UI message array.
+  UI_BODY_FORMAT_A2UI_SNAPSHOT = 1;
+  // A motif.workflow-ui role bundle.
+  UI_BODY_FORMAT_WORKFLOW_BUNDLE = 2;
+  // A motif.report envelope containing an HTML presentation.
+  UI_BODY_FORMAT_HTML_REPORT = 3;
+}
+
+// Shared interactive state on a canonical Ui entity. The representation binding
+// must match the entity's current Representation before state can be used.
+// Replacing a definition atomically installs a new generation, binding, and
+// initial state, even when the new body has identical bytes. State-only writes
+// preserve the generation and binding.
+message UiState {
+  option (motif.extension.v1.message).component = 244;
+
+  // Unique identity of the definition replacement that initialized this state.
+  string definition_generation = 1 [(buf.validate.field).string.uuid = true];
+
+  // The definition representation this state belongs to.
+  motif.extension.v1.RepresentationReference definition = 2 [(buf.validate.field).required = true];
+
+  // A JSON value. Hosts validate JSON and enforce a 16,384 UTF-16 code-unit
+  // serialized limit; the byte bound permits its largest UTF-8 encoding.
+  string value_json = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_bytes: 49152
+  }];
+}
+
+// One source-model association, on a separate entity in the UI's owning model.
+// A Member component on that entity references its local canonical Ui. Keeping
+// Member separate prevents this model reference from changing its scope.
+// The pin records an observed source version, not proof of data extraction at
+// that version. Associations have their own history and may be absent or many.
+message UiSource {
+  option (motif.extension.v1.message).component = 245;
+
+  // An authorized, observed version of the source model.
+  motif.extension.v1.ModelReference source = 1 [(buf.validate.field).required = true];
 }
 
 // Where a UI instance is shown in the host, and how the user gets to it.
