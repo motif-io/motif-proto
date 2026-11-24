@@ -464,6 +464,7 @@ message ModelContent {
 
   oneof action {
     HistoryEnrichmentFinished history_enrichment_finished = 10;
+    MilestoneChanged milestone_changed = 11;
   }
 }
 
@@ -836,4 +837,17 @@ enum GlobalRole {
   GLOBAL_ROLE_GLOBAL_ADMIN = 2;
   GLOBAL_ROLE_SUPPORT = 3;
   GLOBAL_ROLE_SUBSCRIBED_MEMBER = 4;
+}
+
+// A committed bookmark revision changed. Published best effort after commit on
+// modelContent/{model_id}, including for private bookmarks. Subscribers may
+// observe private IDs and revisions; protected content is read only through the
+// currently authorized milestone APIs. The body carries only identity/revision.
+//
+// Hints may be missed, duplicated or reordered. Invalidate relevant queries and
+// refetch authorized state. Refresh on normal view load and reconnect. A hint
+// alone creates no visible milestone or grouping boundary.
+message MilestoneChanged {
+  bytes history_bookmark_id = 1 [(buf.validate.field).bytes.len = 16];
+  int32 revision = 2 [(buf.validate.field).int32.gt = 0];
 }

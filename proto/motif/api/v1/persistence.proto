@@ -77,6 +77,41 @@ service Persistence {
   // buf:lint:ignore RPC_REQUEST_STANDARD_NAME
   rpc ListChangesets(ListChangesetRequest) returns (ListChangesetsResponse);
 
+  // Creates an independently versioned bookmark into model history.
+  // Requires project Edit, plus creator ownership for private mutations.
+  // ALREADY_EXISTS reports an active name collision in the public model or
+  // private creator scope. INVALID_ARGUMENT reports malformed fields or text.
+  // FAILED_PRECONDITION reports a soft-deleted model or uncommitted target.
+  // Successful mutations return their committed snapshot. An uncertain timeout
+  // requires an authorized reload before deciding whether to repeat a mutation.
+  rpc CreateMilestone(CreateMilestoneRequest) returns (CreateMilestoneResponse);
+
+  // Resolves an active authorized bookmark, concealing removed or inaccessible
+  // identities with NOT_FOUND. Transient failures return UNAVAILABLE.
+  rpc GetMilestone(GetMilestoneRequest) returns (GetMilestoneResponse);
+
+  // Enumerates current active bookmarks visible to the caller.
+  rpc ListMilestones(ListMilestonesRequest) returns (ListMilestonesResponse);
+
+  // Atomically updates a bookmark at expected_revision. Stale writes return
+  // ABORTED before the unchanged-state test. Errors otherwise follow creation.
+  // An unchanged update returns the existing revision and attribution.
+  rpc UpdateMilestone(UpdateMilestoneRequest) returns (UpdateMilestoneResponse);
+
+  // Removes a bookmark while retaining its revision history. Requires Edit
+  // and creator ownership for a private bookmark. Soft-deleted models reject
+  // mutations with FAILED_PRECONDITION.
+  rpc RemoveMilestone(RemoveMilestoneRequest) returns (RemoveMilestoneResponse);
+
+  // Reads retained bookmark revisions using current content permissions.
+  rpc ListMilestoneRevisions(ListMilestoneRevisionsRequest) returns (ListMilestoneRevisionsResponse);
+
+  // Pages a reader-specific model-history projection and expands its groups.
+  rpc ListChangesetsIndex(ListChangesetsIndexRequest) returns (ListChangesetsIndexResponse);
+
+  // Lists model-wide contributors for history author selection.
+  rpc ListChangesetAuthors(ListChangesetAuthorsRequest) returns (ListChangesetAuthorsResponse);
+
   // Streams the diff between two model-history cursor positions.
   //
   // buf:lint:ignore RPC_RESPONSE_STANDARD_NAME
@@ -1126,4 +1161,381 @@ message TraverseReferencesResponse {
     // Progress of the graph walk.
     Progress progress = 4;
   }
+}
+
+// Public or creator-private access, fixed when a milestone is created.
+enum MilestoneVisibility {
+  MILESTONE_VISIBILITY_UNSPECIFIED = 0;
+  MILESTONE_VISIBILITY_PUBLIC = 1;
+  MILESTONE_VISIBILITY_PRIVATE = 2;
+}
+
+// The mutation that produced a milestone revision.
+enum MilestoneOperation {
+  MILESTONE_OPERATION_UNSPECIFIED = 0;
+  MILESTONE_OPERATION_CREATE = 1;
+  MILESTONE_OPERATION_UPDATE = 2;
+  MILESTONE_OPERATION_REMOVE = 3;
+}
+
+// One immutable snapshot of a bookmark into a committed model version.
+// Model, creator, visibility and original creation time stay fixed across
+// revisions. Public content requires current project View. Private content and
+// revisions require the creator and current project View, including for project
+// owners. Mutations additionally require project Edit.
+//
+// Copies start without bookmarks. Model restore preserves bookmark history and
+// permissions. Soft-delete retains bookmarks and prevents mutations until
+// undelete. Authorized model purge permanently removes all bookmark revisions.
+message Milestone {
+  bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
+  // Server-assigned stable UUID, retained after removal.
+  bytes history_bookmark_id = 2 [(buf.validate.field).bytes.len = 16];
+  // Positive revision, starting at one. Independent of target_version.
+  int32 revision = 3 [(buf.validate.field).int32.gt = 0];
+  bytes creator_user_id = 4 [(buf.validate.field).bytes.len = 16];
+  MilestoneVisibility visibility = 5 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  google.protobuf.Timestamp created_at = 6 [(buf.validate.field).required = true];
+  // Trim Unicode White_Space, normalize to NFC, then count 1..48 Unicode
+  // scalar values. Preserve display capitalization and internal whitespace.
+  // Active names use canonical caseless matching,
+  // NFD(toCasefold(NFD(name))), per model for public bookmarks and per
+  // model/creator for private bookmarks.
+  string name = 7 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 48
+  }];
+  // Preserved text, at most 500 Unicode scalar values.
+  string description = 8 [(buf.validate.field).string.max_len = 500];
+  int32 target_version = 9 [(buf.validate.field).int32.gt = 0];
+  bool removed = 10;
+  bytes actor_user_id = 11 [(buf.validate.field).bytes.len = 16];
+  optional bytes actor_client_id = 12 [(buf.validate.field).bytes.len = 16];
+  google.protobuf.Timestamp recorded_at = 13 [(buf.validate.field).required = true];
+  // Compare adjacent snapshots to obtain metadata edits and prior targets.
+  MilestoneOperation operation = 14 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+}
+
+// Creates a bookmark with revision one. Creator and actor come from
+// authentication. Validate name length after normalization as on Milestone.
+message CreateMilestoneRequest {
+  bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
+  string name = 2;
+  optional string description = 3 [(buf.validate.field).string.max_len = 500];
+  int32 target_version = 4 [(buf.validate.field).int32.gt = 0];
+  MilestoneVisibility visibility = 5 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+}
+
+message CreateMilestoneResponse {
+  Milestone milestone = 1 [(buf.validate.field).required = true];
+}
+
+// Resolves the latest active authorized revision. Removed, inaccessible and
+// nonexistent IDs all return NOT_FOUND. A saved link follows the current
+// target of this identity. A failed target read must be surfaced to the caller.
+message GetMilestoneRequest {
+  bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
+  bytes history_bookmark_id = 2 [(buf.validate.field).bytes.len = 16];
+}
+
+message GetMilestoneResponse {
+  Milestone milestone = 1 [(buf.validate.field).required = true];
+}
+
+// Exclusive boundary values for creation-descending enumeration. Continuation
+// does not require the anchor bookmark to remain active or accessible.
+message MilestoneListBoundary {
+  google.protobuf.Timestamp created_at = 1 [(buf.validate.field).required = true];
+  bytes history_bookmark_id = 2 [(buf.validate.field).bytes.len = 16];
+}
+
+// Lists current active public and caller-private bookmarks. Order is original
+// creation time descending, then UUID bytes descending. Each page authorizes
+// and reads current state before applying bounds.
+message ListMilestonesRequest {
+  bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
+  // Defaults to 100.
+  optional uint32 page_size = 2 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 500
+  }];
+  MilestoneListBoundary before = 3;
+}
+
+message ListMilestonesResponse {
+  repeated Milestone milestones = 1;
+  bool has_more = 2;
+  // Present exactly when has_more, derived from the last returned entry.
+  MilestoneListBoundary next_before = 3;
+}
+
+// Atomically edits an active bookmark. Omitted fields preserve their values;
+// an explicitly empty description clears it. Validate names as on Milestone.
+message UpdateMilestoneRequest {
+  bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
+  bytes history_bookmark_id = 2 [(buf.validate.field).bytes.len = 16];
+  // Checked before the unchanged-state test. Unrelated model or bookmark
+  // changes do not invalidate this precondition. A stale value returns ABORTED.
+  int32 expected_revision = 3 [(buf.validate.field).int32.gt = 0];
+  optional string name = 4;
+  optional string description = 5 [(buf.validate.field).string.max_len = 500];
+  optional int32 target_version = 6 [(buf.validate.field).int32.gt = 0];
+}
+
+message UpdateMilestoneResponse {
+  // The committed snapshot, or the existing snapshot for an unchanged update.
+  // A state-changing update increments the revision exactly once.
+  Milestone milestone = 1 [(buf.validate.field).required = true];
+}
+
+// Removes the current bookmark and releases its active name, retaining
+// identity and revisions. Repeated removal returns the existing removed
+// snapshot. Reusing a removed name allocates a fresh bookmark UUID.
+message RemoveMilestoneRequest {
+  bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
+  bytes history_bookmark_id = 2 [(buf.validate.field).bytes.len = 16];
+}
+
+message RemoveMilestoneResponse {
+  Milestone milestone = 1 [(buf.validate.field).required = true];
+}
+
+// Lists retained authorized snapshots, including removed bookmarks, in
+// revision-descending order. Every page checks current content permissions.
+message ListMilestoneRevisionsRequest {
+  bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
+  bytes history_bookmark_id = 2 [(buf.validate.field).bytes.len = 16];
+  // Defaults to 100.
+  optional uint32 page_size = 3 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 500
+  }];
+  // Exclusive boundary.
+  optional int32 before_revision = 4 [(buf.validate.field).int32.gt = 0];
+}
+
+message ListMilestoneRevisionsResponse {
+  repeated Milestone revisions = 1;
+  bool has_more = 2;
+  // Present exactly when has_more, equal to the last returned revision.
+  optional int32 next_before_revision = 3 [(buf.validate.field).int32.gt = 0];
+}
+
+// A reader-specific projection of model history. Roots are local days, with
+// individual versions and repeated-edit groups inside each day. Groups have at
+// most 100 consecutive versions with the same author, action and element type.
+// A restore, reader-visible milestone, different author/action/type, mixed edit
+// or unknown classification breaks a run. Boundaries are determined before
+// filtering. Private bookmarks affect only their creator's projection.
+//
+// Order days by local date and entries by model version, in the requested
+// direction. Use the same query to page roots or expand a group. Each request
+// authorizes and reads fresh data. Refresh after edits, milestone moves or late
+// semantic enrichment. Pages do not retain a cross-request snapshot.
+message ListChangesetsIndexRequest {
+  option (buf.validate.message).cel = {
+    id: "history_index.root_focus"
+    message: "focus requests must start at the root"
+    expression: "(!has(this.around_version) && !has(this.around_history_bookmark_id)) || !has(this.parent_group_key)"
+  };
+  bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
+  // Required IANA timezone, used for calendar dates and daylight-saving rules.
+  string time_zone = 2 [(buf.validate.field).string.min_len = 1];
+  bool oldest_first = 3;
+  HistoryIndexFilter filter = 4;
+  // Omit for day groups. Use a returned day or repeated-edit group key to
+  // expand it. Keys are opaque and scoped to reader, model and query.
+  optional bytes parent_group_key = 5 [(buf.validate.field).bytes.min_len = 1];
+  // Defaults to 100. Bounds entries, including when seeking.
+  optional uint32 page_size = 6 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 500
+  }];
+  oneof start {
+    // Use either continuation from the response with the identical query and
+    // parent. Mismatched tokens return INVALID_ARGUMENT.
+    bytes page_token = 7 [(buf.validate.field).bytes.min_len = 1];
+    int32 around_version = 8 [(buf.validate.field).int32.gt = 0];
+    bytes around_history_bookmark_id = 9 [(buf.validate.field).bytes.len = 16];
+  }
+}
+
+// Selected authors combine by OR; all other filters combine by AND.
+message HistoryIndexFilter {
+  option (buf.validate.message).cel = {
+    id: "history_index.date_order"
+    message: "from_inclusive must precede to_exclusive"
+    expression: "!has(this.from_inclusive) || !has(this.to_exclusive) || this.from_inclusive < this.to_exclusive"
+  };
+  repeated bytes author_ids = 1 [(buf.validate.field).repeated = {
+    unique: true
+    items: {
+      bytes: {len: 16}
+    }
+  }];
+  google.protobuf.Timestamp from_inclusive = 2;
+  google.protobuf.Timestamp to_exclusive = 3;
+  // Match distinct versions changing this entity at CLIENT or DERIVED.
+  optional bytes entity_id = 4 [(buf.validate.field).bytes.len = 16];
+  // Match versions with at least one active reader-visible milestone.
+  bool milestones_only = 5;
+  // Defaults to true. False hides system lines and excludes derived-only
+  // entity matches while preserving direct matches.
+  optional bool include_system_updates = 6;
+}
+
+message ListChangesetsIndexResponse {
+  repeated HistoryIndexEntry entries = 1;
+  // Empty at the end of the requested order.
+  bytes next_page_token = 2;
+  // Empty at the beginning of the requested order.
+  bytes previous_page_token = 3;
+  // Focus requests resolve the current authorized milestone target, or the
+  // explicit version. Excluded authorized targets return FAILED_PRECONDITION;
+  // nonexistent versions and removed/inaccessible milestones return NOT_FOUND.
+  optional int32 focused_version = 4 [(buf.validate.field).int32.gt = 0];
+  // Outer to inner expandable groups leading to focused_version. The returned
+  // root page contains the first group; expand each group in turn.
+  repeated bytes focus_group_path = 5;
+}
+
+message HistoryIndexEntry {
+  oneof kind {
+    option (buf.validate.oneof).required = true;
+    HistoryIndexGroup group = 1;
+    HistoryIndexChangeset changeset = 2;
+  }
+}
+
+message HistoryIndexGroup {
+  bytes group_key = 1 [(buf.validate.field).bytes.min_len = 1];
+  // Matching changesets, counted once each, including when annotations exist.
+  uint32 matching_changeset_count = 2 [(buf.validate.field).uint32.gt = 0];
+  oneof kind {
+    option (buf.validate.oneof).required = true;
+    HistoryIndexDay day = 3;
+    HistoryIndexRepeatedEdits repeated_edits = 4;
+  }
+}
+
+message HistoryIndexDay {
+  // Calendar date in the requested timezone, YYYY-MM-DD.
+  string local_date = 1 [(buf.validate.field).string.pattern = "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"];
+  // Up to three authors of matching versions, ordered by matching count
+  // descending, then UUID bytes ascending.
+  repeated bytes top_author_ids = 2 [(buf.validate.field).repeated = {
+    max_items: 3
+    unique: true
+    items: {
+      bytes: {len: 16}
+    }
+  }];
+  // Up to three visible markers in the requested version order, then bookmark
+  // UUID bytes ascending for equal versions. Expand the day to see the rest.
+  repeated HistoryIndexMilestone milestone_preview = 3 [(buf.validate.field).repeated.max_items = 3];
+  // Total visible markers on matching versions in this day.
+  uint32 matching_milestone_count = 4;
+}
+
+// Version and time bounds describe the original contiguous run, before
+// filtering; matching_changeset_count counts its filtered members.
+message HistoryIndexRepeatedEdits {
+  bytes author_id = 1 [(buf.validate.field).bytes.len = 16];
+  SemanticHistory.EntityChange.Verb action = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  SemanticHistory.Classification element_type = 3 [(buf.validate.field).required = true];
+  int32 first_version = 4 [(buf.validate.field).int32.gt = 0];
+  int32 last_version = 5 [(buf.validate.field).int32.gt = 0];
+  google.protobuf.Timestamp first_edit_at = 6 [(buf.validate.field).required = true];
+  google.protobuf.Timestamp last_edit_at = 7 [(buf.validate.field).required = true];
+  // Whether matching members include derived changes.
+  bool has_system_updates = 8;
+}
+
+message HistoryIndexChangeset {
+  // Metadata and complete semantic facts when available, including CLIENT
+  // and applicable DERIVED facts. Callers can summarize system changes under
+  // their causative version. Missing enrichment leaves metadata readable.
+  ChangesetListItem changeset = 1 [(buf.validate.field).required = true];
+  repeated HistoryIndexMilestone milestones = 2;
+  // Authorized retained moves away from this version, ordered by bookmark
+  // UUID bytes, then revision ascending.
+  repeated HistoryIndexMilestoneMove milestone_moves = 3;
+  // Present for an entity-filtered query. Obtained from historical component
+  // changes even if semantic enrichment is pending.
+  HistoryIndexEntityMatch entity_match = 4;
+}
+
+// The selected entity's actual stages in this version. At least one is true.
+// Both may be true. Client changes take precedence for the direct-match test.
+message HistoryIndexEntityMatch {
+  option (buf.validate.message).cel = {
+    id: "history_index.entity_match"
+    message: "an entity match requires a client or system change"
+    expression: "this.direct_change || this.system_change"
+  };
+  bool direct_change = 1;
+  bool system_change = 2;
+}
+
+// Compact marker at the target version. Use the milestone domain APIs for
+// descriptions, editing and retained revision history.
+message HistoryIndexMilestone {
+  bytes history_bookmark_id = 1 [(buf.validate.field).bytes.len = 16];
+  int32 revision = 2 [(buf.validate.field).int32.gt = 0];
+  int32 target_version = 3 [(buf.validate.field).int32.gt = 0];
+  string name = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 48
+  }];
+  MilestoneVisibility visibility = 5 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+}
+
+// One retained revision that moved a reader-visible milestone away from the
+// enclosing version. Later moves do not rewrite this historical destination.
+message HistoryIndexMilestoneMove {
+  bytes history_bookmark_id = 1 [(buf.validate.field).bytes.len = 16];
+  int32 revision = 2 [(buf.validate.field).int32.gt = 0];
+  int32 new_target_version = 3 [(buf.validate.field).int32.gt = 0];
+  bytes actor_user_id = 4 [(buf.validate.field).bytes.len = 16];
+}
+
+// Enumerates authors across the entire authorized model history for people
+// selection, independent of the currently loaded index pages and filters.
+message ListChangesetAuthorsRequest {
+  bytes model_id = 1 [(buf.validate.field).bytes.len = 16];
+  // Defaults to 100.
+  optional uint32 page_size = 2 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 500
+  }];
+  // Empty starts the list. Opaque continuation scoped to model and reader.
+  bytes page_token = 3;
+}
+
+message ListChangesetAuthorsResponse {
+  // Ordered by changeset count descending, then UUID bytes ascending.
+  repeated ChangesetAuthor authors = 1;
+  // Empty when complete. Each page authorizes and reads current state.
+  bytes next_page_token = 2;
+}
+
+// One contributor and their count of authored versions in the model.
+message ChangesetAuthor {
+  bytes author_id = 1 [(buf.validate.field).bytes.len = 16];
+  uint32 changeset_count = 2 [(buf.validate.field).uint32.gt = 0];
 }
