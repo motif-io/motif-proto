@@ -14,10 +14,13 @@ import "motif/extension/v1/options.proto";
 // Each part resolves as a `TablePartStyle` does, and yields the same
 // properties: the text's font, weight, slant, color, printed height and
 // justification, and the shape's fill and rules. What it yields lays over
-// the table's own part. Its part links opt into pinned resolution
-// as `DimensionStyleAsset`'s do: an unqualified link resolves in this
-// asset's model snapshot, and a link naming a model uses that model's
-// recorded version.
+// the table's own part. Its part links (each part's text and shape style,
+// and the line style its shape's border names) opt into pinned resolution as
+// `DimensionStyleAsset`'s do: an unqualified link resolves in this asset's
+// model snapshot, and a link naming a model uses that model's recorded
+// version. A color follows `StyleColorSource.pin_style`; when a part's own
+// text or shape follows a live color in this model, writers leave its model
+// unset and set `pin_style`.
 //
 // A property a part leaves unset is the table's own. Every part is optional.
 message TableStyleAsset {

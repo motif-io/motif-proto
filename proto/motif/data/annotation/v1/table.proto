@@ -19,12 +19,14 @@ import "motif/extension/v1/options.proto";
 // reader that does not know that version prints the table with its
 // defaults.
 //
-// Every style link in here, `style_asset` and each part's text, shape,
-// border line and color links, opts into pinned resolution as
-// `DimensionStyleAsset`'s links do: an unqualified
-// link resolves in the model holding the table, and a link naming a model
-// uses that model's recorded version. Editing a library style changes no
-// table until the table's link moves to the new version.
+// `style_asset` and the part links (each part's text and shape style, and
+// the line style its shape's border names) opt into pinned resolution as
+// `DimensionStyleAsset`'s do: an unqualified link resolves in the model
+// holding the table, and a link naming a model uses that model's recorded
+// version. A color follows `StyleColorSource.pin_style`; when a part's own
+// text or shape follows a live color in this model, writers leave its model
+// unset and set `pin_style`. Editing a library style changes no table until
+// the table's link moves to the new version.
 message TableAppearance {
   option (motif.extension.v1.message).component = 266;
 
