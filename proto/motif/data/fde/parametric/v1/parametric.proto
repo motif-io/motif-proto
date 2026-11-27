@@ -33,7 +33,7 @@ import "motif/extension/v1/reference.proto";
 // "kernel" below need a geometry kernel; a reader without one (a client
 // preview) declines the part rather than approximating it.
 message AnalyticalAssetConfiguration {
-  option (motif.extension.v1.message).component = 254;
+  option (motif.extension.v1.message).component = 267;
 
   // Minimum reader version of the shared asset configuration language. Always
   // 3 for this component; a later semantic extension can bump it without a
@@ -673,7 +673,7 @@ message AnalyticalAssetConfiguration {
 // Regeneration resolves `inputs`, evaluates `configuration`, selects the part
 // at `part_index`, and writes its B-rep geometry to `output` as a `Shape`.
 message AnalyticalAssetPartBehavior {
-  option (motif.extension.v1.message).component = 255;
+  option (motif.extension.v1.message).component = 268;
 
   // Resolved parameter inputs keyed by parameter name. The configuration's
   // decoder validates the value types it needs.
