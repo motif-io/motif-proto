@@ -37,6 +37,9 @@ enum ViewKind {
   // Reflected ceiling plan: an upward-looking plan-family view. Distinct from
   // PLAN because its camera direction and view-range semantics differ.
   VIEW_KIND_RCP = 7;
+  // A schedule: a table laid out from its `ScheduleDefinition` in the view's
+  // own paper space, framing nothing in the model.
+  VIEW_KIND_SCHEDULE = 8;
 }
 
 // Distinguishes the documentation role of an elevation-family view (a view

@@ -1,0 +1,314 @@
+syntax = "proto3";
+
+// Schedules: live tables of model elements, listed with views, placed on
+// sheets and exported.
+//
+// A schedule is a `View` of kind `VIEW_KIND_SCHEDULE` carrying a
+// `ScheduleDefinition`. Its `AssignedName` is the printed title and its
+// camera is derived from the laid-out table. It is placed on a sheet by a
+// viewport like any view; a `ScheduleSegment` on the viewport says which
+// rows it shows. Rows and cell values are never persisted: readers rebuild
+// them from the model and the definition, and an edited cell writes the
+// element it reads.
+package motif.data.view.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/empty.proto";
+import "motif/data/annotation/v1/table.proto";
+import "motif/data/filter/v1/filter.proto";
+import "motif/data/geometry/v1/geometry.proto";
+import "motif/data/model/v1/model.proto";
+import "motif/extension/v1/options.proto";
+
+// What a schedule lists and how its table is arranged. Lives on the
+// schedule's view. How the table prints is
+// `motif.data.annotation.v1.TableAppearance`, a component of the same entity.
+//
+// A reader that meets a part it does not know (an unknown field, oneof arm
+// or enum value, here or in a filter) cannot rebuild the table as written.
+// It shows no rows and must not write the definition back.
+message ScheduleDefinition {
+  option (motif.extension.v1.message).component = 244;
+
+  // The rows: the entities of the containing model that this matches,
+  // every entity when unset. It is the whole pick, with no other field
+  // narrowing it, so a schedule lists what a view with the same filter
+  // shows; a saved filter it names (a `saved_filter` node) changes every
+  // schedule that names it. Elements hidden from the schedule are `not` of
+  // an `entities` node naming entities of the schedule's own model, written
+  // last under a top `all`, so a reader can show them apart from the rest.
+  // With nothing hidden, a writer nests a filter of that shape itself (an
+  // `all` whose last child is such a `not`) one level down, under another
+  // `all`, so it does not read back as the hidden list.
+  motif.data.filter.v1.FilterExpression filter = 1;
+
+  // In display order, hidden columns included.
+  repeated ScheduleColumn columns = 2;
+
+  // Applied in sequence after the group columns; ties fall through to the
+  // next key, then to the reader's stable order.
+  repeated SortKey sort = 3;
+
+  // Grouping, outermost level first. Group columns sort ahead of `sort` so
+  // that each group's rows stay together.
+  repeated GroupLevel groups = 4;
+
+  // Rows equal in the sort and group columns (in every printed column when
+  // there are none) collapse into one row, which shows `varies_text` where
+  // its elements differ. False gives every element its own row.
+  bool collapse_rows = 5;
+
+  // The table closes with a row carrying the row count and each aggregated
+  // column's result. Off, no group closes with a subtotal line either.
+  bool footer = 6;
+
+  // Every group closes without its closing line, whatever its level asks:
+  // the schedule shows no subtotals. The table's own footer is unaffected.
+  bool hide_group_footers = 7;
+
+  // Labels printed in rows above the column headers, each over a run of
+  // columns. Groups nest or stand apart; a group spanning the same columns as
+  // an earlier one sits under it.
+  repeated ColumnGroup column_groups = 8;
+
+  // What a cell shows where its element has no such property. Unset shows
+  // `-`.
+  optional string not_applicable_text = 9;
+
+  // What a cell of a collapsed row shows where its elements differ. Unset
+  // shows `<varies>`.
+  optional string varies_text = 10;
+}
+
+// A label over the printed columns from `first_column_id` to
+// `last_column_id`, in the order of the definition's columns; hidden columns
+// between them take no room. A group naming no column, or ending before it
+// starts, is skipped.
+message ColumnGroup {
+  uint32 first_column_id = 1 [(buf.validate.field).uint32.gt = 0];
+  uint32 last_column_id = 2 [(buf.validate.field).uint32.gt = 0];
+
+  // The printed label.
+  string label = 3;
+}
+
+// One column of a schedule.
+message ScheduleColumn {
+  // Unique within the schedule; what `SortKey`, `GroupLevel` and
+  // `ColumnGroup` refer to.
+  uint32 id = 1 [(buf.validate.field).uint32.gt = 0];
+
+  // The printed header.
+  string header = 2;
+
+  // What the column reads.
+  ScheduleColumnSource source = 3 [(buf.validate.field).required = true];
+
+  // How the column's values are parsed, sorted, aggregated and formatted,
+  // in place of the kind the column's property has. Unspecified takes that
+  // kind: a declared property's own, text for an imported property, which
+  // declares none, a number for a count and text for a combined column.
+  ScheduleValueKind kind = 4 [(buf.validate.field).enum.defined_only = true];
+
+  // Takes part in sorting, grouping and collapsing without being printed.
+  bool hidden = 5;
+
+  // What the footer and each group's closing line show for this column.
+  // Unspecified shows nothing.
+  ScheduleAggregation aggregation = 6 [(buf.validate.field).enum.defined_only = true];
+
+  // Printed width in paper meters. Unset sizes the column to its content.
+  optional double width = 7 [(buf.validate.field).double.gt = 0];
+
+  // Horizontal alignment of the column's cells, ahead of the body part's
+  // (see `motif.data.annotation.v1.TableAlignment`). Unspecified takes the
+  // body part's, else the kind's default: right for numbers and lengths,
+  // left otherwise.
+  motif.data.annotation.v1.TableAlignment alignment = 8 [(buf.validate.field).enum.defined_only = true];
+
+  // The unit, notation and precision a length column prints and aggregates
+  // in, and reads a typed number with no unit in. Fractional notation rounds
+  // to the nearest 1/precision inch. Unset, or with
+  // `length_format.follow_model` set, the column prints in the model's unit
+  // settings; ignored on other kinds.
+  motif.data.model.v1.LengthUnitGroup length_units = 9;
+
+  // How a length column prints beyond its units: rounding to an increment,
+  // the symbol and the display options. Unset prints `length_units` with
+  // the unit's default symbol and no display option; ignored on other kinds.
+  ScheduleLengthFormat length_format = 10;
+}
+
+// How a length column prints, beyond `ScheduleColumn.length_units`.
+message ScheduleLengthFormat {
+  // The column prints in the model's unit settings. `length_units` and the
+  // other fields are kept, and apply again once this is cleared.
+  bool follow_model = 1;
+
+  // Rounds to the nearest multiple of this, in the unit of `length_units`,
+  // in place of its precision, printing as many decimals as the increment
+  // has (at most 6). Decimal notation only; ignored with fractional.
+  optional double increment = 2 [(buf.validate.field).double = {
+    gt: 0
+    finite: true
+  }];
+
+  // What follows a value in decimal notation. Unspecified takes the unit's
+  // default: the mark for feet and inches, the abbreviation for every other
+  // unit. Ignored with fractional notation, whose marks are fixed.
+  ScheduleLengthSymbol symbol = 3 [(buf.validate.field).enum.defined_only = true];
+
+  // Drops zeros at the end of a decimal part, then a lone decimal point.
+  bool suppress_trailing_zeros = 4;
+
+  // Feet and inches print without the feet while they are 0: `6 1/4"`.
+  bool suppress_zero_feet = 5;
+
+  // A positive value prints with `+`. A value that rounds to zero prints
+  // no sign.
+  bool show_plus = 6;
+
+  // The whole part prints with a comma every three digits.
+  bool digit_grouping = 7;
+
+  // No space before an abbreviation, and none around the `-` between feet
+  // and inches: `3764mm`, `12'-4 3/16"`.
+  bool suppress_spaces = 8;
+}
+
+// What follows a length printed in decimal notation.
+enum ScheduleLengthSymbol {
+  // The unit's default.
+  SCHEDULE_LENGTH_SYMBOL_UNSPECIFIED = 0;
+  // Nothing.
+  SCHEDULE_LENGTH_SYMBOL_NONE = 1;
+  // The foot (') or inch (") mark. Feet and inches only.
+  SCHEDULE_LENGTH_SYMBOL_MARK = 2;
+  // The unit's abbreviation: ft, in, yd, mi, mm, cm, m or km.
+  SCHEDULE_LENGTH_SYMBOL_ABBREVIATION = 3;
+}
+
+// What a column's footer and group closing lines show, over the elements of
+// the table or of the group, a collapsed row counting each of its elements.
+// Every aggregation but `COUNT` reads the values as they print, rounded to
+// the column's display precision, so a sum matches the cells above it, and
+// shows nothing on a column that is not a number or a length.
+enum ScheduleAggregation {
+  // No aggregation.
+  SCHEDULE_AGGREGATION_UNSPECIFIED = 0;
+  // The sum of the values; 0 with none.
+  SCHEDULE_AGGREGATION_SUM = 1;
+  // The least value; nothing with none.
+  SCHEDULE_AGGREGATION_MIN = 2;
+  // The greatest value; nothing with none.
+  SCHEDULE_AGGREGATION_MAX = 3;
+  // The arithmetic mean of the values; nothing with none.
+  SCHEDULE_AGGREGATION_MEAN = 4;
+  // The population standard deviation of the values; nothing with none.
+  SCHEDULE_AGGREGATION_STANDARD_DEVIATION = 5;
+  // How many elements have a value in the column, of any kind. A count
+  // column counts the elements a row stands for whatever they hold.
+  SCHEDULE_AGGREGATION_COUNT = 6;
+}
+
+// What a schedule column reads.
+message ScheduleColumnSource {
+  oneof source {
+    option (buf.validate.oneof).required = true;
+
+    // One property of the row's element, read from the source it names. A
+    // parameter reads the parameter of that name on whichever asset each
+    // element places, as a column across several door types does, and names
+    // no asset. A computed value gives a calculated column, and a `coalesce`
+    // one that shows the first of several properties that has a value.
+    motif.data.filter.v1.FilterPropertyRead property = 1;
+
+    // How many elements the row stands for: 1 for an element's own row, the
+    // element count of a collapsed row.
+    google.protobuf.Empty count = 2;
+
+    // Several properties joined into one line of text, such as a width and a
+    // height or a level and a mark. Read-only.
+    ScheduleCombinedColumn combined = 3;
+  }
+}
+
+// The parts of a combined column. Each part prints as the model displays its
+// value, a length in the model's unit settings rather than as a number in SI
+// units, and the parts that print are joined with `separator` in order. A
+// part with no value, or whose text is empty or only white space, is left
+// out together with its separator; a row where every part is left out has no
+// value. The column's kind is text.
+message ScheduleCombinedColumn {
+  // Each read as `ScheduleColumnSource.property` reads.
+  repeated motif.data.filter.v1.FilterPropertyRead parts = 1 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 100
+  }];
+
+  // Printed between two parts that print. May be empty.
+  string separator = 2;
+}
+
+// How a column's values are parsed, sorted, aggregated and formatted.
+enum ScheduleValueKind {
+  // The kind of the column's property.
+  SCHEDULE_VALUE_KIND_UNSPECIFIED = 0;
+  // Text, sorted in natural order ("Door 9" before "Door 10").
+  SCHEDULE_VALUE_KIND_TEXT = 1;
+  // A plain number.
+  SCHEDULE_VALUE_KIND_NUMBER = 2;
+  // Yes or no.
+  SCHEDULE_VALUE_KIND_BOOLEAN = 3;
+  // A length.
+  SCHEDULE_VALUE_KIND_LENGTH = 4;
+}
+
+// One sort key.
+message SortKey {
+  // The column sorted on. A key naming no column is skipped.
+  uint32 column_id = 1 [(buf.validate.field).uint32.gt = 0];
+
+  // Largest first.
+  bool descending = 2;
+}
+
+// One level of grouping: rows with equal values in the column form a group.
+message GroupLevel {
+  // The column grouped on. A level naming no column is skipped.
+  uint32 column_id = 1 [(buf.validate.field).uint32.gt = 0];
+
+  // The group opens with a line showing its value.
+  bool header = 2;
+
+  // The group closes with a line carrying its row count and each aggregated
+  // column's result.
+  bool footer = 3;
+}
+
+// Which part of a schedule a viewport shows. Lives on the viewport that
+// `Presents` the schedule view, next to its sheet `Member` and paper
+// `Transform`. Rows flow through a schedule's viewports in `order`, on any
+// sheet: each takes the whole rows that fit under its `max_height`, repeats
+// the column header, and only the last closes with the footer. A viewport
+// presenting a schedule without this component shows the whole table.
+//
+// A table grows down and to the right from its top-left corner, so the corner
+// is what places it: a reader derives the viewport's centre from the corner
+// and the size it lays the segment out to, and writers keep the viewport's
+// `Transform` at that centre.
+message ScheduleSegment {
+  option (motif.extension.v1.message).component = 245;
+
+  // Position in the flow across all of the schedule's viewports. Viewports
+  // with equal orders flow in an order the reader picks.
+  uint32 order = 1;
+
+  // The paper height in meters the segment may take, title and header
+  // included. Unset takes every remaining row. The first row always fits.
+  optional double max_height = 2 [(buf.validate.field).double.gt = 0];
+
+  // The table's top-left corner on the sheet, in paper meters, +Y up. Unset
+  // takes the corner from the viewport's `Transform` and the laid-out size.
+  motif.data.geometry.v1.Point2 top_left = 3;
+}

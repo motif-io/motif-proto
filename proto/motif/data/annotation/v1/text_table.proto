@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package motif.data.annotation.v1;
+
+import "buf/validate/validate.proto";
+import "motif/data/annotation/v1/table.proto";
+import "motif/extension/v1/options.proto";
+
+// A table of typed text, such as a key, a legend or general notes: an
+// annotation that owns its cells and reads nothing from the model. Lives on
+// an entity that is a `Member` of a sheet or a drafting view, whose paper
+// `Transform` is the table's top-left corner. How it prints is
+// `TableAppearance`, a component of the same entity.
+message TextTable {
+  option (motif.extension.v1.message).component = 246;
+
+  // The printed title.
+  string title = 1;
+
+  // One header per column; their number is the table's column count.
+  repeated string headers = 2;
+
+  // The body, top to bottom.
+  repeated TextTableRow rows = 3;
+
+  // How each column prints, in header order. A column past the end sizes to
+  // its text and sets no alignment; entries past the column count are ignored.
+  repeated TextTableColumn columns = 4;
+}
+
+// How one column of a text table prints.
+message TextTableColumn {
+  // Printed width in paper meters. Unset sizes the column to its text.
+  optional double width = 1 [(buf.validate.field).double.gt = 0];
+
+  // Horizontal alignment of the column's cells, ahead of the body part's
+  // (see `TableAlignment`). Unspecified takes the body part's, else aligns
+  // left.
+  TableAlignment alignment = 2 [(buf.validate.field).enum.defined_only = true];
+}
+
+// One body row of a text table.
+message TextTableRow {
+  // One per column, in header order. Missing cells are blank; cells past the
+  // column count are ignored.
+  repeated string cells = 1;
+}
